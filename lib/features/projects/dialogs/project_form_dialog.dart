@@ -472,7 +472,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppPalette.accent,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(AppPalette.accent),
               ),
               onPressed: () {
                 final text = _newChecklistItemController.text.trim();
@@ -847,7 +847,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppPalette.accent,
-                                  foregroundColor: AppPalette.onPrimary,
+                                  foregroundColor: AppPalette.foregroundOn(AppPalette.accent),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 11,
@@ -2932,7 +2932,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppPalette.accent,
-            foregroundColor: AppPalette.onPrimary,
+            foregroundColor: AppPalette.foregroundOn(AppPalette.accent),
           ),
           onPressed: _isSaving || _isUpdatingEdesk ? null : _saveProject,
           child: _isSaving

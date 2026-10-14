@@ -9,16 +9,12 @@ void main() {
   for (final theme in AppVisualTheme.values) {
     test('efficiency text contrast for $theme', () {
       AppAppearance.instance.value = theme;
-      for (final color in [const Color(0xFF19C37D), Colors.greenAccent, Colors.amber, Colors.redAccent]) {
+      for (final color in [const Color(0xFF19C37D), Colors.greenAccent, Colors.amber, Colors.redAccent, const Color(0xFF172B43), const Color(0xFF435970)]) {
         final text = metricsTextColor(color);
-        if (AppPalette.dark) {
-          expect(text, color);
-        } else {
-          for (final alpha in [0.0, 0.10, 0.13]) {
-            final bg = Color.alphaBlend(Colors.black.withValues(alpha: alpha), AppPalette.surface);
-            final contrast = (bg.computeLuminance() + 0.05) / (text.computeLuminance() + 0.05);
-            expect(contrast, greaterThanOrEqualTo(4.5));
-          }
+        for (final bg in [AppPalette.surface,
+          Color.alphaBlend(Colors.black.withValues(alpha: 0.13), AppPalette.surface),
+          Color.alphaBlend(AppPalette.text.withValues(alpha: 0.08), AppPalette.surface)]) {
+          expect(AppPalette.contrast(text, bg), greaterThanOrEqualTo(4.5));
         }
       }
     });

@@ -114,7 +114,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                   isError
                       ? Icons.error_outline_rounded
                       : Icons.check_circle_outline_rounded,
-                  color: Colors.white,
+                  color: AppPalette.foregroundOn(isError ? CoresApp.erro : CoresApp.sucesso),
                   size: 17,
                 ),
               ),
@@ -123,7 +123,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                 child: Text(
                   message,
                   style: TextStyle(
-                    color: AppPalette.text,
+                    color: AppPalette.foregroundOn(isError ? CoresApp.erro : CoresApp.sucesso),
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -423,7 +423,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: CoresApp.destaque,
-                  foregroundColor: AppPalette.onPrimary,
+                  foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 17,
@@ -599,7 +599,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.erro,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 17,
@@ -895,7 +895,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: CoresApp.destaque,
-                          foregroundColor: AppPalette.onPrimary,
+                          foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -1212,7 +1212,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: CoresApp.destaque,
-                                  foregroundColor: AppPalette.onPrimary,
+                                  foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                                   elevation: 0,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
@@ -1299,7 +1299,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.destaque,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -1846,7 +1846,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: CoresApp.destaque,
-            foregroundColor: AppPalette.onPrimary,
+            foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
             padding: const EdgeInsets.symmetric(
               horizontal: 15,
               vertical: 11,

@@ -1504,7 +1504,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -1636,7 +1636,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF35D27F),
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(const Color(0xFF35D27F)),
                   ),
                   onPressed: () {
                     final novaData = DateTime(
@@ -1892,7 +1892,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -2130,7 +2130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -2273,7 +2273,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -2509,7 +2509,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

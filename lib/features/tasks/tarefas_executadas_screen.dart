@@ -1394,7 +1394,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.fundo,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.fundo),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
                   side: BorderSide(
@@ -1429,7 +1429,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
                 ),
@@ -1792,7 +1792,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
               label: const Text('Excluir'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.erro,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
               ),
             ),
           ],
@@ -1924,7 +1924,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: CoresApp.fundo,
-                          foregroundColor: AppPalette.onPrimary,
+                          foregroundColor: AppPalette.foregroundOn(CoresApp.fundo),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
                               10,
@@ -2002,7 +2002,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -3494,7 +3494,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
               label: const Text('Enviar para o E-Desk'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
                 shape: RoundedRectangleBorder(

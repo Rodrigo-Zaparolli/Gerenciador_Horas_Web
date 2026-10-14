@@ -25,7 +25,7 @@ void showCustomAuthorDialog(BuildContext context) async {
         backgroundColor: AppPalette.surface, // Padrão de cor do seu app
         /*title: const Text(
           'Sobre o Desenvolvedor',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppPalette.text, fontWeight: FontWeight.bold),
         ),*/
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -71,7 +71,7 @@ void showCustomAuthorDialog(BuildContext context) async {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppPalette.accent,
-              foregroundColor: AppPalette.onPrimary,
+              foregroundColor: AppPalette.foregroundOn(AppPalette.accent),
             ),
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Fechar',

@@ -1,3 +1,4 @@
+import '../../core/theme/app_palette.dart';
 import 'dart:math' as math;
 import 'annual_performance_chart.dart';
 import 'package:flutter/material.dart';
@@ -110,7 +111,7 @@ class _MonthlyPerformanceState extends State<MonthlyPerformance> {
             style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
-                color: widget.chargedColor)),
+                color: AppPalette.readableText(widget.chargedColor))),
         const SizedBox(width: 12),
         Expanded(
             child:

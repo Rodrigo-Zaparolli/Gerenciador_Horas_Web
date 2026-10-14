@@ -3378,7 +3378,7 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.destaqueVerde,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.destaqueVerde),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
@@ -3522,7 +3522,7 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.erro,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),

@@ -206,7 +206,7 @@ class AtualizacoesPendentesModal extends StatelessWidget {
                                     Navigator.pop(context, requestsAction),
                                 style: FilledButton.styleFrom(
                                     backgroundColor: cyan,
-                                    foregroundColor: AppPalette.onPrimary),
+                                    foregroundColor: AppPalette.foregroundOn(cyan)),
                                 icon:
                                     const Icon(Icons.folder_outlined, size: 18),
                                 label: const Text('Ver solicitações'))

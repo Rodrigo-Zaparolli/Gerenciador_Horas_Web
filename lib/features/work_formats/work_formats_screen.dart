@@ -158,7 +158,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
                   isError
                       ? Icons.error_outline_rounded
                       : Icons.check_circle_outline_rounded,
-                  color: Colors.white,
+                  color: AppPalette.foregroundOn(isError ? CoresApp.erro : CoresApp.sucesso),
                   size: 18,
                 ),
               ),
@@ -167,7 +167,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
                 child: Text(
                   message,
                   style: TextStyle(
-                    color: AppPalette.text,
+                    color: AppPalette.foregroundOn(isError ? CoresApp.erro : CoresApp.sucesso),
                     fontSize: 12.5,
                     height: 1.35,
                   ),
@@ -1497,7 +1497,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
         backgroundColor: CoresApp.primaria,
-        foregroundColor: AppPalette.onPrimary,
+        foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
         padding: const EdgeInsets.symmetric(
           horizontal: 18,
         ),
@@ -1848,7 +1848,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
         backgroundColor: CoresApp.primaria,
-        foregroundColor: AppPalette.onPrimary,
+        foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
         padding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 13,
@@ -2418,7 +2418,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
       children: [
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppPalette.onPrimary,
+            foregroundColor: AppPalette.text,
             side: BorderSide(
               color: CoresApp.borda.withValues(alpha: 0.9),
             ),
@@ -2456,7 +2456,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
         ),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppPalette.onPrimary,
+            foregroundColor: AppPalette.text,
             side: BorderSide(
               color: CoresApp.borda.withValues(alpha: 0.9),
             ),
@@ -2495,7 +2495,7 @@ class _WorkFormatsScreenState extends State<WorkFormatsScreen> {
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: CoresApp.primaria,
-            foregroundColor: AppPalette.onPrimary,
+            foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
             padding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,

@@ -520,7 +520,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: _isLoading ? null : _handleRegister,
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                 disabledBackgroundColor: CoresApp.primaria.withValues(alpha: 0.45),
                 elevation: 0,
                 shape: RoundedRectangleBorder(

@@ -656,7 +656,7 @@ class _CabecalhoState extends State<Cabecalho> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 11,
@@ -740,7 +740,7 @@ class _CabecalhoState extends State<Cabecalho> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
               ),
               child: const Text('Sair'),
             ),

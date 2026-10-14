@@ -169,12 +169,29 @@ class AppPalette {
       choose(const Color(0xFF50647C), const Color(0xFF8FA4BC));
   static Color get primary =>
       choose(const Color(0xFF096AB5), const Color(0xFF38BDF8));
-  static Color foregroundForPrimary(Color color, {required bool isDark}) =>
-      isDark
-          ? const Color(0xFF0B1220)
-          : (color.computeLuminance() > 0.183
-              ? const Color(0xFF0C2434)
-              : Colors.white);
+  /// Selects text from the actual painted background, independent of theme.
+  static Color foregroundOn(Color background) {
+    final opaque = Color.alphaBlend(background, surface);
+    const darkText = Color(0xFF0B1220);
+    return contrast(Colors.white, opaque) >= contrast(darkText, opaque)
+        ? Colors.white : darkText;
+  }
+  static double contrast(Color foreground, Color background) {
+    final a = Color.alphaBlend(foreground, background).computeLuminance();
+    final b = background.computeLuminance();
+    return a > b ? (a + 0.05) / (b + 0.05) : (b + 0.05) / (a + 0.05);
+  }
+  static Color readableText(Color color, {Color? background}) {
+    final painted = background ?? surface;
+    if (contrast(color, painted) >= 4.5) return color;
+    final target = foregroundOn(painted);
+    for (var step = 1; step <= 100; step++) {
+      final candidate = Color.lerp(color.withValues(alpha: 1), target, step / 100)!;
+      if (contrast(candidate, painted) >= 4.5) return candidate;
+    }
+    return target;
+  }
+  static Color foregroundForPrimary(Color color, {required bool isDark}) => foregroundOn(color);
   static Color get onPrimary => foregroundForPrimary(primary, isDark: dark);
   static Color get accent =>
       choose(const Color(0xFF08768C), const Color(0xFF22D3EE));

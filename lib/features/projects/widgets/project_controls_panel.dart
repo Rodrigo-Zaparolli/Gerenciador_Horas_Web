@@ -86,7 +86,7 @@ class ProjectControlsPanel extends StatelessWidget {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppPalette.surface,
-                  foregroundColor: AppPalette.onPrimary,
+                  foregroundColor: AppPalette.foregroundOn(AppPalette.surface),
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
@@ -95,7 +95,7 @@ class ProjectControlsPanel extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                icon: const Icon(Icons.add, size: 15, color: Colors.cyanAccent),
+                icon: Icon(Icons.add, size: 15, color: AppPalette.primary),
                 label: const Text(
                   'Novo Projeto',
                   style: TextStyle(
@@ -113,7 +113,7 @@ class ProjectControlsPanel extends StatelessWidget {
                 _buildQuickAction(
                   Icons.sync,
                   'Sincronizar',
-                  Colors.cyanAccent,
+                  AppPalette.primary,
                   onSyncPressed,
                 ),
                 _buildQuickAction(
@@ -121,13 +121,13 @@ class ProjectControlsPanel extends StatelessWidget {
                       ? Icons.filter_alt
                       : Icons.filter_alt_outlined,
                   'Filtrar',
-                  hasFilterActive ? Colors.orangeAccent : Colors.cyanAccent,
+                  hasFilterActive ? AppPalette.warning : AppPalette.primary,
                   onFilterPressed,
                 ),
                 _buildQuickAction(
                   Icons.timer_outlined,
                   'Manual',
-                  Colors.tealAccent,
+                  AppPalette.accent,
                   onManualPressed,
                 ),
               ],
@@ -139,19 +139,19 @@ class ProjectControlsPanel extends StatelessWidget {
                 _buildQuickAction(
                   Icons.play_arrow,
                   'Iniciar',
-                  Colors.greenAccent,
+                  AppPalette.success,
                   onStartPressed,
                 ),
                 _buildQuickAction(
                   Icons.pause,
                   'Pausar',
-                  Colors.amberAccent,
+                  AppPalette.warning,
                   onPausePressed,
                 ),
                 _buildQuickAction(
                   Icons.check_circle_outline,
                   'Stop',
-                  Colors.redAccent,
+                  AppPalette.danger,
                   onStopPressed,
                 ),
               ],
@@ -177,8 +177,8 @@ class ProjectControlsPanel extends StatelessWidget {
             child: Checkbox(
               value: value,
               onChanged: onChanged,
-              activeColor: Colors.cyanAccent,
-              checkColor: AppPalette.onPrimary,
+              activeColor: AppPalette.primary,
+              checkColor: AppPalette.foregroundOn(AppPalette.primary),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),

@@ -1,3 +1,4 @@
+import '../../../core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 List<int> edeskPhaseIndices(int total, Set<int> selected, {required bool all}) {
@@ -29,7 +30,11 @@ class EdeskPhaseSendButton extends StatelessWidget {
   final ValueChanged<bool> onSend;
 
   @override
-  Widget build(BuildContext context) => PopupMenuButton<bool>(
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final buttonColor = AppPalette.readableText(primary,
+      background: Color.alphaBlend(primary.withValues(alpha: 0.15), Theme.of(context).colorScheme.surface));
+    return PopupMenuButton<bool>(
         tooltip: 'Escolher quais fases enviar ao E-Desk',
         enabled: enabled && !busy && total > 0,
         onSelected: onSend,
@@ -44,9 +49,9 @@ class EdeskPhaseSendButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-              color: Colors.blueAccent.withValues(alpha: busy ? 0.08 : 0.15),
+              color: buttonColor.withValues(alpha: busy ? 0.08 : 0.15),
               border:
-                  Border.all(color: Colors.blueAccent.withValues(alpha: 0.45)),
+                  Border.all(color: buttonColor.withValues(alpha: 0.45)),
               borderRadius: BorderRadius.circular(8)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (busy)
@@ -55,16 +60,17 @@ class EdeskPhaseSendButton extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
             else
-              const Icon(Icons.sync, size: 18, color: Colors.blueAccent),
+              Icon(Icons.sync, size: 18, color: buttonColor),
             const SizedBox(width: 8),
             Text(busy ? 'Atualizando E-Desk...' : 'Enviar fases ao E-Desk',
-                style: const TextStyle(
-                    color: Colors.blueAccent,
+                style: TextStyle(
+                    color: buttonColor,
                     fontSize: 11,
                     fontWeight: FontWeight.w600)),
             if (!busy)
-              const Icon(Icons.arrow_drop_down, color: Colors.blueAccent),
+              Icon(Icons.arrow_drop_down, color: buttonColor),
           ]),
         ),
       );
+  }
 }

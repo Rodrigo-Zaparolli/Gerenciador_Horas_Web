@@ -722,7 +722,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
               onPressed: () => Navigator.of(context).pop(true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.erro,
-                foregroundColor: AppPalette.onPrimary,
+                foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
               ),
               child: const Text('Excluir'),
             ),
@@ -1808,7 +1808,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
             onPressed: _adicionarBloco,
             style: ElevatedButton.styleFrom(
               backgroundColor: CoresApp.primaria,
-              foregroundColor: AppPalette.onPrimary,
+              foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
               elevation: 3,
               shadowColor: CoresApp.primaria.withValues(alpha: 0.25),
               padding: EdgeInsets.zero,
@@ -1842,7 +1842,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: CoresApp.primaria,
-          foregroundColor: AppPalette.onPrimary,
+          foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
           elevation: 3,
           shadowColor: CoresApp.primaria.withValues(alpha: 0.25),
           padding: const EdgeInsets.symmetric(
@@ -2084,7 +2084,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: CoresApp.primaria,
-                  foregroundColor: AppPalette.onPrimary,
+                  foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                   elevation: 2,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 17,

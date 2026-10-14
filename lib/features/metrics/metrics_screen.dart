@@ -615,7 +615,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: CoresApp.destaque,
-                              foregroundColor: AppPalette.onPrimary,
+                              foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 17,
@@ -1809,7 +1809,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
                   child: Text(
                     value,
                     style: TextStyle(
-                      color: color,
+                      color: metricsTextColor(color),
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.5,
@@ -2214,7 +2214,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
               Text(
                 value,
                 style: TextStyle(
-                  color: color,
+                  color: metricsTextColor(color),
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                 ),
@@ -3089,7 +3089,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: _cardDecoration(
-        color: Colors.white,
+        color: AppPalette.surface,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3136,7 +3136,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
               Text(
                 'Planejamento anual',
                 style: TextStyle(
-                  color: Colors.black87,
+                  color: AppPalette.text,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
                 ),
@@ -3145,7 +3145,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
               Text(
                 'Metas mensais e distribuição das horas ao longo de $_ano.',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: AppPalette.secondary,
                   fontSize: 8.5,
                 ),
               ),
@@ -3206,10 +3206,10 @@ class _MetricsScreenState extends State<MetricsScreen> {
       },
       border: TableBorder(
         horizontalInside: BorderSide(
-          color: Colors.black.withValues(alpha: 0.07),
+          color: AppPalette.border.withValues(alpha: 0.7),
         ),
         verticalInside: BorderSide(
-          color: Colors.black.withValues(alpha: 0.045),
+          color: AppPalette.border.withValues(alpha: 0.45),
         ),
       ),
       children: [
@@ -3255,7 +3255,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
         _buildCellText(
           'Data Início / Jornada',
           isHeader: true,
-          color: Colors.white,
+          color: AppPalette.text,
           alignLeft: true,
         ),
         _buildCellInput(
@@ -3268,7 +3268,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
           (i) => _buildCellText(
             _meses[i],
             isHeader: true,
-            color: Colors.white,
+            color: AppPalette.text,
           ),
         ),
       ],
@@ -3283,7 +3283,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
       children: [
         _buildCellInput(
           _dataInicioController,
-          bgColor: const Color(0xFFFFF2CC),
+          bgColor: AppPalette.warning.withValues(alpha: 0.10),
           onChanged: (_) {
             _recalcularDiasUteis();
             setState(() {});
@@ -3298,7 +3298,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
           (i) => _buildCellText(
             '${i + 1}',
             isHeader: true,
-            color: Colors.white,
+            color: AppPalette.text,
           ),
         ),
       ],
@@ -3332,8 +3332,8 @@ class _MetricsScreenState extends State<MetricsScreen> {
 
   TableRow _buildMetaRow() {
     return TableRow(
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFF8DF),
+      decoration: BoxDecoration(
+        color: AppPalette.warning.withValues(alpha: 0.08),
       ),
       children: [
         _buildCellText(
@@ -3463,7 +3463,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: color ?? Colors.black87,
+          color: color == null ? AppPalette.text : metricsTextColor(color),
           fontSize: 10,
           fontWeight: isHeader || isBold ? FontWeight.w800 : FontWeight.w500,
         ),
@@ -3491,7 +3491,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
-          color: isHeader ? AppPalette.text : Colors.black87,
+          color: AppPalette.text,
         ),
         decoration: const InputDecoration(
           border: InputBorder.none,

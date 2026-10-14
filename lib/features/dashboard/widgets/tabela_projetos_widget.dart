@@ -734,7 +734,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: CoresApp.destaque,
-                          foregroundColor: AppPalette.onPrimary,
+                          foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
@@ -1071,7 +1071,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: CoresApp.destaque,
-                            foregroundColor: AppPalette.onPrimary,
+                            foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 14,
@@ -1178,7 +1178,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: CoresApp.destaque,
-                            foregroundColor: AppPalette.onPrimary,
+                            foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 12,
@@ -2968,7 +2968,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: CoresApp.destaque,
-                              foregroundColor: AppPalette.onPrimary,
+                              foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 18,
                                 vertical: 12,
@@ -3954,7 +3954,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 9,
                       vertical: 5,
@@ -4308,7 +4308,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CoresApp.erro,
-                        foregroundColor: AppPalette.onPrimary,
+                        foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
                       ),
                       onPressed: () => Navigator.of(
                         dialogContext,

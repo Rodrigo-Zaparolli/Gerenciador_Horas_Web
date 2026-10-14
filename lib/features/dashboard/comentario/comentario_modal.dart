@@ -1561,7 +1561,7 @@ class ComentarioModal {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: CoresApp.erro,
-                  foregroundColor: AppPalette.onPrimary,
+                  foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
                 ),
                 icon: const Icon(
                   Icons.delete_outline_rounded,
@@ -2929,7 +2929,7 @@ class ComentarioModal {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.destaque,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                   ),
                   onPressed: () {
                     Navigator.of(contextNome).pop(
@@ -3053,7 +3053,7 @@ class ComentarioModal {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.destaque,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.destaque),
                   ),
                   onPressed: () {
                     Navigator.of(contextNome).pop(
@@ -3158,7 +3158,7 @@ class ComentarioModal {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.erro,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.erro),
                   ),
                   onPressed: () {
                     Navigator.of(confirmContext).pop(true);
@@ -4297,7 +4297,7 @@ class ComentarioModal {
                                         },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: CoresApp.sucesso,
-                                    foregroundColor: AppPalette.onPrimary,
+                                    foregroundColor: AppPalette.foregroundOn(CoresApp.sucesso),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
                                       vertical: 13,

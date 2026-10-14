@@ -1,5 +1,6 @@
 {
   "changes": [
-    "Desempenho mensal: visão anual compacta com os 12 meses, horas cobradas e metas. Clique em um mês para ver o detalhe diário, sem aumentar a altura do card."
+    "Contrastes: textos e botões passam a respeitar o fundo real nos temas Black, escuros e claros.",
+    "Métricas: planejamento anual e números personalizados corrigidos para manter a leitura ao trocar de tema."
   ]
 }

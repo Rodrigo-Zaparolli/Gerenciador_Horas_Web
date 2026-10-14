@@ -316,7 +316,7 @@ class _ControleProjetosWidgetState extends State<ControleProjetosWidget> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _green,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(_green),
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -550,7 +550,7 @@ class _ControleProjetosWidgetState extends State<ControleProjetosWidget> {
                         onPressed: widget.onNewProject,
                         style: ElevatedButton.styleFrom(
                             backgroundColor: _accent,
-                            foregroundColor: AppPalette.onPrimary,
+                            foregroundColor: AppPalette.foregroundOn(_accent),
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             shape: RoundedRectangleBorder(

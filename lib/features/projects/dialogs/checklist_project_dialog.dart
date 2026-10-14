@@ -226,7 +226,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: CoresApp.primaria,
-                          foregroundColor: AppPalette.onPrimary,
+                          foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
@@ -462,7 +462,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: CoresApp.primaria,
-                              foregroundColor: AppPalette.onPrimary,
+                              foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
@@ -595,7 +595,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius:
@@ -724,7 +724,7 @@ class _ChecklistFormatsScreenState extends State<ChecklistFormatsScreen> {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: CoresApp.primaria,
-                    foregroundColor: AppPalette.onPrimary,
+                    foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 16),
                     elevation: 0,
