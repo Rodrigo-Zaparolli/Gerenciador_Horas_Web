@@ -1,3 +1,4 @@
+import 'monthly_performance.dart';
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
@@ -2290,24 +2291,13 @@ class _MetricsScreenState extends State<MetricsScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: _cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            icon: Icons.insights_rounded,
-            title: 'Desempenho mensal',
-            subtitle:
-                'Compare as horas cobradas e demais horas com a meta mensal.',
-            trailing: _buildCustomizeButton(),
-          ),
-          const SizedBox(height: 15),
-          _buildLegend(),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 350,
-            child: _buildRobustChart(),
-          ),
-        ],
+      child: MonthlyPerformance(
+        year: _ano,
+        logs: widget.timeLogStore.logs,
+        goals: List.generate(12, (i) => (_parseTimeToDouble(_metaControllers[i].text) * 60).round()),
+        chargedColor: _cobradasColor,
+        otherColor: _demaisColor,
+        settings: _buildCustomizeButton(),
       ),
     );
   }
