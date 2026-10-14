@@ -1,7 +1,8 @@
+import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
 import '../../edesk/comment_document_snapshot.dart';
-import 'comment_draft_recovery.dart';
+import '../../../data/services/recoverable_draft.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
 import 'package:gerenciador_horas/core/theme/app_visuals.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
@@ -1648,11 +1649,22 @@ class ComentarioModal {
     // SALVAR COMENTÁRIO
     // ===============================================================
 
+    Map<String, dynamic>? comentarioEnviadoParaSalvar;
+    String? idComentarioEnviadoParaSalvar;
+    final commentSaveGate = CommentSaveGate();
+    String identidadeConteudoAtual() => jsonEncode({
+      'delta': editorController.document.toDelta().toJson(),
+      'percentual': percentualController.text,
+      'tipo': tipoComentario,
+    });
+    bool podeSalvarEnviado() => comentarioEnviadoParaSalvar != null &&
+        commentSaveGate.canSave(identidadeConteudoAtual());
+
     Future<void> salvarComentario(
       BuildContext dialogContext,
       StateSetter setDialogState,
     ) async {
-      if (!validarPercentual(dialogContext)) return;
+      if (!podeSalvarEnviado()) return;
       final texto = montarTextoOrdenado();
 
       if (texto.isEmpty && imagensBase64.isEmpty && imagemBase64 == null) {
@@ -1681,23 +1693,13 @@ class ComentarioModal {
 
         final ref = comentariosRef();
 
-        final dados = <String, dynamic>{
-          'comentario': texto,
-          'imagemBase64': imagemBase64,
-          'imagensBase64': List<String>.from(imagensBase64),
-          'blocosComentario': blocosParaPersistir(),
-          'tipoComentario': tipoComentario,
-          'percentualRealizado':
-              parseCommentPercentage(percentualController.text),
-          'modoExecucao': 'Salvo',
-          'projetoId': project.id.trim(),
-          'usuarioId': firebaseUser.uid,
-          'usuario':
-              firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
-        };
+        if (comentarioEnviadoParaSalvar!['usuarioId'] != firebaseUser.uid) {
+          throw StateError('A conta foi alterada. Abra novamente o coment\u00e1rio.');
+        }
+        final dados = Map<String, dynamic>.from(comentarioEnviadoParaSalvar!);
 
-        if (comentarioSelecionadoId == null) {
-          dados['status'] = 'Pendente';
+        if (idComentarioEnviadoParaSalvar == null) {
+          dados['status'] = 'Enviado';
           dados['dataHora'] = FieldValue.serverTimestamp();
           dados['tentativas'] = 0;
 
@@ -1705,10 +1707,11 @@ class ComentarioModal {
 
           setDialogState(() {
             comentarioSelecionadoId = documento.id;
+            idComentarioEnviadoParaSalvar = documento.id;
           });
         } else {
           dados['atualizadoEm'] = FieldValue.serverTimestamp();
-          await ref.doc(comentarioSelecionadoId).update(dados);
+          await ref.doc(idComentarioEnviadoParaSalvar).update(dados);
         }
 
         comentarioFocusNode.unfocus();
@@ -1717,6 +1720,7 @@ class ComentarioModal {
 
         setDialogState(() {
           salvando = false;
+          commentSaveGate.markSaved();
         });
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -1750,6 +1754,11 @@ class ComentarioModal {
       required StateSetter setDialogState,
       required bool enviar,
     }) async {
+      if (enviar && commentSaveGate.alreadySent(identidadeConteudoAtual())) {
+        ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+          content: Text('Este coment\u00e1rio j\u00e1 foi enviado. Use Salvar para guardar no projeto.')));
+        return;
+      }
       if (!validarPercentual(dialogContext)) return;
       final texto = montarTextoOrdenado();
       final editorDeltaPreview = CommentDocumentSnapshot(editorController.document.toDelta().toJson()).delta;
@@ -1864,7 +1873,19 @@ class ComentarioModal {
         });
       }
 
-      String? comentarioId = comentarioSelecionadoId;
+      final identidadeDoEnvio = identidadeConteudoAtual();
+      final idDoComentarioEnviado = comentarioSelecionadoId;
+      final dadosDoEnvio = <String, dynamic>{
+        'comentario': texto,
+        'imagemBase64': imagemBase64,
+        'imagensBase64': List<String>.from(imagensParaEnvio),
+        'blocosComentario': blocosParaPersistir(),
+        'tipoComentario': tipoComentario,
+        'percentualRealizado': parseCommentPercentage(percentualController.text),
+        'tipoComentarioEdesk': _tipoComentarioEdesk(tipoComentario),
+        'modoExecucao': 'Envio',
+        'projetoId': project.id.trim(),
+      };
       EdeskService? service;
 
       try {
@@ -1872,59 +1893,6 @@ class ComentarioModal {
 
         if (firebaseUser == null) {
           throw Exception('Usuário não autenticado no Firebase.');
-        }
-
-        final ref = comentariosRef();
-        final statusInicial = enviar ? 'Enviando' : 'Teste';
-
-        if (comentarioId == null) {
-          final dados = <String, dynamic>{
-            'comentario': texto,
-            'imagemBase64': imagemBase64,
-            'imagensBase64': List<String>.from(imagensParaEnvio),
-            'blocosComentario': blocosParaPersistir(),
-            'tipoComentario': tipoComentario,
-            'percentualRealizado':
-                parseCommentPercentage(percentualController.text),
-            'tipoComentarioEdesk': _tipoComentarioEdesk(tipoComentario),
-            'status': statusInicial,
-            'modoExecucao': enviar ? 'Envio' : 'Teste',
-            'projetoId': project.id.trim(),
-            'usuarioId': firebaseUser.uid,
-            'usuario':
-                firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
-            'dataHora': FieldValue.serverTimestamp(),
-            'tentativas': 1,
-          };
-
-          final documento = await ref.add(dados);
-          comentarioId = documento.id;
-
-          setDialogState(() {
-            comentarioSelecionadoId = documento.id;
-          });
-        } else {
-          final documentoRef = ref.doc(comentarioId);
-
-          await documentoRef.update({
-            'comentario': texto,
-            'imagemBase64': imagemBase64,
-            'imagensBase64': List<String>.from(imagensParaEnvio),
-            'blocosComentario': blocosParaPersistir(),
-            'tipoComentario': tipoComentario,
-            'percentualRealizado':
-                parseCommentPercentage(percentualController.text),
-            'tipoComentarioEdesk': _tipoComentarioEdesk(tipoComentario),
-            'status': statusInicial,
-            'modoExecucao': enviar ? 'Envio' : 'Teste',
-            'projetoId': project.id.trim(),
-            'usuarioId': firebaseUser.uid,
-            'usuario':
-                firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
-            'ultimaTentativa': FieldValue.serverTimestamp(),
-            'tentativas': FieldValue.increment(1),
-            'erroEnvio': FieldValue.delete(),
-          });
         }
 
         service = EdeskService();
@@ -1942,84 +1910,36 @@ class ComentarioModal {
           enviar: enviar,
         );
 
-        if (resultado.statusCode == 499) {
-          await comentariosRef().doc(comentarioId).update({
-            'status': 'Rascunho',
-            'erroEnvio': FieldValue.delete(),
-          });
-          return;
-        }
-
-        final docRef = comentariosRef().doc(comentarioId);
-
-        if (!enviar) {
-          await docRef.update({
-            'status': resultado.confirmed ? 'Teste' : 'Erro',
-            'resultadoTeste': resultado.message,
-            'testadoEm': FieldValue.serverTimestamp(),
-            if (!resultado.confirmed) 'erroEnvio': resultado.message,
-            if (!resultado.confirmed) 'erroEm': FieldValue.serverTimestamp(),
-          });
-        } else {
-          if (resultado.confirmed) {
-            await docRef.update({
+        if (resultado.statusCode == 499) return;
+        if (enviar && resultado.confirmed) {
+          setDialogState(() {
+            idComentarioEnviadoParaSalvar = idDoComentarioEnviado;
+            comentarioEnviadoParaSalvar = {
+              ...dadosDoEnvio,
               'status': 'Enviado',
+              'usuarioId': firebaseUser.uid,
+              'usuario': firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
               'enviadoEm': FieldValue.serverTimestamp(),
-              'erroEnvio': FieldValue.delete(),
-            });
-          } else {
-            await docRef.update({
-              'status': 'Erro',
-              'erroEnvio': resultado.message,
-              'erroEm': FieldValue.serverTimestamp(),
-            });
-          }
+              'tentativas': 1,
+            };
+            commentSaveGate.receiveResult(content: identidadeDoEnvio, sending: enviar, confirmed: resultado.confirmed);
+          });
         }
 
         if (!dialogContext.mounted) return;
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
           SnackBar(
-            content: Text(resultado.message),
+            content: Text(enviar && resultado.confirmed
+                ? '${resultado.message} Clique em Salvar para guardar no projeto.'
+                : resultado.message),
             backgroundColor:
                 resultado.confirmed ? CoresApp.sucesso : CoresApp.erro,
             duration: const Duration(seconds: 5),
           ),
         );
 
-        if (enviar && resultado.confirmed) {
-          comentarioController.clear();
-          percentualController.clear();
-          comentarioFocusNode.unfocus();
-          carregarDocumentoComentario();
-
-          setDialogState(() {
-            comentarioSelecionadoId = null;
-            imagensBase64.clear();
-            blocosComentario.clear();
-            controllersBlocosTexto.clear();
-            focosBlocosTexto.clear();
-            controllerBlocoTextoAtivo = null;
-            focoBlocoTextoAtivo = null;
-            imagensExcelBase64.clear();
-            intervalosExcelAdicionados.clear();
-            imagemBase64 = null;
-            imagemExcelBase64 = null;
-            campoExcelSelecionado = null;
-            tipoComentario = 'Interno';
-          });
-        }
       } catch (e) {
-        if (comentarioId != null) {
-          try {
-            await comentariosRef().doc(comentarioId).update({
-              'status': 'Erro',
-              'erroEnvio': e.toString(),
-              'erroEm': FieldValue.serverTimestamp(),
-            });
-          } catch (_) {}
-        }
-
         if (dialogContext.mounted) {
           ScaffoldMessenger.of(dialogContext).showSnackBar(
             SnackBar(
@@ -4294,20 +4214,7 @@ class ComentarioModal {
 // MODAL — COMENTÁRIOS E-DESK (Móvel e Redimensionável)
 // ===============================================================
 
-    final recoveryUid = FirebaseAuth.instance.currentUser?.uid;
-    final draftRecovery = CommentDraftRecovery(
-      uid: recoveryUid, projectId: project.id,
-      editor: editorController, percentage: percentualController,
-      isCurrentAccount: () => FirebaseAuth.instance.currentUser?.uid == recoveryUid,
-      metadata: () => {'type': tipoComentario, 'commentId': comentarioSelecionadoId},
-      restoreMetadata: (saved) {
-        tipoComentario = saved['type'] as String? ?? 'Interno';
-        final id = saved['commentId'];
-        if (id is String && !id.contains('/')) comentarioSelecionadoId = id;
-      },
-    );
-    final recoveryStatus = draftRecovery.status;
-    void persistRecovery() => draftRecovery.persist();
+    RecoverableDraft.clear(FirebaseAuth.instance.currentUser?.uid, 'comment.${project.id}');
 
     var editorOpen = true;
     final stopCommentPaste = listenForCommentPaste(
@@ -4330,7 +4237,6 @@ class ComentarioModal {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             AppAppearance.watch(context);
-            persistRecovery();
             atualizarImagensComentario = () {
               if (context.mounted) setDialogState(() {});
             };
@@ -6109,7 +6015,7 @@ class ComentarioModal {
                                                 'Escreva uma atualização clara para este chamado.',
                                                 style: TextStyle(
                                                     color: AppPalette.secondary,
-                                                    fontSize: 10)), ValueListenableBuilder<String>(valueListenable: recoveryStatus, builder: (context, value, child) => value.isEmpty ? const SizedBox.shrink() : Text(value, style: TextStyle(color: AppPalette.secondary, fontSize: 11)))]),
+                                                    fontSize: 10))]),
                                             const SizedBox(height: 10),
                                             // Editor principal no estilo Word.
                                             // Ocupa TODO o espaço vertical livre do painel esquerdo.
@@ -7436,7 +7342,7 @@ class ComentarioModal {
                                                         fontSize: 11)),
                                               ),
                                               ElevatedButton.icon(
-                                                onPressed: (salvando ||
+                                                onPressed: (!podeSalvarEnviado() || salvando ||
                                                         testandoEdesk ||
                                                         enviandoEdesk)
                                                     ? null
@@ -7645,7 +7551,6 @@ class ComentarioModal {
     ).whenComplete(() {
       editorOpen = false;
       stopCommentPaste();
-      draftRecovery.dispose();
       editorController.removeListener(sincronizarEstadoEditor);
       percentualController.dispose();
       comentarioController.dispose();

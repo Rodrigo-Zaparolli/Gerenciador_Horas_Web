@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-Desk: envio de comentários seleciona a aba Comentários da solicitação antes de abrir o editor, conforme o fluxo demonstrado.",
-    "Atualize também a integração E-Desk no computador usado para o envio."
+    "Comentários: registro no projeto somente pelo botão Salvar, após envio confirmado ao E-Desk.",
+    "Fechar o modal, testar, cancelar ou falhar no envio não salva automaticamente o comentário. Texto e imagens permanecem no editor após enviar, aguardando Salvar."
   ]
 }
