@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-Desk: integração local preserva a sessão do navegador por conta e aguarda a tela ficar pronta, sem a pausa fixa de 4 segundos na abertura da lista.",
-    "Para ativar essa melhoria, atualize o pacote de integração E-Desk e execute Iniciar integração E-Desk.cmd. A primeira autenticação ainda pode ser solicitada."
+    "Comentários: Conferir mostra uma cópia do descritivo atual no mesmo editor em modo de leitura, com texto, imagens e formatação, sem buscar conteúdo antigo do histórico.",
+    "A conversão para envio preserva a ordem do documento e não acrescenta quebras ao redor das imagens."
   ]
 }

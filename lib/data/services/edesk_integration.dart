@@ -8,6 +8,7 @@ import 'edesk_endpoint.dart';
 import 'edesk_extension.dart';
 import '../../features/edesk/edesk_central_dialog.dart';
 import '../../features/edesk/edesk_comment_preview.dart';
+import '../../features/edesk/comment_document_preview.dart';
 
 const edeskApiUrl = defaultEdeskApiUrl;
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -371,7 +372,9 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
                               ]))),
                 if (widget.script == 'edesk_comentario.py')
                   Card(child: Padding(padding: const EdgeInsets.all(12),
-                      child: EdeskCommentPreview(
+                      child: widget.data['_editorDeltaPreview'] is List
+                        ? CommentDocumentPreview(delta: widget.data['_editorDeltaPreview'] as List<dynamic>)
+                        : EdeskCommentPreview(
                           text: widget.data['texto']?.toString() ?? '',
                           legacyImage: widget.data['imagemBase64']?.toString()))),
                 if (hasUncertain) ...[

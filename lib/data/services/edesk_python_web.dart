@@ -52,6 +52,10 @@ Future<EdeskPythonResult> _executar({
       return _failure(
           'Envio cancelado. Nenhum registro foi enviado nesta tentativa.', 499);
   }
+  // Editor snapshot is UI-only; never duplicate its images in the API payload.
+  final deliveryData = jsonDecode(requestJson) as Map<String, dynamic>;
+  deliveryData.remove('_editorDeltaPreview');
+  requestJson = jsonEncode(deliveryData);
   final navigator = appNavigatorKey.currentState;
   String? hoursApiUrl;
   final operationId = DateTime.now().microsecondsSinceEpoch.toString();

@@ -1379,6 +1379,7 @@ class EdeskService {
     required String idTrabalho,
     required String tipoComentario,
     required String texto,
+    List<dynamic>? editorDeltaPreview,
     String? imagemBase64,
     double? percentualRealizado,
     required bool enviar,
@@ -1465,6 +1466,7 @@ class EdeskService {
       'tipo': tipoComentario,
 
       'texto': texto,
+      if (kIsWeb && editorDeltaPreview != null) '_editorDeltaPreview': editorDeltaPreview,
 
       'imagemBase64': imagemBase64,
       if (percentualRealizado != null)

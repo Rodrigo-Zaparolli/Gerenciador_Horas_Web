@@ -1,3 +1,4 @@
+import '../../edesk/comment_document_snapshot.dart';
 import 'comment_draft_recovery.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
 import 'package:gerenciador_horas/core/theme/app_visuals.dart';
@@ -258,6 +259,7 @@ class ComentarioModal {
             'tipo': 'imagem',
             'valor': imagem,
             'inline': 'true',
+            'estiloImagem': atributos['style']?.toString() ?? '',
           });
         }
       }
@@ -871,62 +873,8 @@ class ComentarioModal {
 
     // HTML final do documento. As imagens são incorporadas na posição
     // em que aparecem no editor; não existem placeholders EDESK_IMAGE.
-    String montarHtmlEdesk() {
-      final buffer = StringBuffer('[[EDESK_HTML]]');
-      final tamanhoMarcador = '[[EDESK_HTML]]'.length;
-      var terminaComQuebra = false;
-      var quebraPendente = false;
-
-      void escrever(String html) {
-        if (html.isEmpty) return;
-        buffer.write(html);
-        terminaComQuebra = html.endsWith('<br>');
-      }
-
-      for (final bloco in blocosParaPersistir()) {
-        if (bloco['tipo'] == 'texto') {
-          final html = blocoTextoParaHtml(bloco);
-          if (html.isEmpty) continue;
-
-          if (quebraPendente && !html.startsWith('<br>')) {
-            escrever('<br>');
-          }
-          escrever(html);
-          quebraPendente = false;
-          continue;
-        }
-
-        if (bloco['tipo'] == 'imagem') {
-          if (buffer.length > tamanhoMarcador && !terminaComQuebra) {
-            escrever('<br>');
-          }
-
-          final rotuloInline = bloco['rotuloInline'] ?? '';
-          if (rotuloInline.isNotEmpty) {
-            final blocoRotulo = Map<String, String>.from(bloco)
-              ..['tipo'] = 'texto'
-              ..['valor'] = rotuloInline;
-            escrever(blocoTextoParaHtml(blocoRotulo));
-          }
-
-          final imagem = (bloco['valor'] ?? '').trim();
-          if (imagem.isNotEmpty) {
-            final src = imagem.startsWith('data:')
-                ? imagem
-                : 'data:image/png;base64,$imagem';
-            escrever(
-              '<img src="${escaparHtmlComentario(src)}" '
-              'alt="" style="max-width:100%;height:auto;vertical-align:middle;">',
-            );
-            quebraPendente = true;
-          }
-
-          if (bloco['inline'] != 'true') quebraPendente = true;
-        }
-      }
-
-      return buffer.toString();
-    }
+    String montarHtmlEdesk(List<Map<String, String>> documento) =>
+        commentHtmlFromBlocks(documento, blocoTextoParaHtml);
 
     // Texto utilizado para filtrar o histórico da lateral direita.
     String buscaHistorico = '';
@@ -1802,7 +1750,9 @@ class ComentarioModal {
     }) async {
       if (!validarPercentual(dialogContext)) return;
       final texto = montarTextoOrdenado();
-      final textoEdesk = montarHtmlEdesk();
+      final editorDeltaPreview = CommentDocumentSnapshot(editorController.document.toDelta().toJson()).delta;
+      final documentoAtual = blocosDoDocumento();
+      final textoEdesk = montarHtmlEdesk(documentoAtual);
 
       final imagensParaEnvio = imagensBase64.isNotEmpty
           ? List<String>.from(imagensBase64)
@@ -1983,6 +1933,7 @@ class ComentarioModal {
           idTrabalho: idTrabalho,
           tipoComentario: tipoComentario,
           texto: textoEdesk,
+          editorDeltaPreview: editorDeltaPreview,
           imagemBase64: imagemPayload,
           percentualRealizado:
               parseCommentPercentage(percentualController.text),
