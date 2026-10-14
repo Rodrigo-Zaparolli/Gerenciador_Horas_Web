@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -48,6 +49,16 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BYTES
 if LOCAL_MODE:
     app.logger.setLevel(logging.INFO)
+
+
+def _local_browser_profile(uid, data):
+    credentials = data.get('edeskCredenciais') or {}
+    email = str(credentials.get('email') or '').strip().lower() if isinstance(credentials, dict) else ''
+    identity = hashlib.sha256((uid + '\0' + email).encode('utf-8')).hexdigest()
+    root = APP_ROOT / '.edesk-local' / 'browser-profiles'
+    path = root / identity
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return str(path)
 
 
 def _allowed_origins() -> set[str]:
@@ -472,6 +483,8 @@ def run_edesk_automation(action: str):
                 environment = dict(os.environ, EDESK_DATA_DIR=str(data_dir),
                                    EDESK_HEADLESS="false", PYTHONUTF8="1",
                                    PYTHONUNBUFFERED="1")
+            if LOCAL_MODE:
+                environment['EDESK_PROFILE_DIR'] = _local_browser_profile(uid, data)
             environment.update(EDESK_PROGRESS_FILE=str(progress_file), EDESK_EVENTS_FILE=str(events_file))
             environment['EDESK_PROGRESS_TOTAL'] = str(total)
             if keys:

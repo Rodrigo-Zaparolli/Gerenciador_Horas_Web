@@ -16,6 +16,7 @@ from urllib.parse import (
 from playwright.sync_api import sync_playwright
 from send_progress import observe_log, hour_event
 
+from config import restore_session_cookies, save_session_cookies
 from config import (
     PROFILE_DIR,
     SCREENSHOTS_DIR,
@@ -693,7 +694,7 @@ def acessar_minha_grid(page, guid=None):
     except Exception as erro:
         log(f"Aviso durante acesso à Grid: {erro}")
 
-    page.wait_for_timeout(4000)
+    page.locator("#cph1_txtSol").first.wait_for(state="visible", timeout=20000)
     log(f"URL atual da Grid: {page.url}")
 
 def instalar_monitor_requests(page):
@@ -2135,6 +2136,7 @@ def fechar_playwright(context, playwright):
             paginas = []
 
         try:
+            save_session_cookies(context)
             context.close()
             log("Contexto Playwright encerrado.")
         except Exception as erro:
@@ -2205,6 +2207,7 @@ def main():
             viewport=None,
         )
 
+        restore_session_cookies(context)
         instalar_monitor_navegacao(context)
 
         page = None

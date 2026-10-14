@@ -24,7 +24,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
                                 'scripts', 'LEIA-ME.txt', 'Iniciar integração E-Desk.cmd',
                                 'Parar integração E-Desk.cmd'}, name
         assert not any(part in {'.edesk-local', 'perfil', 'logs', '__pycache__'} for part in path.parts), name
-    for source in ['edesk_bot/edesk_horas.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/comment_percentage.py', 'cloud_run/main.py']:
+    for source in ['edesk_bot/edesk_horas.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
         assert archive.read(source) == (ROOT / source).read_bytes()
     with tempfile.TemporaryDirectory(prefix='complete package ', dir=VALIDATION) as temporary:
         extracted = Path(temporary).resolve()
@@ -33,7 +33,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-percent-2',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='session-profile-3',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -76,7 +76,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'comment-percent-2'
+            assert health['integrationPackageVersion'] == 'session-profile-3'
             assert health['commentPercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',

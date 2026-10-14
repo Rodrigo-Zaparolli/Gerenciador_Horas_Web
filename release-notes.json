@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Visão anual: total de horas do ano, valores nas barras e colunas discretas de referência das metas mensais.",
-    "Planejamento anual: tabela centralizada em telas largas e barra horizontal visível para navegar em telas menores."
+    "E-Desk: integração local preserva a sessão do navegador por conta e aguarda a tela ficar pronta, sem a pausa fixa de 4 segundos na abertura da lista.",
+    "Para ativar essa melhoria, atualize o pacote de integração E-Desk e execute Iniciar integração E-Desk.cmd. A primeira autenticação ainda pode ser solicitada."
   ]
 }
