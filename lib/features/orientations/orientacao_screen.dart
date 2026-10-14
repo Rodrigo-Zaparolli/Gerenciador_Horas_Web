@@ -1,3 +1,4 @@
+import 'orientation_content.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'dart:async';
@@ -452,7 +453,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
   // ============================================================
 
   Future<void> _adicionarImagens(
-    OrientacaoModel item,
+    OrientacaoModel item, {VoidCallback? onChanged}
   ) async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -467,7 +468,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         ],
       );
 
-      if (result == null) {
+      if (!mounted || result == null) {
         return;
       }
 
@@ -505,6 +506,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         item.imagens.addAll(novasImagens);
         _cardComFoco = item.id;
       });
+      onChanged?.call();
 
       await _salvarBloco(item);
     } catch (e) {
@@ -515,7 +517,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
   }
 
   Future<void> _colarPrint(
-    OrientacaoModel item,
+    OrientacaoModel item, {VoidCallback? onChanged}
   ) async {
     if (_colandoImagem) {
       return;
@@ -539,15 +541,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         return;
       }
 
-      final String base64Imagem = base64Encode(bytes);
-
-      final String imagemBase64 = 'data:image/png;base64,$base64Imagem';
-
-      setState(() {
-        item.imagens.add(imagemBase64);
-      });
-
-      await _salvarBloco(item);
+      await _incluirPrint(item, bytes, onChanged: onChanged);
     } catch (e) {
       debugPrint(
         'Erro ao colar print: $e',
@@ -559,6 +553,13 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         });
       }
     }
+  }
+
+  Future<void> _incluirPrint(OrientacaoModel item, Uint8List bytes, {VoidCallback? onChanged}) async {
+    if (!mounted || bytes.isEmpty) return;
+    setState(() => item.imagens.add('data:image/png;base64,${base64Encode(bytes)}'));
+    onChanged?.call();
+    await _salvarBloco(item);
   }
 
   Future<void> _removerImagem(
@@ -854,61 +855,38 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
                                     Icons.description_outlined,
                                   ),
                                   const SizedBox(height: 8),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: item.controller,
-                                      maxLines: null,
-                                      expands: true,
-                                      textAlignVertical: TextAlignVertical.top,
-                                      style: TextStyle(
-                                        color: CoresApp.textoPrincipal,
-                                        fontSize: 14,
-                                        height: 1.55,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText:
-                                            'Digite aqui a orientação, procedimento ou regra...',
-                                        hintStyle: TextStyle(
-                                          color: CoresApp.textoSecundario,
-                                          fontSize: 13,
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          borderSide: BorderSide(
-                                            color: CoresApp.borda,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          borderSide: BorderSide(
-                                            color: CoresApp.primaria,
-                                            width: 1.4,
-                                          ),
-                                        ),
-                                        filled: true,
-                                        fillColor:
-                                            CoresApp.fundo.withValues(alpha: 0.45),
-                                        contentPadding:
-                                            const EdgeInsets.all(14),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildTituloSecao(
-                                    'ANEXOS',
-                                    Icons.image_outlined,
-                                  ),
+                                  Expanded(child: OrientationContent(
+                                    controller: item.controller,
+                                    images: item.imagens,
+                                    onPasteImage: (bytes) async {
+                                      await _incluirPrint(item, bytes, onChanged: () {
+                                        if (context.mounted) setStateModal(() {});
+                                      });
+                                      if (context.mounted) setStateModal(() {});
+                                    },
+                                    onRemoveImage: (index) {
+                                      setStateModal(() => item.imagens.removeAt(index));
+                                      _salvarBloco(item);
+                                    },
+                                    onOpenImage: _visualizarImagem,
+                                  )),
                                   const SizedBox(height: 8),
-                                  _buildAreaImagens(
-                                    item,
-                                    setStateModal,
-                                  ),
+                                  Wrap(spacing: 8, children: [
+                                    TextButton.icon(icon: const Icon(Icons.content_paste), label: const Text('Colar print'),
+                                      onPressed: () async {
+                                        await _colarPrint(item, onChanged: () {
+                                          if (context.mounted) setStateModal(() {});
+                                        });
+                                        if (context.mounted) setStateModal(() {});
+                                      }),
+                                    TextButton.icon(icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Adicionar imagem'),
+                                      onPressed: () async {
+                                        await _adicionarImagens(item, onChanged: () {
+                                          if (context.mounted) setStateModal(() {});
+                                        });
+                                        if (context.mounted) setStateModal(() {});
+                                      }),
+                                  ]),
                                 ],
                               ),
                             ),
@@ -2130,7 +2108,7 @@ class _OrientacaoCardState extends State<_OrientacaoCard> {
     AppAppearance.watch(context);
     final item = widget.item;
 
-    final bool possuiConteudo = item.controller.text.trim().isNotEmpty;
+    final bool possuiConteudo = item.controller.text.trim().isNotEmpty || item.imagens.isNotEmpty;
 
     return MouseRegion(
       onEnter: (_) {
