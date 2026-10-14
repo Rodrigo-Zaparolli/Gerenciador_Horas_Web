@@ -1,8 +1,9 @@
 import sys
-from comment_percentage import (parse_percentage, preflight_percentage,
+from comment_percentage import (parse_percentage,
                                 save_work_percentage, save_comment_then_percentage)
 from edesk_horas import localizar_solicitacao as localizar_solicitacao_validada
 from edesk_horas import abrir_trabalho as abrir_trabalho_validado
+from edesk_horas import abrir_trabalho_na_solicitacao
 
 from send_progress import observe_log
 import json
@@ -1278,11 +1279,22 @@ def abrir_trabalho(
 # ABRIR COMENTÁRIO
 # ================================================================
 
+def abrir_solicitacao_para_comentario(page, context, linha, solicitacao, preaberta=None):
+    """Open the request directly; never enter a work or retroactive hours."""
+    try:
+        return abrir_trabalho_validado(
+            page, context, linha, solicitacao, '',
+            pagina_solicitacao_preaberta=preaberta,
+            abrir_retroativo=False, somente_solicitacao=True)
+    except Exception as error:
+        raise RuntimeError('EDESK_COMMENT_REQUEST_NOT_OPENED') from error
+
+
 def abrir_comentario(page, context):
     """Abre o popup de comentário e retorna (pagina, frame).
 
     Mantém o contrato já utilizado pelo main(): o botão de comentários
-    é acionado na tela do trabalho e o frame é identificado pelo campo
+    é acionado na tela da solicitação e o frame é identificado pelo campo
     de tipo de comentário (#popC_ddlTipCom).
     """
 
@@ -2360,38 +2372,9 @@ def main():
                 raise RuntimeError("Request search returned no matching result")
         except Exception as error:
             raise RuntimeError("EDESK_COMMENT_REQUEST_NOT_FOUND") from error
-        try:
-            pagina_trabalho = abrir_trabalho_validado(
-                pagina_grid, context, linha, solicitacao, id_trabalho,
-                pagina_solicitacao_preaberta=preaberta, abrir_retroativo=False)
-        except Exception as error:
-            raise RuntimeError("EDESK_COMMENT_WORK_NOT_OPENED") from error
-        if pagina_trabalho is None:
-            raise RuntimeError("EDESK_COMMENT_WORK_NOT_OPENED")
-        url_trabalho = pagina_trabalho.url
-        if percentual is not None:
-            preflight_percentage(pagina_trabalho, solicitacao, id_trabalho)
-
-        # ========================================================
-        # TELA DE TRABALHO
-        # ========================================================
-
-        if pagina_trabalho is None:
-
-            raise RuntimeError(
-                "Tela de trabalho não encontrada."
-            )
-
-        page = pagina_trabalho
-
-        log("")
-        log("============================================")
-        log("TELA DE TRABALHO ATIVA")
-        log("============================================")
-
-        log(
-            f"URL: {page.url}"
-        )
+        page = abrir_solicitacao_para_comentario(
+            pagina_grid, context, linha, solicitacao, preaberta)
+        url_solicitacao_comentario = page.url
 
         # ========================================================
         # ABRIR COMENTÁRIO
@@ -2424,8 +2407,12 @@ def main():
             def salvar_percentual():
                 if percentual is None:
                     return
-                log('Atualizando %Realizado na tela do trabalho.')
-                pagina_trabalho.goto(url_trabalho, wait_until='domcontentloaded', timeout=30000)
+                log('Comentário salvo. Abrindo trabalho apenas para atualizar %Realizado.')
+                page.goto(url_solicitacao_comentario, wait_until='domcontentloaded', timeout=30000)
+                pagina_trabalho = abrir_trabalho_na_solicitacao(
+                    page, context, solicitacao, id_trabalho)
+                if pagina_trabalho is None:
+                    raise RuntimeError('Não foi possível abrir o trabalho para atualizar o percentual.')
                 save_work_percentage(pagina_trabalho, solicitacao, id_trabalho, percentual)
                 log('Percentual confirmado depois de recarregar o trabalho.')
 

@@ -1239,7 +1239,7 @@ def fechar_solicitacoes_duplicadas(context, selecionada, principal, snapshot):
             pass
 
 
-def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, pagina_solicitacao_preaberta=None, abrir_retroativo=True):
+def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, pagina_solicitacao_preaberta=None, abrir_retroativo=True, somente_solicitacao=False):
     id_trabalho = str(id_trabalho).strip()
     numero_solicitacao = str(numero_solicitacao).strip()
 
@@ -1268,6 +1268,11 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
     pagina_solicitacao = pagina_solicitacao_preaberta
 
     def contem_trabalho_esperado(pagina):
+        if somente_solicitacao:
+            if not eh_solicitacao(pagina.url):
+                return False
+            pagina.locator("#cph1_BtCom").first.wait_for(state="visible", timeout=20000)
+            return True
         inicio = time.time()
         while time.time() - inicio < 15:
             try:
@@ -1439,6 +1444,10 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
     # Also remove duplicates created by the search itself, before selecting work.
     snapshot = getattr(pagina_solicitacao_preaberta, "_edesk_search_snapshot", paginas_antes)
     fechar_solicitacoes_duplicadas(context, pagina_solicitacao, page, snapshot)
+
+    if somente_solicitacao:
+        pagina_solicitacao.bring_to_front()
+        return pagina_solicitacao
 
     pagina_solicitacao_atual = pagina_solicitacao
     log(f"Solicitação correta aberta: {pagina_solicitacao_atual.url}")

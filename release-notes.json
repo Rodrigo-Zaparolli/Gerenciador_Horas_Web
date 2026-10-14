@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Comentários: Ctrl+V no descritivo usa a colagem do navegador, sem exigir permissão adicional de leitura do clipboard.",
-    "Integração: a Minha Grid aguarda o campo de pesquisa antes de buscar a solicitação e mostra um erro específico se esse campo não carregar. Atualize o pacote completo para ativar essa melhoria."
+    "E-Desk: comentário segue Minha Grid > solicitação > Comentários, sem abrir trabalho ou retroativo antes do envio.",
+    "O percentual é atualizado somente após salvar o comentário. Atualize também o pacote de integração E-Desk neste computador."
   ]
 }
