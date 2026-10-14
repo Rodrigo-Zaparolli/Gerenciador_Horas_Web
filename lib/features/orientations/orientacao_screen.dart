@@ -839,6 +839,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
                           _buildCabecalhoModal(
                             item,
                             context,
+                            setStateModal,
                           ),
                           Divider(
                             color: CoresApp.borda,
@@ -953,6 +954,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
   Widget _buildCabecalhoModal(
     OrientacaoModel item,
     BuildContext dialogContext,
+    StateSetter setStateModal,
   ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -1005,6 +1007,13 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
             ),
           ),
           _buildIndicadorSalvamento(item),
+          IconButton(
+            tooltip: 'Editar nome da orientação',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => _renomearOrientacao(item, () {
+              if (dialogContext.mounted) setStateModal(() {});
+            }),
+          ),
           const SizedBox(width: 8),
           IconButton(
             tooltip: 'Fechar',
@@ -1019,6 +1028,33 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _renomearOrientacao(OrientacaoModel item, VoidCallback onChanged) async {
+    item.tituloController.text = item.titulo;
+    final form = GlobalKey<FormState>();
+    final nome = await showDialog<String>(context: context, builder: (context) {
+      void salvar() {
+        if (form.currentState!.validate()) Navigator.of(context).pop(item.tituloController.text.trim());
+      }
+      return AlertDialog(
+        title: const Text('Editar nome da orientação'),
+        content: Form(key: form, child: TextFormField(
+          controller: item.tituloController, autofocus: true, maxLength: 150,
+          decoration: const InputDecoration(labelText: 'Nome da orientação'),
+          validator: (value) => value == null || value.trim().isEmpty ? 'Informe um nome.' : null,
+          onFieldSubmitted: (_) => salvar(),
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+          FilledButton(onPressed: salvar, child: const Text('Salvar')),
+        ],
+      );
+    });
+    if (!mounted || nome == null || nome == item.titulo) return;
+    setState(() => item.titulo = nome);
+    onChanged();
+    await _salvarBloco(item);
   }
 
   Widget _buildIndicadorSalvamento(
