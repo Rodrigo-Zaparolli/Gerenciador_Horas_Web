@@ -9,6 +9,17 @@ import 'support/image_clipboard_test_stub.dart'
     if (dart.library.js_interop) 'support/image_clipboard_test_web.dart';
 
 void main() {
+  testWidgets('image starts above empty text and moves below a description', (tester) async {
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: OrientationContent(
+      controller: controller, images: ['data:image/png;base64,${base64Encode(png)}'],
+      onPasteImage: (_) async {}, onRemoveImage: (_) {}, onOpenImage: (_) {}))));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.byType(Image)).dy, lessThan(tester.getTopLeft(find.byType(TextField)).dy));
+    controller.text = 'Descrição'; await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.byType(Image)).dy, greaterThan(tester.getTopLeft(find.byType(TextField)).dy));
+  });
   testWidgets('browser paste renders immediately while persistence is still pending', (tester) async {
     final controller = TextEditingController();
     final images = <String>[];

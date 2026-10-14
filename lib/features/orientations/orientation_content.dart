@@ -22,6 +22,7 @@ class _OrientationContentState extends State<OrientationContent> {
   @override
   void initState() {
     super.initState();
+    widget.controller.addListener(refresh);
     stopPaste = listenForImagePaste(accepts: () => mounted && focus.hasFocus,
       onImage: (bytes) async { await widget.onPasteImage(bytes); },
       onError: () {
@@ -30,7 +31,16 @@ class _OrientationContentState extends State<OrientationContent> {
       });
   }
   @override
-  void dispose() { stopPaste(); focus.dispose(); super.dispose(); }
+  void didUpdateWidget(covariant OrientationContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(refresh);
+      widget.controller.addListener(refresh);
+    }
+  }
+  void refresh() { if (mounted) setState(() {}); }
+  @override
+  void dispose() { widget.controller.removeListener(refresh); stopPaste(); focus.dispose(); super.dispose(); }
 
   Widget image(String value, int index) {
     Widget preview;
@@ -53,11 +63,14 @@ class _OrientationContentState extends State<OrientationContent> {
       border: Border.all(color: Theme.of(context).colorScheme.outline), borderRadius: BorderRadius.circular(12)),
     child: SingleChildScrollView(padding: const EdgeInsets.all(14), child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        TextField(controller: widget.controller, maxLines: null, minLines: 5,
+        if (widget.controller.text.trim().isEmpty && widget.images.isNotEmpty)
+          for (var i = 0; i < widget.images.length; i++) image(widget.images[i], i),
+        TextField(key: const ValueKey('orientation-description'), controller: widget.controller, maxLines: null, minLines: 5,
           style: const TextStyle(fontSize: 14, height: 1.55),
           decoration: const InputDecoration(hintText: 'Digite a orientação ou cole um print aqui...',
             border: InputBorder.none, enabledBorder: InputBorder.none, focusedBorder: InputBorder.none, filled: false)),
-        for (var i = 0; i < widget.images.length; i++) image(widget.images[i], i),
+        if (widget.controller.text.trim().isNotEmpty || widget.images.isEmpty)
+          for (var i = 0; i < widget.images.length; i++) image(widget.images[i], i),
       ])),
   ));
 }
