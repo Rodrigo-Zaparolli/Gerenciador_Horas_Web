@@ -1,0 +1,1 @@
+Antes de cada publica??o, atualizar release-notes.json com as altera??es concretas em linguagem simples. O script de build inclui esses textos no manifesto da vers?o. O modal l? as notas da vers?o publicada, antes de recarregar o app. N?o incluir credenciais ou dados de clientes.

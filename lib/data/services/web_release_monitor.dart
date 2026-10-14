@@ -25,12 +25,14 @@ class WebReleaseMonitor extends StatefulWidget {
       {super.key,
       required this.child,
       this.releaseLoader,
+      this.notesLoader,
       this.installedRelease,
       this.synchronize,
       this.reload,
       this.checkInterval = const Duration(seconds: 30)});
   final Widget child;
   final Future<String?> Function()? releaseLoader;
+  final Future<List<String>> Function()? notesLoader;
   final String? installedRelease;
   final VoidCallback? synchronize;
   final VoidCallback? reload;
@@ -82,8 +84,10 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
     _lastCheck = DateTime.now();
     try {
       String? release;
+      List<String> notes = [];
       if (widget.releaseLoader != null) {
         release = await widget.releaseLoader!();
+        notes = await widget.notesLoader?.call() ?? [];
       } else {
         final response = await http
             .get(Uri.base.resolve('web-release.json').replace(queryParameters: {
@@ -92,6 +96,13 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
             .timeout(const Duration(seconds: 10));
         if (response.statusCode != 200) return;
         final decoded = jsonDecode(response.body);
+        if (decoded is Map && decoded['changes'] is List) {
+          notes = (decoded['changes'] as List)
+              .whereType<String>()
+              .map((text) => text.trim())
+              .where((text) => text.isNotEmpty)
+              .toList();
+        }
         release = decoded is Map && decoded['release'] is String
             ? decoded['release'] as String
             : null;
@@ -107,9 +118,32 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
           context: context,
           builder: (dialog) => AlertDialog(
                 title: const Text('Nova versão disponível'),
-                content: const Text(
-                    'O app recebeu melhorias. Os textos dos comentários e e-mails têm recuperação local. '
-                    'Salve alterações em outros formulários e selecione novamente os anexos após atualizar.'),
+                content: SizedBox(
+                  width: 440,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (notes.isNotEmpty) ...[
+                          const Text('O que mudou nesta vers?o:',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          for (final note in notes)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text('? $note'),
+                            ),
+                          const SizedBox(height: 12),
+                        ] else
+                          const Text('Uma nova vers?o do app est? dispon?vel.'),
+                        const Text(
+                            'Os textos dos coment?rios e e-mails t?m recupera??o local. '
+                            'Salve altera??es em outros formul?rios e selecione novamente os anexos ap?s atualizar.'),
+                      ],
+                    ),
+                  ),
+                ),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(dialog, false),

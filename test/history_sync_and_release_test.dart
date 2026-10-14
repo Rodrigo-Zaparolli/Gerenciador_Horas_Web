@@ -132,6 +132,30 @@ void main() {
               reload: reload,
               child: child ?? const Scaffold(body: Text('App')))));
 
+  testWidgets('shows release changes before updating on a small screen',
+      (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        home: WebReleaseMonitor(
+      installedRelease: 'old',
+      releaseLoader: () async => 'new',
+      notesLoader: () async => ['Gr?fico di?rio de horas.', 'Meta mensal.'],
+      synchronize: () {},
+      child: const Scaffold(),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('O que mudou nesta vers?o:'), findsOneWidget);
+    expect(find.text('? Gr?fico di?rio de horas.'), findsOneWidget);
+    expect(find.text('? Meta mensal.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Depois'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('asks before reloading and reloads only with explicit click',
       (tester) async {
     var reloads = 0;
