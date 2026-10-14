@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-Desk: comentário segue Minha Grid > solicitação > Comentários, sem abrir trabalho ou retroativo antes do envio.",
-    "O percentual é atualizado somente após salvar o comentário. Atualize também o pacote de integração E-Desk neste computador."
+    "E-Desk: envio de comentários seleciona a aba Comentários da solicitação antes de abrir o editor, conforme o fluxo demonstrado.",
+    "Atualize também a integração E-Desk no computador usado para o envio."
   ]
 }

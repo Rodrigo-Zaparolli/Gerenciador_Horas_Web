@@ -1,4 +1,5 @@
 import sys
+import re
 from comment_percentage import (parse_percentage,
                                 save_work_percentage, save_comment_then_percentage)
 from edesk_horas import localizar_solicitacao as localizar_solicitacao_validada
@@ -1290,6 +1291,23 @@ def abrir_solicitacao_para_comentario(page, context, linha, solicitacao, preaber
         raise RuntimeError('EDESK_COMMENT_REQUEST_NOT_OPENED') from error
 
 
+def selecionar_aba_comentarios(page):
+    """Select the request's comments tab before opening a new comment."""
+    try:
+        aba = page.get_by_text(re.compile(r'^Comentários\s*(?:\(\d+\))?$'))
+        aba.wait_for(state='visible', timeout=20000)
+        aba.click(timeout=15000)
+        page.wait_for_function(r"""() => {
+            const pattern = /^Comentários\s*(?:\(\d+\))?$/;
+            return [...document.querySelectorAll('a,span,[role="tab"]')].some(e => {
+                if (!pattern.test((e.textContent || '').trim()) || !e.getClientRects().length) return false;
+                return !!e.closest('.rtsSelected,.ajax__tab_active,[aria-selected="true"]');
+            });
+        }""", timeout=20000)
+    except Exception as error:
+        raise RuntimeError('EDESK_COMMENT_TAB_NOT_OPENED') from error
+
+
 def abrir_comentario(page, context):
     """Abre o popup de comentário e retorna (pagina, frame).
 
@@ -1304,6 +1322,7 @@ def abrir_comentario(page, context):
     log("============================================")
 
     page.bring_to_front()
+    selecionar_aba_comentarios(page)
 
     botao = page.locator("#cph1_BtCom")
     botao.wait_for(state="visible", timeout=15000)

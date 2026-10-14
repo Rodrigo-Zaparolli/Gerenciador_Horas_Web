@@ -61,9 +61,45 @@ with patch.object(h,'abrir_trabalho_na_solicitacao',side_effect=AssertionError('
                 env=dict(os.environ,EDESK_DATA_DIR=temporary),capture_output=True,text=True,timeout=30)
             self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_comments_tab_precedes_editor_and_failure_does_not_click_new_comment(self):
+        root=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temporary:
+            program="""
+import sys
+sys.path.insert(0,sys.argv[1])
+import edesk_comentario as c
+from unittest.mock import Mock
+calls=[]
+page=Mock()
+page.is_closed.return_value=False
+page.frames=[]
+page.get_by_text.return_value.wait_for.side_effect=lambda **kw: calls.append('tab-ready')
+page.get_by_text.return_value.click.side_effect=lambda **kw: calls.append('tab-click')
+page.wait_for_function.side_effect=lambda *a,**kw: calls.append('tab-selected')
+button=Mock()
+button.click.side_effect=lambda: calls.append('new-comment')
+field=Mock()
+field.count.return_value=1
+page.locator.side_effect=lambda selector: button if selector=='#cph1_BtCom' else field
+context=Mock(pages=[page])
+assert c.abrir_comentario(page,context)==(page,page)
+assert calls==['tab-ready','tab-click','tab-selected','new-comment'],calls
+calls.clear()
+page.wait_for_function.side_effect=TimeoutError('fixture')
+try:
+ c.abrir_comentario(page,context)
+ raise AssertionError('missing failure')
+except RuntimeError as error:
+ assert str(error)=='EDESK_COMMENT_TAB_NOT_OPENED'
+assert 'new-comment' not in calls
+"""
+            result=subprocess.run([sys.executable,'-I','-c',program,str(root/'edesk_bot')],
+                env=dict(os.environ,EDESK_DATA_DIR=temporary),capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stderr)
+
     def test_navigation_errors_are_specific_and_do_not_expose_raw_logs(self):
         from cloud_run import main
-        for marker in ['EDESK_GRID_SEARCH_NOT_READY', 'EDESK_COMMENT_REQUEST_NOT_FOUND', 'EDESK_COMMENT_WORK_NOT_OPENED']:
+        for marker in ['EDESK_COMMENT_TAB_NOT_OPENED', 'EDESK_GRID_SEARCH_NOT_READY', 'EDESK_COMMENT_REQUEST_NOT_FOUND', 'EDESK_COMMENT_WORK_NOT_OPENED']:
             message = main._automation_failure_message(marker + ' secret-token private-session-url')
             self.assertIn('Nenhum coment\u00e1rio foi enviado', message)
             self.assertNotIn('secret-token', message)

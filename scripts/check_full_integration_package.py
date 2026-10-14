@@ -33,7 +33,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-request-direct-5',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-request-tab-6',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -50,6 +50,9 @@ with sync_playwright() as p:
     page=browser.new_page()
     page.set_content('<h1>Runtime portable OK</h1>')
     assert page.locator('h1').inner_text()=='Runtime portable OK'
+    page.set_content('<ul class="RadTabStrip"><li><a class="rtsLink" onclick="this.classList.add(&quot;rtsSelected&quot;)"><span>Coment&#225;rios (27)</span></a></li></ul><button id="cph1_BtCom">Coment&#225;rio</button>')
+    edesk_comentario.selecionar_aba_comentarios(page)
+    assert page.locator('.rtsSelected').count()==1
     browser.close()
 print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
 '''
@@ -76,7 +79,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'comment-request-direct-5'
+            assert health['integrationPackageVersion'] == 'comment-request-tab-6'
             assert health['commentPercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',
