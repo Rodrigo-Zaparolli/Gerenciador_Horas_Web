@@ -250,7 +250,10 @@ class _MonthlyPerformanceState extends State<MonthlyPerformance> {
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: chartCard),
             const SizedBox(width: 16),
-            SizedBox(width: 300, child: sidebar(387))
+            SizedBox(
+                width:
+                    math.min(440, math.max(360, constraints.maxWidth * 0.34)),
+                child: sidebar(387))
           ])
         else ...[chartCard, const SizedBox(height: 12), sidebar(265)],
         const SizedBox(height: 16),
@@ -307,7 +310,8 @@ class _MonthlyPerformanceState extends State<MonthlyPerformance> {
                   getTitlesWidget: (value, meta) => Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                          monthlyDayLabel(DateTime(widget.year, month, value.toInt() + 1)),
+                          monthlyDayLabel(
+                              DateTime(widget.year, month, value.toInt() + 1)),
                           textAlign: TextAlign.center,
                           style: style))))),
       barTouchData: BarTouchData(

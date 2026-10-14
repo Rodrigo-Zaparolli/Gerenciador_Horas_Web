@@ -1,3 +1,4 @@
+import 'package:gerenciador_horas/features/metrics/annual_performance_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
@@ -87,6 +88,35 @@ void main() {
             widget.style?.fontSize == 23),
         findsNWidgets(2));
     expect(tester.getSize(find.byType(MonthlyPerformance)).height, height);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'annual details show the real percentage and handle a missing target',
+      (tester) async {
+    final goals = List.filled(12, 60)..[1] = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+                width: 440,
+                height: 260,
+                child: AnnualPerformanceChart(
+                    year: 2026,
+                    totals: List.filled(12, 90),
+                    goals: goals,
+                    selectedMonth: 1,
+                    color: Colors.blue,
+                    onMonthSelected: (_) {})))));
+    final january = tester.widget<Tooltip>(find.ancestor(
+        of: find.byKey(const ValueKey('annual-month-1')),
+        matching: find.byType(Tooltip)));
+    expect(january.richMessage!.toPlainText(), contains('Janeiro 2026'));
+    expect(january.richMessage!.toPlainText(), contains('Cobradas  01:30'));
+    expect(january.richMessage!.toPlainText(), contains('Atingido  150%'));
+    final february = tester.widget<Tooltip>(find.ancestor(
+        of: find.byKey(const ValueKey('annual-month-2')),
+        matching: find.byType(Tooltip)));
+    expect(
+        february.richMessage!.toPlainText(), contains('Sem meta configurada'));
     expect(tester.takeException(), isNull);
   });
   for (final theme in AppVisualTheme.values) {
