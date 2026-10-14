@@ -1,3 +1,5 @@
+import '../../../core/platform/comment_paste.dart';
+import 'comment_paste_action.dart';
 import '../../edesk/comment_document_snapshot.dart';
 import 'comment_draft_recovery.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
@@ -4307,6 +4309,18 @@ class ComentarioModal {
     final recoveryStatus = draftRecovery.status;
     void persistRecovery() => draftRecovery.persist();
 
+    var editorOpen = true;
+    final stopCommentPaste = listenForCommentPaste(
+      accepts: () => editorOpen && editorFocusNode.hasFocus && !enviandoEdesk && !testandoEdesk && !salvando,
+      onText: (text) {
+        final selection = editorController.selection;
+        final start = selection.start.clamp(0, editorController.document.length - 1);
+        final end = selection.end.clamp(start, editorController.document.length - 1);
+        editorController.replaceText(start, end - start, text,
+          TextSelection.collapsed(offset: start + text.length));
+      },
+      onImage: (bytes) => adicionarImagemAoEditor(base64Encode(bytes)),
+    );
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -7167,7 +7181,7 @@ class ComentarioModal {
                                                                 child: Actions(
                                                                   actions: {
                                                                     _ColarComentarioIntent:
-                                                                        CallbackAction<
+                                                                        kIsWeb ? BrowserCommentPasteAction() : CallbackAction<
                                                                             _ColarComentarioIntent>(
                                                                       onInvoke:
                                                                           (intent) {
@@ -7629,6 +7643,8 @@ class ComentarioModal {
         );
       },
     ).whenComplete(() {
+      editorOpen = false;
+      stopCommentPaste();
       draftRecovery.dispose();
       editorController.removeListener(sincronizarEstadoEditor);
       percentualController.dispose();

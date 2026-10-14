@@ -397,6 +397,18 @@ def _automation_failure_message(output: str):
         return ('O E-Desk respondeu ao salvamento do comentario, mas o percentual nao foi confirmado. '
                 'Confira o comentario e o %Realizado no E-Desk antes de reenviar para evitar duplicidade.')
 
+    if "EDESK_COMMENT_REQUEST_NOT_FOUND" in output:
+        return ('A integração não localizou a solicitação na Minha Grid. '
+                'Nenhum comentário foi enviado nesta tentativa. Confira o número vinculado ao projeto e o acesso dessa conta à solicitação.')
+
+    if "EDESK_COMMENT_WORK_NOT_OPENED" in output:
+        return ('A integração não abriu a tela do trabalho a partir da Minha Grid. '
+                'Nenhum comentário foi enviado nesta tentativa. Confira a solicitação e o trabalho vinculados ao projeto.')
+
+    if "EDESK_GRID_SEARCH_NOT_READY" in output:
+        return ('A Minha Grid não disponibilizou o campo de pesquisa da solicitação. '
+                'Nenhum comentário foi enviado nesta tentativa. Confira o acesso ao E-Desk e tente novamente.')
+
     # Return only fixed messages, never raw logs containing user data or session URLs.
     if "Tempo limite de autenticação excedido" in output:
         return ("O login no E-Desk não foi concluído. Confira suas credenciais e conclua "

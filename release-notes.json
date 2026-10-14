@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Comentários: Conferir mostra uma cópia do descritivo atual no mesmo editor em modo de leitura, com texto, imagens e formatação, sem buscar conteúdo antigo do histórico.",
-    "A conversão para envio preserva a ordem do documento e não acrescenta quebras ao redor das imagens."
+    "Comentários: Ctrl+V no descritivo usa a colagem do navegador, sem exigir permissão adicional de leitura do clipboard.",
+    "Integração: a Minha Grid aguarda o campo de pesquisa antes de buscar a solicitação e mostra um erro específico se esse campo não carregar. Atualize o pacote completo para ativar essa melhoria."
   ]
 }

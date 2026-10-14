@@ -453,7 +453,10 @@ def acessar_minha_grid(
             f"Aviso durante acesso à Grid: {erro}"
         )
 
-    page.wait_for_timeout(4000)
+    try:
+        page.locator("#cph1_txtSol").first.wait_for(state="visible", timeout=20000)
+    except Exception as error:
+        raise RuntimeError("EDESK_GRID_SEARCH_NOT_READY") from error
 
     log(
         f"URL atual da Grid: {page.url}"
@@ -2327,17 +2330,8 @@ def main():
         )
 
         # ========================================================
-        # AGUARDAR A TABELA PRINCIPAL DA GRID
-        # ========================================================
-
-        page.locator(
-            "#ctl00_cph1_hgrSol_ctl00"
-        ).wait_for(
-            state="visible",
-            timeout=30000,
-        )
-
-        page.wait_for_timeout(1000)
+        # The request search is ready; the result table may be absent until
+        # a search is submitted. The validated search below waits for results.
 
         log("")
         log("============================================")
@@ -2359,11 +2353,21 @@ def main():
         # LOCALIZAR SOLICITAÇÃO
         # ========================================================
 
-        pagina_grid, linha, preaberta = localizar_solicitacao_validada(
-            page, context, solicitacao)
-        pagina_trabalho = abrir_trabalho_validado(
-            pagina_grid, context, linha, solicitacao, id_trabalho,
-            pagina_solicitacao_preaberta=preaberta, abrir_retroativo=False)
+        try:
+            pagina_grid, linha, preaberta = localizar_solicitacao_validada(
+                page, context, solicitacao)
+            if pagina_grid is None or (linha is None and preaberta is None):
+                raise RuntimeError("Request search returned no matching result")
+        except Exception as error:
+            raise RuntimeError("EDESK_COMMENT_REQUEST_NOT_FOUND") from error
+        try:
+            pagina_trabalho = abrir_trabalho_validado(
+                pagina_grid, context, linha, solicitacao, id_trabalho,
+                pagina_solicitacao_preaberta=preaberta, abrir_retroativo=False)
+        except Exception as error:
+            raise RuntimeError("EDESK_COMMENT_WORK_NOT_OPENED") from error
+        if pagina_trabalho is None:
+            raise RuntimeError("EDESK_COMMENT_WORK_NOT_OPENED")
         url_trabalho = pagina_trabalho.url
         if percentual is not None:
             preflight_percentage(pagina_trabalho, solicitacao, id_trabalho)
