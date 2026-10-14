@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verificar espelho do Excel</title>
+  <style>
+    body{margin:0;padding:24px;background:#0b0f19;color:#e2e8f0;font:16px/1.6 system-ui,sans-serif}
+    main{max-width:720px;margin:5vh auto;padding:28px;background:#131d2b;border:1px solid #334155;border-radius:18px}
+    button{padding:12px 18px;border:0;border-radius:10px;background:#00d9ed;font:inherit;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;background:#1e293b;border-radius:10px}a{color:#00d9ed}
+  </style>
+</head>
+<body><main>
+  <h1>Verificar espelho do Excel</h1>
+  <p>Esta verificação identifica a integração que responde neste computador. Não abre planilhas, não altera arquivos e não envia horas ao E-Desk.</p>
+  <button id="check">Verificar e gerar diagnóstico</button>
+  <pre id="result" role="status" aria-live="polite">Clique para verificar.</pre>
+  <button id="copy" hidden>Copiar diagnóstico</button>
+  <p><a href="/">Voltar ao app</a></p>
+</main>
+<script src="native_local_files_v2.js"></script>
+<script>
+const check=document.querySelector('#check'), result=document.querySelector('#result'), copy=document.querySelector('#copy');
+check.onclick=async()=>{
+  check.disabled=true;copy.hidden=true;result.textContent='Verificando a conexão local…';
+  try{
+    const call=async args=>JSON.parse(await nativeLocalFilesRequest(JSON.stringify(args)));
+    const health=await call({action:'health',interactive:true});
+    const report={pagina:location.origin,ponte:window.nativeLocalFilesBridgeVersion,conexao:health};
+    try{report.ultimaTentativa=JSON.parse(localStorage.getItem('nativeExcelPreviewDiagnostic'));}catch(_){}
+    if(health.status===200 && health.data?.service==='gerenciador-horas-edesk'){
+      // An intentionally invalid token guarantees no native operation can run.
+      const probe=await call({action:'preview',interactive:true,token:'invalid-diagnostic-token',reference:'',range:''});
+      report.rotaExcel={status:probe.status ?? null,erro:probe.error ?? null,mensagem:probe.message ?? probe.data?.message ?? null};
+      report.autenticacaoProtegida=probe.status===401;
+    }
+    result.textContent=JSON.stringify(report,null,2);copy.hidden=false;
+  }catch(_){result.textContent='Não foi possível concluir a verificação. Recarregue a página e tente novamente.';}
+  finally{check.disabled=false;}
+};
+copy.onclick=async()=>{try{await navigator.clipboard.writeText(result.textContent);copy.textContent='Diagnóstico copiado';}catch(_){copy.textContent='Selecione o texto acima e copie';}};
+</script>
+</body></html>

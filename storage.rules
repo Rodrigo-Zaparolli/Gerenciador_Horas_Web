@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{userId}/projects/{projectId}/files/{fileName} {
+      allow read: if request.auth != null
+        && request.auth.uid == userId;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType.matches(
+          '^(application/pdf|application/msword|application/vnd\\.ms-excel|application/vnd\\.openxmlformats-officedocument\\.(spreadsheetml\\.sheet|wordprocessingml\\.document)|application/vnd\\.ms-excel\\.sheet\\.macroEnabled\\.12|text/csv|text/plain)$'
+        );
+
+      allow delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+  }
+}

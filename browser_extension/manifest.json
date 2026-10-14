@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Gerenciador de Horas — E-Desk",
+  "version": "1.0.3",
+  "description": "Envia horas, comentários e fases usando sua sessão do E-Desk, sem servidor local.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://promob.e-desk.com.br/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "Abrir E-Desk"},
+  "content_scripts": [{
+    "matches": ["https://gerenciador-horas.web.app/*", "https://gerenciador-horas.firebaseapp.com/*"],
+    "js": ["bridge.js"],
+    "run_at": "document_start"
+  }]
+}

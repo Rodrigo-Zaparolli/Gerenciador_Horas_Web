@@ -1,0 +1,141 @@
+"""User-selected Windows paths, scoped to Firebase UID, never supplied to startfile by HTTP."""
+import base64
+import os
+import re
+import sqlite3
+import threading
+import uuid
+from contextlib import contextmanager
+from pathlib import Path, PureWindowsPath
+from urllib.parse import quote, unquote, urlsplit
+
+DB_PATH = Path(__file__).resolve().parent.parent / '.edesk-local' / 'local-files.sqlite3'
+EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
+picker_lock = threading.Lock()
+PROTOCOL_VERSION = 'excel-preview-2'
+SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview'})
+
+
+def parse_reference(reference, uid):
+    # Legacy editor paths also require a one-time native selection; never open
+    # the client-provided path directly, even if it already exists.
+    if len(reference) <= 4096 and re.match(r'^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)', reference):
+        legacy = PureWindowsPath(reference)
+        return ('file' if legacy.suffix.lower() in EXTENSIONS else 'folder'), legacy.name
+    uri = urlsplit(reference)
+    parts = [unquote(part) for part in uri.path.split('/')[1:]]
+    if (uri.scheme not in {'browser-file', 'browser-folder', 'desktop-file', 'desktop-folder'}
+            or uri.netloc != 'local' or uri.query or uri.fragment or len(parts) != 3
+            or parts[0] != uid or not re.fullmatch(r'[0-9a-f-]{36}', parts[1])
+            or not parts[2] or '/' in parts[2] or '\\' in parts[2]):
+        raise ValueError('Vínculo local inválido para esta conta.')
+    return ('folder' if uri.scheme.endswith('folder') else 'file'), parts[2]
+
+
+def choose(kind, title):
+    # Each Tk instance is created, used and destroyed on the same request thread.
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+    try:
+        if kind == 'folder':
+            return filedialog.askdirectory(parent=root, title=title)
+        return filedialog.askopenfilename(parent=root, title=title,
+            filetypes=[('Documentos do projeto', '*.xlsx *.xls *.xlsm *.csv *.doc *.docx *.pdf *.txt')])
+    finally:
+        root.destroy()
+
+
+def _validate(path, kind):
+    value = Path(path).resolve(strict=True)
+    if kind == 'folder' and not value.is_dir():
+        raise ValueError('Selecione uma pasta.')
+    if kind == 'file' and (not value.is_file() or value.suffix.lower() not in EXTENSIONS):
+        raise ValueError('Selecione uma planilha ou documento do projeto.')
+    return value
+
+
+@contextmanager
+def _connection():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(DB_PATH)
+    con.execute('CREATE TABLE IF NOT EXISTS files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+    try:
+        with con:
+            yield con
+    finally:
+        con.close()
+
+
+def execute(uid, body):
+    if os.name != 'nt':
+        raise ValueError('A abertura local está disponível no Windows.')
+    action = body.get('action')
+    if action not in SUPPORTED_ACTIONS:
+        raise ValueError('Ação local inválida.')
+    reference = body.get('reference')
+    if action in {'open', 'read', 'preview'}:
+        if not isinstance(reference, str):
+            raise ValueError('Selecione um arquivo ou pasta no editor.')
+        kind, expected_name = parse_reference(reference, uid)
+        if action == 'preview' and kind != 'file':
+            raise ValueError('Selecione a planilha do trabalho, não a pasta.')
+        with _connection() as con:
+            record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
+        if record:
+            path = _validate(record[0], kind)
+        elif action == 'read':
+            raise ValueError('Selecione novamente o arquivo no editor deste computador.')
+        else:
+            if not picker_lock.acquire(blocking=False):
+                raise ValueError('Conclua a seleção de arquivo ou pasta que já está aberta.')
+            try:
+                selected = choose(kind, f'Localize {expected_name} — vínculo deste computador')
+                if not selected:
+                    return {'cancelled': True}
+                path = _validate(selected, kind)
+                if path.name.casefold() != expected_name.casefold():
+                    raise ValueError('O nome selecionado é diferente do vínculo. Altere o arquivo ou pasta no editor.')
+                _save(uid, reference, path, kind)
+            finally:
+                picker_lock.release()
+        if action == 'open':
+            os.startfile(str(path))
+            return {'opened': True}
+        if action == 'preview':
+            from local_edesk.excel_mirror import render
+            return render(path, body.get('range', ''))
+        if kind != 'file' or path.stat().st_size > 25 * 1024 * 1024:
+            raise ValueError('Selecione um arquivo de até 25 MB para a prévia.')
+        return {'base64': base64.b64encode(path.read_bytes()).decode('ascii')}
+    kind = 'file' if action == 'pick-file' else 'folder'
+    name = body.get('name', '')
+    if action == 'create-folder' and (not isinstance(name, str) or not name.strip()):
+        raise ValueError('Informe o nome da pasta.')
+    if not picker_lock.acquire(blocking=False):
+        raise ValueError('Conclua a seleção de arquivo ou pasta que já está aberta.')
+    try:
+        selected = choose(kind, 'Selecione o arquivo original' if kind == 'file' else
+            'Escolha onde criar a pasta' if action == 'create-folder' else 'Selecione a pasta do projeto')
+        if not selected:
+            return {'cancelled': True}
+        path = _validate(selected, kind)
+        if action == 'create-folder':
+            name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '-', name).strip().rstrip('. ')[:180]
+            if not name or name in {'.', '..'}:
+                raise ValueError('Nome de pasta inválido.')
+            path = path / name
+            path.mkdir(exist_ok=True)
+            path = _validate(path, kind)
+        reference = f'desktop-{kind}://local/{quote(uid, safe="")}/{uuid.uuid4()}/{quote(path.name or "Raiz do disco", safe="")}'
+        _save(uid, reference, path, kind)
+        return {'reference': reference}
+    finally:
+        picker_lock.release()
+
+
+def _save(uid, reference, path, kind):
+    with _connection() as con:
+        con.execute('INSERT OR REPLACE INTO files VALUES(?,?,?,?)', (uid, reference, str(path), kind))

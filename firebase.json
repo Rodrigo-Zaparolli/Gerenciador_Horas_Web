@@ -1,0 +1,88 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "gerenciador-horas",
+          "appId": "1:318491809401:android:4f4c2a1a49bd4136fe66a8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "gerenciador-horas",
+          "configurations": {
+            "android": "1:318491809401:android:4f4c2a1a49bd4136fe66a8",
+            "ios": "1:318491809401:ios:d57e7119e9b3af35fe66a8",
+            "macos": "1:318491809401:ios:d57e7119e9b3af35fe66a8",
+            "web": "1:318491809401:web:6e512fe183f7a4f4fe66a8",
+            "windows": "1:318491809401:web:f6ba337970e0fe62fe66a8"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v1.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v2.zip",
+        "type": 301
+      },
+      {
+        "source": "/downloads/abertura-local-excel-v2-windows.zip",
+        "destination": "/downloads/abertura-local-windows.zip",
+        "type": 301
+      },
+      {
+        "source": "/downloads/abertura-local-excel-v3-windows.zip",
+        "destination": "/downloads/abertura-local-windows.zip",
+        "type": 301
+      },
+      {
+        "source": "/downloads/abertura-local-excel-windows.zip",
+        "destination": "/downloads/abertura-local-windows.zip",
+        "type": 301
+      },
+      {
+        "source": "/downloads/edesk-extensao-1.0.1.zip",
+        "destination": "/downloads/edesk-extensao-1.0.3.zip",
+        "type": 301
+      },
+      {
+        "source": "/downloads/edesk-extensao-1.0.2.zip",
+        "destination": "/downloads/edesk-extensao-1.0.3.zip",
+        "type": 301
+      }
+    ]
+  }
+}

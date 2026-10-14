@@ -1,0 +1,16 @@
+**
+!cloud_run/
+!cloud_run/**
+!edesk_bot/
+!edesk_bot/config.py
+!edesk_bot/edesk_comentario.py
+!edesk_bot/edesk_fases.py
+!edesk_bot/edesk_horas.py
+!edesk_bot/comment_percentage.py
+!edesk_bot/phase_confirmation.py
+!edesk_bot/send_progress.py
+!local_edesk/
+!local_edesk/__init__.py
+!local_edesk/central.py
+!local_edesk/journal.py
+**/__pycache__/

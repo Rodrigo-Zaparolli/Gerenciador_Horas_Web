@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Gerencie projetos, acompanhe tarefas e registre suas horas de trabalho.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Gestão de Horas">
+  <meta name="theme-color" content="#D5DFE9">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Gestão de Horas e Projetos</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="app-loading" role="status" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#D5DFE9;color:#172B43;font:16px system-ui,sans-serif">
+    Carregando Gestão de Horas…
+  </div>
+  <noscript>Ative o JavaScript no navegador para utilizar o aplicativo.</noscript>
+  <script>
+    try {
+      if (localStorage.getItem('gerenciador_horas.appearance') === 'dark') {
+        document.getElementById('app-loading').style.background = '#0B1220';
+        document.getElementById('app-loading').style.color = '#E8EFF7';
+        document.querySelector('meta[name="theme-color"]').content = '#0B1220';
+      } else {
+        const backgrounds = { sand: '#E5E1DA', sage: '#E1E5E2', petroleum: '#20282D', rose: '#E5E5E9', ruby: '#E3E5E8', black: '#090A0C', slate: '#A5B4C2', ocean: '#15384A', azure: '#D3E2EF' };
+        const savedTheme = localStorage.getItem('gerenciador_horas.appearance');
+        if (backgrounds[savedTheme]) {
+          document.getElementById('app-loading').style.background = backgrounds[savedTheme];
+          document.querySelector('meta[name="theme-color"]').content = backgrounds[savedTheme];
+          if (backgrounds[savedTheme]) {
+              document.getElementById('app-loading').style.color = ['petroleum', 'black', 'ocean'].includes(savedTheme) ? '#E8EFF7' : '#30313B';
+          }
+        }
+      }
+    } catch (_) { /* The app also works with storage disabled. */ }
+    window.addEventListener('flutter-first-frame', function () {
+      document.getElementById('app-loading')?.remove();
+    });
+    window.addEventListener('error', function (event) {
+      const loading = document.getElementById('app-loading');
+      if (loading && event.target?.tagName === 'SCRIPT') {
+        loading.textContent = 'Não foi possível carregar o aplicativo. Verifique a conexão e recarregue a página.';
+      }
+    }, true);
+  </script>
+  <script src="edesk_extension.js"></script>
+  <script src="project_local_files.js"></script>
+  <script src="native_local_files_v2.js"></script>
+  <script>
+    // Fetch the current loader even when an older Flutter worker cached it.
+    const bootstrap = document.createElement('script');
+    bootstrap.src = 'flutter_bootstrap.js?release=' + Date.now();
+    bootstrap.async = true;
+    document.body.appendChild(bootstrap);
+  </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000" fill="none">
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1440" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101827"/>
+      <stop offset="1" stop-color="#080D16"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <filter id="shadow" x="110" y="38" width="1220" height="942" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feGaussianBlur in="BackgroundImageFix" stdDeviation="18"/>
+      <feComposite in2="SourceAlpha" operator="in" result="effect1_backgroundBlur"/>
+      <feColorMatrix in="effect1_backgroundBlur" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.38 0"/>
+      <feOffset dy="12"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feComposite in2="SourceAlpha" operator="out"/>
+      <feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.42 0"/>
+      <feBlend in2="BackgroundImageFix" result="shadow"/>
+      <feBlend in="SourceGraphic" in2="shadow" result="shape"/>
+    </filter>
+    <clipPath id="editorClip">
+      <rect x="184" y="442" width="698" height="173" rx="10"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1440" height="1000" fill="url(#page)"/>
+
+  <!-- Dimmed dashboard backdrop -->
+  <rect x="0" y="0" width="1440" height="1000" fill="#020617" fill-opacity=".66"/>
+  <rect x="36" y="34" width="192" height="932" rx="18" fill="#111827" stroke="#263449"/>
+  <rect x="57" y="58" width="34" height="34" rx="10" fill="#0EA5E9" fill-opacity=".16"/>
+  <path d="M67 75h14M74 68v14" stroke="#22D3EE" stroke-width="2" stroke-linecap="round"/>
+  <text x="102" y="80" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="700">Horas</text>
+  <rect x="55" y="128" width="151" height="39" rx="9" fill="#1E293B"/>
+  <circle cx="74" cy="147" r="6" fill="#64748B"/>
+  <rect x="91" y="143" width="75" height="7" rx="3.5" fill="#64748B"/>
+  <rect x="68" y="198" width="12" height="12" rx="3" fill="#475569"/>
+  <rect x="91" y="201" width="81" height="6" rx="3" fill="#475569"/>
+  <rect x="68" y="239" width="12" height="12" rx="3" fill="#475569"/>
+  <rect x="91" y="242" width="62" height="6" rx="3" fill="#475569"/>
+  <rect x="68" y="280" width="12" height="12" rx="3" fill="#475569"/>
+  <rect x="91" y="283" width="93" height="6" rx="3" fill="#475569"/>
+  <rect x="68" y="321" width="12" height="12" rx="3" fill="#475569"/>
+  <rect x="91" y="324" width="69" height="6" rx="3" fill="#475569"/>
+  <rect x="265" y="46" width="1125" height="62" rx="14" fill="#111827" stroke="#263449"/>
+  <rect x="292" y="69" width="178" height="10" rx="5" fill="#334155"/>
+  <rect x="1245" y="65" width="112" height="25" rx="12.5" fill="#1E293B"/>
+  <circle cx="1262" cy="77.5" r="4" fill="#34D399"/>
+  <rect x="1274" y="74" width="65" height="7" rx="3.5" fill="#475569"/>
+  <rect x="265" y="131" width="1125" height="148" rx="16" fill="#111827" stroke="#1E293B"/>
+  <rect x="291" y="158" width="195" height="12" rx="6" fill="#273548"/>
+  <rect x="291" y="184" width="570" height="66" rx="10" fill="#151F2E"/>
+  <rect x="883" y="158" width="190" height="12" rx="6" fill="#273548"/>
+  <rect x="883" y="184" width="480" height="66" rx="10" fill="#151F2E"/>
+
+  <g filter="url(#shadow)">
+    <rect x="150" y="70" width="1140" height="860" rx="20" fill="#0F1724" stroke="#344258" stroke-width="1.5"/>
+    <path d="M170 70h1100a20 20 0 0 1 20 20v68H150V90a20 20 0 0 1 20-20Z" fill="#151F2E"/>
+    <path d="M150 158h1140" stroke="#29374B"/>
+
+    <!-- Header -->
+    <rect x="182" y="91" width="46" height="46" rx="13" fill="#0EA5E9" fill-opacity=".14"/>
+    <path d="M195 105h20a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-8l-6 5v-5h-6a4 4 0 0 1-4-4v-12a4 4 0 0 1 4-4Z" stroke="#22D3EE" stroke-width="1.8" stroke-linejoin="round"/>
+    <text x="244" y="108" fill="#F8FAFC" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Novo comentário</text>
+    <text x="244" y="132" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="12">E-Desk</text>
+    <circle cx="290" cy="128" r="2" fill="#64748B"/>
+    <text x="301" y="132" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="12">Projeto: PRJ-2026-1048 · Cliente Exemplo</text>
+    <rect x="1095" y="101" width="112" height="28" rx="14" fill="#064E3B" fill-opacity=".35" stroke="#10B981" stroke-opacity=".32"/>
+    <circle cx="1111" cy="115" r="4" fill="#34D399"/>
+    <text x="1121" y="119" fill="#6EE7B7" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="700" letter-spacing=".4">PRONTO PARA ENVIAR</text>
+    <rect x="1230" y="97" width="36" height="36" rx="10" fill="#1E293B"/>
+    <path d="m1242 109 12 12m0-12-12 12" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"/>
+
+    <!-- Routing controls -->
+    <text x="184" y="190" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="1">TIPO DE COMENTÁRIO</text>
+    <rect x="184" y="201" width="310" height="62" rx="11" fill="#111B29" stroke="#334155"/>
+    <rect x="190" y="207" width="146" height="50" rx="8" fill="#123747"/>
+    <circle cx="208" cy="232" r="5" fill="#22D3EE"/>
+    <text x="221" y="236" fill="#E0F2FE" font-family="Segoe UI,Arial,sans-serif" font-size="12" font-weight="600">Interno</text>
+    <rect x="344" y="227" width="1" height="10" fill="#334155"/>
+    <circle cx="369" cy="232" r="5" fill="#64748B"/>
+    <text x="382" y="236" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="12">Externo</text>
+
+    <text x="516" y="190" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="1">ETIQUETA DO CHAMADO</text>
+    <rect x="516" y="201" width="310" height="62" rx="11" fill="#111B29" stroke="#334155"/>
+    <rect x="532" y="219" width="8" height="26" rx="4" fill="#F59E0B"/>
+    <text x="553" y="237" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="600">Aguardando análise</text>
+    <path d="m797 227 6 6 6-6" stroke="#94A3B8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <text x="848" y="190" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="1">MODELO DE DESCRIÇÃO</text>
+    <rect x="848" y="201" width="412" height="62" rx="11" fill="#111B29" stroke="#334155"/>
+    <path d="M870 220h15l5 5v17h-20v-22Z" stroke="#64748B" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M885 220v6h5" stroke="#64748B" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="904" y="237" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="12">Selecionar um modelo</text>
+    <path d="m1227 227 6 6 6-6" stroke="#94A3B8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Composer card -->
+    <rect x="184" y="283" width="698" height="553" rx="14" fill="#121B2A" stroke="#2B394D"/>
+    <text x="207" y="316" fill="#F1F5F9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">Descrição do comentário</text>
+    <text x="207" y="337" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="10">Escreva uma atualização clara para este chamado.</text>
+    <rect x="790" y="300" width="70" height="24" rx="12" fill="#1E293B"/>
+    <text x="807" y="316" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="10">0 / 5000</text>
+
+    <!-- Formatting toolbar -->
+    <rect x="200" y="355" width="666" height="43" rx="9" fill="#0F1724" stroke="#2B394D"/>
+    <rect x="210" y="363" width="116" height="27" rx="6" fill="#151F2E"/>
+    <text x="221" y="381" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">Segoe UI</text>
+    <path d="m307 374 4 4 4-4" stroke="#64748B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="334" y="363" width="49" height="27" rx="6" fill="#151F2E"/>
+    <text x="346" y="381" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">11 pt</text>
+    <path d="m370 374 4 4 4-4" stroke="#64748B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M400 363v27M443 363v27M486 363v27M529 363v27M572 363v27M615 363v27M658 363v27" stroke="#263449"/>
+    <text x="414" y="382" fill="#E2E8F0" font-family="Georgia,serif" font-size="16" font-weight="700">B</text>
+    <text x="458" y="382" fill="#CBD5E1" font-family="Georgia,serif" font-size="16" font-style="italic">I</text>
+    <path d="M500 379h15" stroke="#CBD5E1" stroke-width="1.5"/>
+    <path d="m541 373 4 4-4 4-4-4 4-4Z" stroke="#CBD5E1" stroke-width="1.4"/>
+    <path d="M584 374h17M584 379h17M584 384h12" stroke="#CBD5E1" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M628 374h17M628 379h17M633 384h12" stroke="#CBD5E1" stroke-width="1.4" stroke-linecap="round"/>
+    <circle cx="680" cy="376" r="7" fill="#22D3EE"/>
+    <path d="m707 374 12 0m-12 5h12m-12 5h8" stroke="#94A3B8" stroke-width="1.4" stroke-linecap="round"/>
+    <rect x="755" y="363" width="99" height="27" rx="6" fill="#123747"/>
+    <path d="M770 371h12l4 4v8h-16v-12Z" stroke="#22D3EE" stroke-width="1.2" stroke-linejoin="round"/>
+    <text x="791" y="381" fill="#A5F3FC" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="600">Colar texto</text>
+
+    <!-- Editor field -->
+    <rect x="200" y="409" width="666" height="196" rx="10" fill="#0D1521" stroke="#334155"/>
+    <text x="220" y="439" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="12">Descreva o andamento do chamado...</text>
+    <path d="M220 456h410" stroke="#1E293B"/>
+    <text x="220" y="480" fill="#475569" font-family="Segoe UI,Arial,sans-serif" font-size="10">Dica: use um modelo ou cole conteúdo formatado para agilizar a atualização.</text>
+    <rect x="220" y="528" width="138" height="30" rx="8" fill="#111B29" stroke="#28364A"/>
+    <circle cx="237" cy="543" r="5" fill="#34D399"/>
+    <text x="249" y="547" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="10">Rascunho local</text>
+
+    <!-- Attachments -->
+    <text x="207" y="632" fill="#F1F5F9" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700" letter-spacing=".5">ANEXOS</text>
+    <rect x="263" y="617" width="25" height="21" rx="10.5" fill="#1E293B"/>
+    <text x="272" y="632" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700">2</text>
+    <rect x="538" y="614" width="154" height="30" rx="8" fill="#142536" stroke="#27516A"/>
+    <path d="M553 622h13v13h-13zM556 625h7m-7 3h7m-7 3h7" stroke="#38BDF8" stroke-width="1.1"/>
+    <text x="574" y="633" fill="#BAE6FD" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="600">Usar imagem do Excel</text>
+    <rect x="700" y="614" width="150" height="30" rx="8" fill="url(#accent)"/>
+    <path d="M716 623h12a2 2 0 0 1 2 2v9h-16v-9a2 2 0 0 1 2-2Z" stroke="white" stroke-width="1.2"/>
+    <circle cx="720" cy="627" r="1.4" fill="white"/>
+    <path d="m715 633 4-4 3 3 2-2 4 4" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+    <text x="738" y="633" fill="white" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700">Buscar imagem</text>
+
+    <rect x="200" y="653" width="212" height="112" rx="10" fill="#0D1521" stroke="#2B394D"/>
+    <rect x="210" y="663" width="66" height="92" rx="7" fill="#172436"/>
+    <rect x="223" y="676" width="40" height="51" rx="4" fill="#0EA5E9" fill-opacity=".18"/>
+    <path d="M231 715 240 701l7 8 6-6 8 12h-30Z" fill="#22D3EE" fill-opacity=".72"/>
+    <circle cx="237" cy="687" r="4" fill="#22D3EE"/>
+    <text x="288" y="685" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">planilha_resumo.png</text>
+    <text x="288" y="704" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">Imagem do Excel · 248 KB</text>
+    <rect x="288" y="721" width="74" height="19" rx="9.5" fill="#123747"/>
+    <text x="301" y="734" fill="#67E8F9" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="700">PRÉ-VISUALIZAÇÃO</text>
+    <circle cx="395" cy="665" r="10" fill="#1E293B"/>
+    <path d="m392 662 6 6m0-6-6 6" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/>
+
+    <rect x="422" y="653" width="212" height="112" rx="10" fill="#0D1521" stroke="#2B394D"/>
+    <rect x="432" y="663" width="66" height="92" rx="7" fill="#0F2D26"/>
+    <rect x="448" y="679" width="35" height="43" rx="4" fill="#10B981" fill-opacity=".17" stroke="#34D399" stroke-opacity=".6"/>
+    <path d="M454 690h23M454 697h23M454 704h23M454 711h23M461 683v39M469 683v39" stroke="#6EE7B7" stroke-opacity=".7" stroke-width="1"/>
+    <text x="510" y="685" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">dados_chamado.xlsx</text>
+    <text x="510" y="704" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">Tabela incorporada · 18 KB</text>
+    <rect x="510" y="721" width="83" height="19" rx="9.5" fill="#123B32"/>
+    <text x="522" y="734" fill="#6EE7B7" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="700">TABELA EXCEL</text>
+    <circle cx="617" cy="665" r="10" fill="#1E293B"/>
+    <path d="m614 662 6 6m0-6-6 6" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/>
+
+    <rect x="644" y="653" width="206" height="112" rx="10" fill="#101A28" stroke="#334155" stroke-dasharray="5 4"/>
+    <circle cx="747" cy="691" r="17" fill="#1E293B"/>
+    <path d="M747 684v14m-7-7h14" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="747" y="726" text-anchor="middle" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">Adicionar outro anexo</text>
+    <text x="747" y="744" text-anchor="middle" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">Imagens ou conteúdo do Excel</text>
+
+    <!-- Integrated history panel -->
+    <rect x="900" y="283" width="360" height="553" rx="14" fill="#121B2A" stroke="#2B394D"/>
+    <text x="924" y="316" fill="#F1F5F9" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">Histórico do chamado</text>
+    <text x="924" y="337" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="10">Atualizações recentes deste projeto</text>
+    <rect x="1187" y="298" width="49" height="23" rx="11.5" fill="#1E293B"/>
+    <text x="1202" y="313" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9">Ver tudo</text>
+    <path d="M924 353h312" stroke="#29374B"/>
+
+    <rect x="920" y="369" width="320" height="122" rx="10" fill="#0F1724" stroke="#263449"/>
+    <circle cx="940" cy="391" r="11" fill="#123747"/>
+    <text x="940" y="395" text-anchor="middle" fill="#67E8F9" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700">MS</text>
+    <text x="960" y="389" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">Mariana Silva</text>
+    <text x="960" y="404" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">Hoje, 09:42</text>
+    <rect x="1152" y="379" width="57" height="18" rx="9" fill="#123B32"/>
+    <text x="1164" y="392" fill="#6EE7B7" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="700">INTERNO</text>
+    <text x="936" y="431" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">Análise iniciada. Estamos validando</text>
+    <text x="936" y="447" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">os dados enviados e retornaremos</text>
+    <text x="936" y="463" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">com uma atualização em breve.</text>
+    <rect x="936" y="474" width="89" height="17" rx="8.5" fill="#172436"/>
+    <text x="947" y="486" fill="#7DD3FC" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="600">Aguardando análise</text>
+
+    <rect x="920" y="504" width="320" height="122" rx="10" fill="#0F1724" stroke="#263449"/>
+    <circle cx="940" cy="526" r="11" fill="#352C19"/>
+    <text x="940" y="530" text-anchor="middle" fill="#FCD34D" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700">RC</text>
+    <text x="960" y="524" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">Rafael Costa</text>
+    <text x="960" y="539" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">Ontem, 16:18</text>
+    <rect x="1141" y="514" width="68" height="18" rx="9" fill="#172436"/>
+    <text x="1152" y="527" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="700">EXTERNO</text>
+    <text x="936" y="561" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">Recebemos sua solicitação e o</text>
+    <text x="936" y="577" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">time técnico já está acompanhando</text>
+    <text x="936" y="593" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="10">o caso.</text>
+    <rect x="936" y="606" width="89" height="17" rx="8.5" fill="#172436"/>
+    <text x="947" y="618" fill="#7DD3FC" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="600">Em andamento</text>
+
+    <rect x="920" y="639" width="320" height="72" rx="10" fill="#0F1724" stroke="#263449"/>
+    <circle cx="940" cy="661" r="11" fill="#25213B"/>
+    <text x="940" y="665" text-anchor="middle" fill="#C4B5FD" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="700">JS</text>
+    <text x="960" y="659" fill="#E2E8F0" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">João Souza</text>
+    <text x="960" y="674" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="9">08 out, 11:03</text>
+    <text x="936" y="698" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9">Comentário com anexo</text>
+    <path d="M924 730h312" stroke="#29374B"/>
+    <rect x="924" y="748" width="312" height="58" rx="9" fill="#102131"/>
+    <circle cx="944" cy="777" r="10" fill="#123747"/>
+    <path d="M940 777h8m-4-4v8" stroke="#22D3EE" stroke-width="1.4" stroke-linecap="round"/>
+    <text x="963" y="773" fill="#BAE6FD" font-family="Segoe UI,Arial,sans-serif" font-size="10" font-weight="600">Dica</text>
+    <text x="963" y="790" fill="#7C9AAC" font-family="Segoe UI,Arial,sans-serif" font-size="9">O histórico ajuda a evitar mensagens repetidas.</text>
+
+    <!-- Footer -->
+    <path d="M150 854h1140" stroke="#29374B"/>
+    <circle cx="188" cy="892" r="9" fill="#1E293B"/>
+    <path d="M188 887v6l4 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="204" y="896" fill="#64748B" font-family="Segoe UI,Arial,sans-serif" font-size="10">As alterações são enviadas ao E-Desk.</text>
+    <rect x="1001" y="873" width="112" height="40" rx="9" fill="#172131" stroke="#334155"/>
+    <text x="1032" y="898" fill="#CBD5E1" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="600">Cancelar</text>
+    <rect x="1123" y="873" width="143" height="40" rx="9" fill="url(#accent)"/>
+    <path d="M1142 886h12v13h-12zM1145 883h6" stroke="white" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+    <text x="1162" y="898" fill="white" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="700">Enviar comentário</text>
+  </g>
+
+  <rect x="1190" y="950" width="146" height="28" rx="14" fill="#0F1724" stroke="#334155"/>
+  <circle cx="1207" cy="964" r="4" fill="#22D3EE"/>
+  <text x="1218" y="968" fill="#94A3B8" font-family="Segoe UI,Arial,sans-serif" font-size="9" font-weight="600" letter-spacing=".6">PROPOSTA VISUAL 01</text>
+</svg>

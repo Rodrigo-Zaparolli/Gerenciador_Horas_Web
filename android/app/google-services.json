@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "318491809401",
+    "project_id": "gerenciador-horas",
+    "storage_bucket": "gerenciador-horas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:318491809401:android:4f4c2a1a49bd4136fe66a8",
+        "android_client_info": {
+          "package_name": "com.example.gerenciador_horas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB42Borv86uOmfGKezMp9xsxQ_qaLVf_G4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

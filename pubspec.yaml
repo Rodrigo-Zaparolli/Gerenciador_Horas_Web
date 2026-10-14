@@ -1,0 +1,140 @@
+name: gerenciador_horas
+description: "Gerenciador de Horas e Projetos"
+publish_to: 'none'
+
+# ============================================================
+# VERSIONAMENTO DO APLICATIVO
+# ============================================================
+
+version: 1.0.2+3
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+# ============================================================
+# DEPENDÊNCIAS
+# ============================================================
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ==========================================================
+  # LOCALIZAÇÃO
+  # ==========================================================
+
+  flutter_localizations:
+    sdk: flutter
+
+  # ==========================================================
+  # EDITOR RICH TEXT / WYSIWYG
+  # ==========================================================
+
+  flutter_quill: ^11.5.1
+  flutter_quill_extensions: ^11.0.0
+
+  # ==========================================================
+  # INTERFACE E UTILITÁRIOS
+  # ==========================================================
+
+  cupertino_icons: ^1.0.8
+  file_picker: ^8.0.0
+  url_launcher: ^6.3.2
+  image_picker: ^1.0.7
+  pasteboard: ^0.5.0
+  path_provider: ^2.1.6
+  excel: ^4.0.6
+  flutter_secure_storage: ^10.3.4
+  web: ^1.1.1
+  html: ^0.15.7
+
+  # ==========================================================
+  # ATUALIZAÇÃO AUTOMÁTICA
+  # ==========================================================
+
+  # Consulta o version.json hospedado no GitHub.
+  http: ^1.2.0
+
+  # Obtém a versão instalada do aplicativo.
+  package_info_plus: ^8.0.0
+
+  # ==========================================================
+  # PDF E IMPRESSÃO
+  # ==========================================================
+
+  pdf: ^3.11.0
+  printing: ^5.13.2
+
+  # ==========================================================
+  # GRÁFICOS
+  # ==========================================================
+
+  fl_chart: ^1.2.0
+
+  # ==========================================================
+  # FIREBASE
+  # ==========================================================
+
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  firebase_storage: ^13.6.0
+
+  # ==========================================================
+  # WINDOWS WEBVIEW
+  # ==========================================================
+
+  webview_windows: 0.4.0
+
+# ============================================================
+# DEPENDÊNCIAS DE DESENVOLVIMENTO
+# ============================================================
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# ============================================================
+# CONFIGURAÇÃO DOS ÍCONES
+# ============================================================
+
+flutter_launcher_icons:
+  image_path: "assets/images/Logo.png"
+
+  android: true
+  ios: true
+
+  windows:
+    generate: true
+    image_path: "assets/images/Logo.png"
+
+  macos:
+    generate: true
+    image_path: "assets/images/Logo.png"
+
+# ============================================================
+# FLUTTER
+# ============================================================
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/fonts/
+    - assets/images/Logo_H.png
+    - assets/images/Logo.png
+    - assets/images/email_signature_cyncly.jpg
+    - assets/images/email_signature_mail.png
+    - assets/images/email_signature_phone.png
+    - assets/images/email_signature_web.png
+    - assets/images/cadastro_trabalho.png
+    - assets/images/metricas.png
+    - assets/images/projetos_finalizados.png
+    - assets/images/fundo.png
+    - assets/images/solicitacoes.png
+    - assets/images/tarefas_executadas.png
+    - assets/images/orientacoes.png
+    - assets/images/check_list.png
