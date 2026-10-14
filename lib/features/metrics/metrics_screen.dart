@@ -1,4 +1,5 @@
 import 'monthly_performance.dart';
+import 'planning_table_viewport.dart';
 import 'metrics_text_color.dart';
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
@@ -3085,7 +3086,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
   // ================================================================
 
   Widget _buildPlanningTable() {
-    return Container(
+    return Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1454), child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(17),
       decoration: _cardDecoration(
@@ -3098,17 +3099,11 @@ class _MetricsScreenState extends State<MetricsScreen> {
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: 1420,
-                child: _buildTable(),
-              ),
-            ),
+            child: PlanningTableViewport(child: _buildTable()),
           ),
         ],
       ),
-    );
+    )));
   }
 
   Widget _buildTableHeader() {

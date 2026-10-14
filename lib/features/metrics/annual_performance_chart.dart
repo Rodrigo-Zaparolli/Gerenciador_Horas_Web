@@ -48,7 +48,7 @@ class AnnualPerformanceChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return LayoutBuilder(builder: (context, available) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Visão anual · $year', maxLines: 1, overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
       const SizedBox(height: 6),
@@ -60,6 +60,11 @@ class AnnualPerformanceChart extends StatelessWidget {
         Text('-- Meta',
             style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant))
       ]),
+      if (available.maxHeight >= 180) ...[
+        const SizedBox(height: 8),
+        Text('Ano: ${WorkDuration.format(totals.fold<int>(0, (total, value) => total + value))} cobradas',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurface)),
+      ],
       const SizedBox(height: 8),
       Expanded(child: LayoutBuilder(builder: (context, constraints) {
         final maxMinutes = math.max(60, [...totals, ...goals].reduce(math.max));
@@ -79,6 +84,7 @@ class AnnualPerformanceChart extends StatelessWidget {
                 bottom: 28,
                 child: CustomPaint(
                     painter: _AnnualPainter(
+                        fontFamily: Theme.of(context).textTheme.bodySmall?.fontFamily,
                         totals: totals,
                         goals: goals,
                         maxMinutes: maxHours * 60,
@@ -158,7 +164,7 @@ class AnnualPerformanceChart extends StatelessWidget {
           ])),
         ]);
       })),
-    ]);
+    ]));
   }
 }
 
@@ -170,10 +176,11 @@ class _AnnualPainter extends CustomPainter {
       required this.selected,
       required this.color,
       required this.grid,
-      required this.goalColor});
+      required this.goalColor, this.fontFamily});
   final List<int> totals, goals;
   final int maxMinutes, selected;
   final Color color, grid, goalColor;
+  final String? fontFamily;
   @override
   void paint(Canvas canvas, Size size) {
     final width = size.width / 12;
@@ -191,22 +198,28 @@ class _AnnualPainter extends CustomPainter {
             const Radius.circular(4)),
         Paint()..color = color.withValues(alpha: 0.08));
     for (var i = 0; i < 12; i++) {
-      if (totals[i] > 0)
-        canvas.drawRRect(
-            RRect.fromRectAndRadius(
-                Rect.fromLTRB(i * width + width * 0.18, y(totals[i]),
-                    (i + 1) * width - width * 0.18, size.height),
-                const Radius.circular(3)),
-            Paint()
-              ..shader = LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color.lerp(
-                        color, Colors.white, i == selected ? 0.18 : 0.06)!,
-                    color.withValues(alpha: i == selected ? 1 : 0.82)
-                  ]).createShader(Rect.fromLTWH(
-                  i * width, y(totals[i]), width, size.height - y(totals[i]))));
+      final left = i * width + width * 0.18;
+      final right = (i + 1) * width - width * 0.18;
+      // The translucent column represents the actual monthly goal, not recorded hours.
+      if (goals[i] > 0) {
+        canvas.drawRRect(RRect.fromRectAndRadius(
+          Rect.fromLTRB(left, y(goals[i]), right, size.height), const Radius.circular(3)),
+          Paint()..color = goalColor.withValues(alpha: 0.10));
+      }
+      if (totals[i] > 0) {
+        final rect = Rect.fromLTRB(left, y(totals[i]), right, size.height);
+        canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(3)),
+          Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color.lerp(color, Colors.white, i == selected ? 0.25 : 0.12)!,
+              color.withValues(alpha: i == selected ? 1 : 0.80)]).createShader(rect));
+        if (width >= 27 && size.height >= 90) {
+          final label = TextPainter(text: TextSpan(text: WorkDuration.format(totals[i]),
+            style: TextStyle(fontFamily: fontFamily, fontSize: 9, fontWeight: FontWeight.w600, color: goalColor)),
+            textDirection: TextDirection.ltr)..layout(maxWidth: width);
+          label.paint(canvas, Offset(i * width + (width - label.width) / 2,
+            math.max(0, y(totals[i]) - label.height - 3)));
+        }
+      }
     }
     // A per-month target can vary; connect its actual values with a dashed line.
     final line = Paint()

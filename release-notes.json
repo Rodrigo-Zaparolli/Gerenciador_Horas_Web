@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Visão anual: gráfico mais largo, barras reforçadas e meses mais legíveis, mantendo a altura do card.",
-    "Ao passar o mouse em um mês, veja horas cobradas, meta e percentual atingido. O mês selecionado fica destacado."
+    "Visão anual: total de horas do ano, valores nas barras e colunas discretas de referência das metas mensais.",
+    "Planejamento anual: tabela centralizada em telas largas e barra horizontal visível para navegar em telas menores."
   ]
 }
