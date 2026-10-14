@@ -54,7 +54,7 @@ context=Mock(pages=[request])
 with patch.object(h,'abrir_trabalho_na_solicitacao',side_effect=AssertionError('work must not open')), patch.object(h,'fechar_solicitacoes_duplicadas'):
  result=c.abrir_solicitacao_para_comentario(request,context,None,'2261914',request)
  assert result is request
- request.locator.assert_called_with('#cph1_BtCom')
+ request.get_by_text.assert_called_once()
  request.bring_to_front.assert_called_once()
 """
             result=subprocess.run([sys.executable,'-I','-c',program,str(root/'edesk_bot')],
@@ -68,7 +68,7 @@ with patch.object(h,'abrir_trabalho_na_solicitacao',side_effect=AssertionError('
 import sys
 sys.path.insert(0,sys.argv[1])
 import edesk_comentario as c
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 calls=[]
 page=Mock()
 page.is_closed.return_value=False
@@ -82,10 +82,11 @@ field=Mock()
 field.count.return_value=1
 page.locator.side_effect=lambda selector: button if selector=='#cph1_BtCom' else field
 context=Mock(pages=[page])
-assert c.abrir_comentario(page,context)==(page,page)
-assert calls==['tab-ready','tab-click','tab-selected','new-comment'],calls
+with patch.object(c,'localizar_botao_comentario',return_value=button):
+ assert c.abrir_comentario(page,context)==(page,page)
+assert calls==['tab-ready','tab-click','new-comment'],calls
 calls.clear()
-page.wait_for_function.side_effect=TimeoutError('fixture')
+page.get_by_text.return_value.click.side_effect=TimeoutError('fixture')
 try:
  c.abrir_comentario(page,context)
  raise AssertionError('missing failure')
@@ -99,7 +100,7 @@ assert 'new-comment' not in calls
 
     def test_navigation_errors_are_specific_and_do_not_expose_raw_logs(self):
         from cloud_run import main
-        for marker in ['EDESK_COMMENT_TAB_NOT_OPENED', 'EDESK_GRID_SEARCH_NOT_READY', 'EDESK_COMMENT_REQUEST_NOT_FOUND', 'EDESK_COMMENT_WORK_NOT_OPENED']:
+        for marker in ['EDESK_COMMENT_BUTTON_NOT_FOUND', 'EDESK_COMMENT_TAB_NOT_OPENED', 'EDESK_GRID_SEARCH_NOT_READY', 'EDESK_COMMENT_REQUEST_NOT_FOUND', 'EDESK_COMMENT_WORK_NOT_OPENED']:
             message = main._automation_failure_message(marker + ' secret-token private-session-url')
             self.assertIn('Nenhum coment\u00e1rio foi enviado', message)
             self.assertNotIn('secret-token', message)

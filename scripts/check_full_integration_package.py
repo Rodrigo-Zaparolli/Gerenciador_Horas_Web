@@ -33,7 +33,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-request-tab-6',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-button-label-7',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -53,6 +53,15 @@ with sync_playwright() as p:
     page.set_content('<ul class="RadTabStrip"><li><a class="rtsLink" onclick="this.classList.add(&quot;rtsSelected&quot;)"><span>Coment&#225;rios (27)</span></a></li></ul><button id="cph1_BtCom">Coment&#225;rio</button>')
     edesk_comentario.selecionar_aba_comentarios(page)
     assert page.locator('.rtsSelected').count()==1
+    for action in ['<input id="requestComment" type="button" value="Coment&#225;rio">',
+                   '<button id="differentId">Coment&#225;rio</button>',
+                   '<a href="#" id="commentLink">Coment&#225;rio</a>']:
+        page.set_content('<a role="tab">Coment&#225;rios (27)</a>' + action)
+        action_button = edesk_comentario.localizar_botao_comentario(page)
+        action_button.evaluate("e => e.onclick = () => { const s=document.createElement('select'); s.id='popC_ddlTipCom'; document.body.appendChild(s); }")
+        comment_page, frame = edesk_comentario.abrir_comentario(page, page.context)
+        assert comment_page is page and frame is page
+    print('REQUEST_COMMENT_BUTTON_VARIANTS_OK')
     browser.close()
 print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
 '''
@@ -79,7 +88,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'comment-request-tab-6'
+            assert health['integrationPackageVersion'] == 'comment-button-label-7'
             assert health['commentPercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',

@@ -1297,15 +1297,23 @@ def selecionar_aba_comentarios(page):
         aba = page.get_by_text(re.compile(r'^Comentários\s*(?:\(\d+\))?$'))
         aba.wait_for(state='visible', timeout=20000)
         aba.click(timeout=15000)
-        page.wait_for_function(r"""() => {
-            const pattern = /^Comentários\s*(?:\(\d+\))?$/;
-            return [...document.querySelectorAll('a,span,[role="tab"]')].some(e => {
-                if (!pattern.test((e.textContent || '').trim()) || !e.getClientRects().length) return false;
-                return !!e.closest('.rtsSelected,.ajax__tab_active,[aria-selected="true"]');
-            });
-        }""", timeout=20000)
     except Exception as error:
         raise RuntimeError('EDESK_COMMENT_TAB_NOT_OPENED') from error
+
+
+def localizar_botao_comentario(page):
+    """Match the visible action by its label, regardless of generated ASP.NET ID."""
+    nome = re.compile(r'^Coment[aá]rio$', re.IGNORECASE)
+    botao = (page.get_by_role('button', name=nome)
+             .or_(page.get_by_role('link', name=nome))
+             .or_(page.locator('#cph1_BtCom:visible')))
+    try:
+        botao.wait_for(state='visible', timeout=20000)
+        if not botao.is_enabled():
+            raise RuntimeError('Comment action disabled')
+        return botao
+    except Exception as error:
+        raise RuntimeError('EDESK_COMMENT_BUTTON_NOT_FOUND') from error
 
 
 def abrir_comentario(page, context):
@@ -1324,8 +1332,7 @@ def abrir_comentario(page, context):
     page.bring_to_front()
     selecionar_aba_comentarios(page)
 
-    botao = page.locator("#cph1_BtCom")
-    botao.wait_for(state="visible", timeout=15000)
+    botao = localizar_botao_comentario(page)
 
     paginas_antes = set(context.pages)
     botao.click()

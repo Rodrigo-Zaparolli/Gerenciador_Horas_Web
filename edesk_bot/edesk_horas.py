@@ -1271,7 +1271,7 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
         if somente_solicitacao:
             if not eh_solicitacao(pagina.url):
                 return False
-            pagina.locator("#cph1_BtCom").first.wait_for(state="visible", timeout=20000)
+            pagina.get_by_text(re.compile(r'^Coment\u00e1rios\s*(?:\(\d+\))?$')).wait_for(state='visible', timeout=20000)
             return True
         inicio = time.time()
         while time.time() - inicio < 15:

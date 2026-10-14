@@ -401,6 +401,9 @@ def _automation_failure_message(output: str):
         return ('A integração não localizou a solicitação na Minha Grid. '
                 'Nenhum comentário foi enviado nesta tentativa. Confira o número vinculado ao projeto e o acesso dessa conta à solicitação.')
 
+    if "EDESK_COMMENT_BUTTON_NOT_FOUND" in output:
+        return ('O botão Comentário não ficou disponível na solicitação. '
+                'Nenhum comentário foi enviado nesta tentativa. Confira se essa conta pode cadastrar comentários.')
     if "EDESK_COMMENT_TAB_NOT_OPENED" in output:
         return ('Não foi possível selecionar a aba Comentários da solicitação. '
                 'Nenhum comentário foi enviado nesta tentativa. Confira se essa conta tem acesso aos comentários.')

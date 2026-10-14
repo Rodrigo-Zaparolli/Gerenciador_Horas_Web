@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Comentários: registro no projeto somente pelo botão Salvar, após envio confirmado ao E-Desk.",
-    "Fechar o modal, testar, cancelar ou falhar no envio não salva automaticamente o comentário. Texto e imagens permanecem no editor após enviar, aguardando Salvar."
+    "E-Desk: botão Comentário localizado pelo nome visível, sem depender do ID interno da tela de trabalho.",
+    "Abertura da solicitação e seleção da aba Comentários não dependem mais do ID do botão nem das classes visuais da aba. Atualize a integração E-Desk."
   ]
 }
