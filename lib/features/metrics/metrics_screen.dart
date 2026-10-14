@@ -1,4 +1,5 @@
 import 'monthly_performance.dart';
+import 'metrics_text_color.dart';
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
@@ -1389,7 +1390,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
                 Text(
                   _formatPercentage(eficiencia),
                   style: TextStyle(
-                    color: _demaisColor,
+                    color: metricsTextColor(_demaisColor),
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1604,7 +1605,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
               Text(
                 _formatPercentage(period.efficiency),
                 style: TextStyle(
-                  color: color,
+                  color: metricsTextColor(color),
                   fontSize: 17,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1682,7 +1683,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
           Text(
             value,
             style: TextStyle(
-              color: color,
+              color: metricsTextColor(color),
               fontSize: 10,
               fontWeight: FontWeight.w900,
             ),
@@ -1872,7 +1873,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
         icon: Icons.speed_rounded,
         label: 'EFICIÊNCIA',
         value: _getEfficiencyText(),
-        color: _demaisColor,
+        color: metricsTextColor(_demaisColor),
         onTap: _abrirModalEficiencia,
       ),
     ];
@@ -3888,7 +3889,7 @@ class _EfficiencyAnnualTab extends StatelessWidget {
                   efficiency,
                 ),
                 style: TextStyle(
-                  color: efficiencyColor,
+                  color: metricsTextColor(efficiencyColor),
                   fontSize: 31,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -1,
@@ -4001,7 +4002,7 @@ class _AnnualValueCard extends StatelessWidget {
                 Text(
                   value,
                   style: TextStyle(
-                    color: color,
+                    color: metricsTextColor(color),
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),

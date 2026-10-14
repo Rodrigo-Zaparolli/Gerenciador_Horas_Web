@@ -1,6 +1,5 @@
 {
   "changes": [
-    "Desempenho mensal: gráfico diário de horas, resumo dos totais e acompanhamento da meta. As demais seções de Métricas foram preservadas.",
-    "O aviso de atualização agora apresenta as alterações da publicação antes de atualizar o app."
+    "Métricas: melhor contraste dos números de Eficiência nos temas claros, mantendo as cores dos temas escuros."
   ]
 }
