@@ -4,9 +4,9 @@ $projectDirectory = Split-Path -Parent $PSScriptRoot
 $releaseIdentifier = [Guid]::NewGuid().ToString('N')
 $notesPath = Join-Path $projectDirectory 'release-notes.json'
 $releaseNotes = Get-Content -LiteralPath $notesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-if (@($releaseNotes.changes).Count -eq 0) { throw 'Informe as altera??es da publica??o em release-notes.json.' }
+if (@($releaseNotes.changes).Count -eq 0) { throw 'Informe as alterações da publicação em release-notes.json.' }
 foreach ($note in $releaseNotes.changes) {
-    if ($note -isnot [string] -or [string]::IsNullOrWhiteSpace($note)) { throw 'Cada altera??o deve ser um texto preenchido.' }
+    if ($note -isnot [string] -or [string]::IsNullOrWhiteSpace($note)) { throw 'Cada alteração deve ser um texto preenchido.' }
 }
 Push-Location -LiteralPath $projectDirectory
 try {

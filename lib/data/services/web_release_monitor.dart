@@ -126,20 +126,20 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (notes.isNotEmpty) ...[
-                          const Text('O que mudou nesta vers?o:',
+                          const Text('O que mudou nesta versão:',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
                           for (final note in notes)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
-                              child: Text('? $note'),
+                              child: Text('• $note'),
                             ),
                           const SizedBox(height: 12),
                         ] else
-                          const Text('Uma nova vers?o do app est? dispon?vel.'),
+                          const Text('Uma nova versão do app está disponível.'),
                         const Text(
-                            'Os textos dos coment?rios e e-mails t?m recupera??o local. '
-                            'Salve altera??es em outros formul?rios e selecione novamente os anexos ap?s atualizar.'),
+                            'Os textos dos comentários e e-mails têm recuperação local. '
+                            'Salve alterações em outros formulários e selecione novamente os anexos após atualizar.'),
                       ],
                     ),
                   ),

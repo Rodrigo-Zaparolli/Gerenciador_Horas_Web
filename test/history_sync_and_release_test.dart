@@ -142,14 +142,14 @@ void main() {
         home: WebReleaseMonitor(
       installedRelease: 'old',
       releaseLoader: () async => 'new',
-      notesLoader: () async => ['Gr?fico di?rio de horas.', 'Meta mensal.'],
+      notesLoader: () async => ['Gráfico diário de horas.', 'Meta mensal.'],
       synchronize: () {},
       child: const Scaffold(),
     )));
     await tester.pumpAndSettle();
-    expect(find.text('O que mudou nesta vers?o:'), findsOneWidget);
-    expect(find.text('? Gr?fico di?rio de horas.'), findsOneWidget);
-    expect(find.text('? Meta mensal.'), findsOneWidget);
+    expect(find.text('O que mudou nesta versão:'), findsOneWidget);
+    expect(find.text('• Gráfico diário de horas.'), findsOneWidget);
+    expect(find.text('• Meta mensal.'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('Depois'));
     await tester.pumpAndSettle();
