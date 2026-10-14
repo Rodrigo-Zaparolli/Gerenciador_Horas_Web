@@ -6,6 +6,13 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:gerenciador_horas/domain/models/dashboard_models.dart';
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
 
+String monthlyDayLabel(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  if (date.weekday == DateTime.saturday) return '$day\nSáb';
+  if (date.weekday == DateTime.sunday) return '$day\nDom';
+  return day;
+}
+
 class MonthlyPerformanceData {
   MonthlyPerformanceData(DateTime month, Iterable<TimeLog> logs) {
     charged = List.filled(DateTime(month.year, month.month + 1, 0).day, 0);
@@ -296,11 +303,12 @@ class _MonthlyPerformanceState extends State<MonthlyPerformance> {
           bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 25,
+                  reservedSize: 34,
                   getTitlesWidget: (value, meta) => Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                          (value.toInt() + 1).toString().padLeft(2, '0'),
+                          monthlyDayLabel(DateTime(widget.year, month, value.toInt() + 1)),
+                          textAlign: TextAlign.center,
                           style: style))))),
       barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(

@@ -17,6 +17,13 @@ TimeLog log(DateTime date, int minutes, String type) => TimeLog(
     isRegistered: true);
 
 void main() {
+  test('daily labels identify weekends using the displayed month and year', () {
+    expect(monthlyDayLabel(DateTime(2026, 10, 3)), '03\nSáb');
+    expect(monthlyDayLabel(DateTime(2026, 10, 4)), '04\nDom');
+    expect(monthlyDayLabel(DateTime(2026, 10, 5)), '05');
+    expect(monthlyDayLabel(DateTime(2026, 11, 1)), '01\nDom');
+    expect(monthlyDayLabel(DateTime(2027, 10, 3)), '03\nDom');
+  });
   test('legacy charged labels match metrics and never include noncharged hours',
       () {
     final date = DateTime(2026, 10, 1);

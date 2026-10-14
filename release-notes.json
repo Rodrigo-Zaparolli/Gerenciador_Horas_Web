@@ -1,6 +1,5 @@
 {
   "changes": [
-    "Contrastes: textos e botões passam a respeitar o fundo real nos temas Black, escuros e claros.",
-    "Métricas: planejamento anual e números personalizados corrigidos para manter a leitura ao trocar de tema."
+    "Desempenho mensal: os dias de sábado e domingo agora aparecem identificados como Sáb e Dom no gráfico diário, mantendo a altura do card."
   ]
 }
