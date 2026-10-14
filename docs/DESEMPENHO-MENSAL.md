@@ -13,3 +13,5 @@ Validação: 29 testes passaram, incluindo cálculos mensais, classificação an
 A cópia anterior está em `build/backup-desempenho-mensal-20261014/metrics_screen.dart`. Para voltar apenas o card, restaure esse arquivo em `lib/features/metrics/metrics_screen.dart`, compile com `scripts/build_web_release.ps1`, valide e publique somente no Hosting. Isso não restaura dados do Firebase nem altera Orientações ou outras funcionalidades.
 
 O histórico Git também preserva a versão anterior à mudança. A cópia local de segurança não é enviada ao repositório, pois `build` é excluído do Git.
+
+Visão anual compacta: 12 meses com horas cobradas e metas individuais, na coluna da direita sob a meta resumida. Clicar no mês atualiza o detalhe diário. A altura do conjunto foi preservada; nos tamanhos menores, a coluna compacta substitui a antiga meta, sem acrescentar um painel abaixo dela. Backup anterior: build/backup-monthly-before-annual.dart.
