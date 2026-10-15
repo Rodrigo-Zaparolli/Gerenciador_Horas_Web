@@ -650,7 +650,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/'
         '${date.month.toString().padLeft(2, '0')}/'
-        '${date.year}';
+        '${date.year.toString().padLeft(4, '0')}';
   }
 
   DateTime _onlyDate(DateTime date) {

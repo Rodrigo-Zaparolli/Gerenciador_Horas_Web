@@ -1,4 +1,4 @@
-/// Only a confirmed E-Desk publication may be persisted in the project.
+/// Tracks confirmed publications independently from explicitly saved drafts.
 class CommentSaveGate {
   String? _confirmedContent;
   bool _saved = false;
@@ -16,6 +16,18 @@ class CommentSaveGate {
   }
 
   void markSaved() => _saved = true;
+
+  Future<void> saveManually({
+    required String content,
+    required Future<void> Function() saveDraft,
+    required Future<void> Function() savePublication,
+  }) async {
+    if (hasPendingSave) {
+      await savePublication();
+    } else if (!alreadySent(content)) {
+      await saveDraft();
+    }
+  }
 
   /// Retrying a failed project save must never publish to E-Desk again.
   Future<bool> persistPending(Future<void> Function() persist) {

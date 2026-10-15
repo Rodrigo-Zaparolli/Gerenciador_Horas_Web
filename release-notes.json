@@ -1,6 +1,8 @@
 {
   "changes": [
     "Integração local: vínculos de pastas e planilhas passam a ficar no perfil do Windows, preservados ao atualizar ou extrair outra versão do pacote.",
-    "Migração automática dos vínculos existentes, sem substituir destinos já salvos. Nesta primeira atualização, extraia o pacote na pasta anterior mantendo .edesk-local; não é necessário selecionar os arquivos novamente se os vínculos antigos estiverem disponíveis."
+    "Migração automática dos vínculos existentes, sem substituir destinos já salvos. Nesta primeira atualização, extraia o pacote na pasta anterior mantendo .edesk-local; não é necessário selecionar os arquivos novamente se os vínculos antigos estiverem disponíveis.",
+    "Comentários: botão Salvar sempre disponível para guardar rascunhos no app, sem publicar no E-Desk. O envio confirmado continua salvando automaticamente como publicado.",
+    "Datas em Novo Trabalho e Editar Trabalho exibidas com ano de quatro dígitos: DD/MM/AAAA."
   ]
 }

@@ -3,6 +3,63 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/features/dashboard/comentario/comment_save_gate.dart';
 
 void main() {
+  test('manual save before sending stores a draft without claiming publication',
+      () async {
+    final gate = CommentSaveGate();
+    var drafts = 0, publications = 0;
+    await gate.saveManually(
+        content: 'text and image',
+        saveDraft: () async {
+          drafts++;
+        },
+        savePublication: () async {
+          publications++;
+        });
+    expect(drafts, 1);
+    expect(publications, 0);
+    expect(gate.alreadySent('text and image'), false);
+    expect(gate.hasPendingSave, false);
+  });
+  test('manual save retries a pending publication instead of making a draft',
+      () async {
+    final gate = CommentSaveGate();
+    gate.receiveResult(content: 'published', sending: true, confirmed: true);
+    var drafts = 0, publications = 0;
+    await gate.saveManually(
+        content: 'edited afterwards',
+        saveDraft: () async {
+          drafts++;
+        },
+        savePublication: () async {
+          publications++;
+          await gate.persistPending(() async {});
+        });
+    expect(drafts, 0);
+    expect(publications, 1);
+    expect(gate.hasPendingSave, false);
+  });
+  test(
+      'manual save keeps a published document and drafts only subsequent edits',
+      () async {
+    final gate = CommentSaveGate();
+    gate.receiveResult(content: 'published', sending: true, confirmed: true);
+    await gate.persistPending(() async {});
+    var drafts = 0;
+    Future<void> save(String content) => gate.saveManually(
+        content: content,
+        saveDraft: () async {
+          drafts++;
+        },
+        savePublication: () async {
+          fail('Already persisted');
+        });
+    await save('published');
+    expect(drafts, 0);
+    await save('new edit');
+    expect(drafts, 1);
+    expect(gate.alreadySent('published'), true);
+    expect(gate.alreadySent('new edit'), false);
+  });
   test('testing, cancellation and failure never enable project saving', () {
     final gate = CommentSaveGate();
     expect(gate.canSave('text'), false);

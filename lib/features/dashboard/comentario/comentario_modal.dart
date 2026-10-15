@@ -88,6 +88,7 @@ class ComentarioModal {
     bool excluindo = false;
 
     String? comentarioSelecionadoId;
+    String? idRascunhoParaSalvar;
     String? imagemBase64;
     Uint8List? excelSelecionadoBytes;
 
@@ -1445,6 +1446,7 @@ class ComentarioModal {
 
       setDialogState(() {
         comentarioSelecionadoId = null;
+        idRascunhoParaSalvar = null;
         imagensBase64.clear();
         blocosComentario.clear();
         controllersBlocosTexto.clear();
@@ -1546,6 +1548,7 @@ class ComentarioModal {
 
           setDialogState(() {
             comentarioSelecionadoId = null;
+            idRascunhoParaSalvar = null;
             imagemBase64 = imagemExcelBase64;
             tipoComentario = 'Interno';
           });
@@ -1660,6 +1663,19 @@ class ComentarioModal {
     bool podeSalvarEnviado() => comentarioEnviadoParaSalvar != null &&
         commentSaveGate.hasPendingSave;
 
+    Map<String, dynamic> capturarComentario() => {
+      'comentario': montarTextoOrdenado(),
+      'imagemBase64': imagemBase64,
+      'imagensBase64': imagensBase64.isNotEmpty
+          ? List<String>.from(imagensBase64)
+          : (imagemBase64 != null ? <String>[imagemBase64!] : <String>[]),
+      'blocosComentario': blocosParaPersistir(),
+      'tipoComentario': tipoComentario,
+      'percentualRealizado': parseCommentPercentage(percentualController.text),
+      'tipoComentarioEdesk': _tipoComentarioEdesk(tipoComentario),
+      'projetoId': project.id.trim(),
+    };
+
     Future<void> persistirPublicacao() async {
       final firebaseUser = FirebaseAuth.instance.currentUser;
 
@@ -1689,7 +1705,7 @@ class ComentarioModal {
 
     }
 
-    Future<void> salvarComentario(
+    Future<void> salvarPublicacao(
       BuildContext dialogContext,
       StateSetter setDialogState,
     ) async {
@@ -1709,6 +1725,7 @@ class ComentarioModal {
         setDialogState(() {
           salvando = false;
           comentarioSelecionadoId = idComentarioEnviadoParaSalvar;
+          idRascunhoParaSalvar = null;
         });
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -1727,12 +1744,82 @@ class ComentarioModal {
         ScaffoldMessenger.of(dialogContext).showSnackBar(
           SnackBar(
             content: Text('Publicado no E-Desk, mas não foi possível confirmar o salvamento no app. '
-                'Use Salvar publicação para tentar novamente, sem reenviar. '
+                'Use Salvar para tentar novamente, sem reenviar. '
                 '${recoveryError(e, operation: 'salvar o comentário')}'),
             backgroundColor: CoresApp.erro,
           ),
         );
       }
+    }
+
+    Future<void> salvarComentario(
+      BuildContext dialogContext,
+      StateSetter setDialogState,
+    ) async {
+      if (salvando || testandoEdesk || enviandoEdesk) return;
+      final identidade = identidadeConteudoAtual();
+      if (!podeSalvarEnviado() && commentSaveGate.alreadySent(identidade)) {
+        ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+          content: Text('Comentário publicado no E-Desk e salvo no app.')));
+        return;
+      }
+      await commentSaveGate.saveManually(
+        content: identidade,
+        savePublication: () => salvarPublicacao(dialogContext, setDialogState),
+        saveDraft: () async {
+          if (!validarPercentual(dialogContext)) return;
+          final dados = capturarComentario();
+          if ((dados['comentario'] as String).trim().isEmpty &&
+              (dados['imagensBase64'] as List).isEmpty) {
+            ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+              content: Text('Digite um comentário ou adicione uma imagem.')));
+            return;
+          }
+          setDialogState(() => salvando = true);
+          try {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) throw StateError('Entre novamente na sua conta.');
+            final ref = comentariosRef();
+            final selecionado = comentarioSelecionadoId == null
+                ? null : ref.doc(comentarioSelecionadoId);
+            idRascunhoParaSalvar ??= ref.doc().id;
+            final novo = ref.doc(idRascunhoParaSalvar);
+            final salvoId = await FirebaseFirestore.instance.runTransaction<String>((transaction) async {
+              final anterior = selecionado == null ? null : await transaction.get(selecionado);
+              final dadosAnteriores = anterior?.data() ?? <String, dynamic>{};
+              final atualizarRascunho = anterior?.exists == true && dadosAnteriores['status'] != 'Enviado';
+              final destino = atualizarRascunho ? selecionado! : novo;
+              transaction.set(destino, {
+                ...dados,
+                'status': 'Rascunho',
+                'modoExecucao': 'Rascunho',
+                'usuarioId': user.uid,
+                'usuario': user.displayName ?? user.email ?? 'Usuário',
+                'dataHora': atualizarRascunho
+                    ? (dadosAnteriores['dataHora'] ?? FieldValue.serverTimestamp())
+                    : FieldValue.serverTimestamp(),
+                'atualizadoEm': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+              return destino.id;
+            }).timeout(const Duration(seconds: 20));
+            if (!dialogContext.mounted) return;
+            setDialogState(() {
+              comentarioSelecionadoId = salvoId;
+              idRascunhoParaSalvar = null;
+            });
+            ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+              content: Text('Rascunho salvo no app. Para publicar no E-Desk, use Enviar comentário.')));
+          } catch (error) {
+            if (dialogContext.mounted) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(
+                content: Text(recoveryError(error, operation: 'salvar o rascunho')),
+                backgroundColor: CoresApp.erro));
+            }
+          } finally {
+            if (dialogContext.mounted) setDialogState(() => salvando = false);
+          }
+        },
+      );
     }
 
     // ===============================================================
@@ -1745,7 +1832,7 @@ class ComentarioModal {
       required bool enviar,
     }) async {
       if (enviar && podeSalvarEnviado()) {
-        await salvarComentario(dialogContext, setDialogState);
+        await salvarPublicacao(dialogContext, setDialogState);
         return;
       }
       if (enviar && commentSaveGate.alreadySent(identidadeConteudoAtual())) {
@@ -1870,13 +1957,7 @@ class ComentarioModal {
       final identidadeDoEnvio = identidadeConteudoAtual();
       final idDoComentarioEnviado = comentarioSelecionadoId;
       final dadosDoEnvio = <String, dynamic>{
-        'comentario': texto,
-        'imagemBase64': imagemBase64,
-        'imagensBase64': List<String>.from(imagensParaEnvio),
-        'blocosComentario': blocosParaPersistir(),
-        'tipoComentario': tipoComentario,
-        'percentualRealizado': parseCommentPercentage(percentualController.text),
-        'tipoComentarioEdesk': _tipoComentarioEdesk(tipoComentario),
+        ...capturarComentario(),
         'modoExecucao': 'Envio',
         'projetoId': project.id.trim(),
       };
@@ -1927,7 +2008,7 @@ class ComentarioModal {
             await persistirPublicacao();
             return;
           }
-          await salvarComentario(dialogContext, setDialogState);
+          await salvarPublicacao(dialogContext, setDialogState);
           return;
         }
 
@@ -2283,6 +2364,7 @@ class ComentarioModal {
                                           setDialogStatePrincipal(() {
                                             comentarioSelecionadoId =
                                                 editar ? doc.id : null;
+                                            idRascunhoParaSalvar = null;
                                             percentualController.text =
                                                 (dados['percentualRealizado'] ??
                                                         '')
@@ -4725,6 +4807,7 @@ class ComentarioModal {
                                 setDialogState(() {
                                   comentarioSelecionadoId =
                                       editar ? doc.id : null;
+                                  idRascunhoParaSalvar = null;
                                   percentualController.text =
                                       (dados['percentualRealizado'] ?? '')
                                           .toString();
@@ -7344,8 +7427,8 @@ class ComentarioModal {
                                                     style: TextStyle(
                                                         fontSize: 11)),
                                               ),
-                                              if (podeSalvarEnviado()) ElevatedButton.icon(
-                                                onPressed: (!podeSalvarEnviado() || salvando ||
+                                              ElevatedButton.icon(
+                                                onPressed: (salvando ||
                                                         testandoEdesk ||
                                                         enviandoEdesk)
                                                     ? null
@@ -7376,7 +7459,7 @@ class ComentarioModal {
                                                 label: Text(
                                                   salvando
                                                       ? 'Salvando...'
-                                                      : 'Salvar publicação',
+                                                      : 'Salvar',
                                                   style: const TextStyle(
                                                       fontSize: 11),
                                                 ),
