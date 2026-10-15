@@ -2,6 +2,7 @@ Future<EdeskPythonResult> executarPythonEdesk({
   required String requestJson,
   required bool enviar,
   String script = 'edesk_comentario.py',
+  bool speakResult = false,
 }) async {
   return _resultadoIndisponivel(script);
 }

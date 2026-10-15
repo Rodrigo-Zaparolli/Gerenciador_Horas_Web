@@ -428,6 +428,7 @@ Future<EdeskPythonResult> executarPythonEdesk({
 
   // Mantém o script atual de comentários como padrão.
   String script = 'edesk_comentario.py',
+  bool speakResult = false,
 }) async {
   Directory? tempDirectory;
   final manterNavegadorDoTeste = !enviar && script == 'edesk_comentario.py';

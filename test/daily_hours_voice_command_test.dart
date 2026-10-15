@@ -47,7 +47,7 @@ void main() {
                 clientFactory: factory,
                 loadDay: (_) async => List.generate(
                     30, (i) => entry('$i', DateTime(2026, 10, 15))),
-                onSend: (_) async =>
+                onSend: (_, spokenReplies) async =>
                     fail('Must not send without confirmation')))));
     await tester.tap(find.text('Comando de voz'));
     await tester.pump();
@@ -99,7 +99,7 @@ void main() {
                       entry('running', day, registered: false)
                     ];
                   },
-                  onSend: (logs) async => sent.add(logs)))));
+                  onSend: (logs, spokenReplies) async => sent.add(logs)))));
       expect(clients.any((c) => c.started), false);
       await tester.tap(find.text('Comando de voz'));
       await tester.pump();
@@ -152,7 +152,7 @@ void main() {
               loads++;
               return pending.future;
             },
-            onSend: (_) async {
+            onSend: (_, spokenReplies) async {
               sends++;
             });
       }))));

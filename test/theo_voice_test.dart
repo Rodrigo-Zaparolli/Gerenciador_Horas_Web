@@ -69,7 +69,7 @@ void main() {
                   loads++;
                   return [entry('today', today)];
                 },
-                onSend: (_) async {
+                onSend: (_, spokenReplies) async {
                   sends++;
                 }))));
     expect(clients.any((c) => c.started), false);

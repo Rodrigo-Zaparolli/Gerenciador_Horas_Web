@@ -42,7 +42,7 @@ class DailyHoursVoiceCommand extends StatefulWidget {
   final String? accountKey;
   final bool enabled;
   final Future<List<TimeLog>> Function(DateTime) loadDay;
-  final Future<void> Function(List<TimeLog>) onSend;
+  final Future<void> Function(List<TimeLog>, bool spokenReplies) onSend;
   final ValueChanged<bool>? onBusyChanged;
   final bool Function(String)? accountIsCurrent;
   final VoiceClientFactory? clientFactory;
@@ -171,7 +171,7 @@ class _DailyHoursVoiceCommandState extends State<DailyHoursVoiceCommand> {
         return;
       }
       setState(() => _message = 'Encaminhando horas ao E-Desk…');
-      await widget.onSend(logs);
+      await widget.onSend(logs, _spokenReplies);
     } catch (_) {
       if (current()) {
         setState(() => _message =

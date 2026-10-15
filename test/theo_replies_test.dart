@@ -32,6 +32,43 @@ class FakeSpeech implements SpeechClient {
 }
 
 void main() {
+  for (final muted in [false, true]) {
+    testWidgets(
+        'send forwards the chosen spoken-result preference muted=$muted',
+        (tester) async {
+      final clients = <FakeVoice>[];
+      FakeVoice factory(VoiceEventHandler cb) {
+        final client = FakeVoice(cb);
+        clients.add(client);
+        return client;
+      }
+
+      bool? resultPreference;
+      final today = DateTime(2026, 10, 15);
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: DailyHoursVoiceCommand(
+                  accountKey: 'a',
+                  clock: () => today,
+                  clientFactory: factory,
+                  loadDay: (_) async => [entry('today', today)],
+                  onSend: (_, spokenReplies) async {
+                    resultPreference = spokenReplies;
+                  }))));
+      if (muted) {
+        await tester.tap(find.text('Respostas faladas'));
+        await tester.pump();
+      }
+      await tester.tap(find.text('Ativar Théo'));
+      await tester.pump();
+      clients.last.onEvent('final', 'Théo enviar horas do dia');
+      await tester.pumpAndSettle();
+      expect(resultPreference, null);
+      await tester.tap(find.text('Confirmar e enviar'));
+      await tester.pumpAndSettle();
+      expect(resultPreference, !muted);
+    });
+  }
   test('spoken totals and cancellation accept only supported review actions',
       () {
     expect(spokenHours(0), 'zero horas');
@@ -82,7 +119,7 @@ void main() {
                   speechFactory: speechFactory,
                   clock: () => today,
                   loadDay: (_) async => [entry('a', today), entry('b', today)],
-                  onSend: (_) async {
+                  onSend: (_, spokenReplies) async {
                     sent++;
                   }))));
       if (muted) {
@@ -149,7 +186,7 @@ void main() {
                 clientFactory: factory,
                 speechFactory: () => FakeSpeech(spoken),
                 loadDay: (_) async => throw StateError('Should not load'),
-                onSend: (_) async => fail('Should not send')))));
+                onSend: (_, spokenReplies) async => fail('Should not send')))));
     await tester.tap(find.text('Ativar Théo'));
     await tester.pump();
     final mic = clients.last;

@@ -1515,7 +1515,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
 // MODAL PRINCIPAL DE CONFERÊNCIA E-DESK
 // ============================================================
 
-  Future<void> _enviarHorasDireto(List<TimeLog> logs, {bool fromVoice = false}) async {
+  Future<void> _enviarHorasDireto(List<TimeLog> logs, {bool fromVoice = false, bool speakResult = false}) async {
     if (_enviandoEdesk || (_preparandoHorasVoz && !fromVoice) || logs.isEmpty) return;
     final sendOwner = FirebaseAuth.instance.currentUser?.uid;
     if (sendOwner == null) return;
@@ -1637,6 +1637,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
         requestJson: requestJson,
         enviar: true,
         script: 'edesk_horas.py',
+        speakResult: speakResult,
       );
 
       if (resultado.statusCode == 499) {
@@ -3742,7 +3743,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
             enabled: widget.selectedIndex == 5 && !_enviandoEdesk,
             loadDay: widget.timeLogStore.loadRegisteredDay,
             onBusyChanged: (busy) { if (mounted) setState(() => _preparandoHorasVoz = busy); },
-            onSend: (logs) => _enviarHorasDireto(logs, fromVoice: true)),
+            onSend: (logs, speakResult) => _enviarHorasDireto(logs, fromVoice: true, speakResult: speakResult)),
           const SizedBox(height: 8),
           _buildFiltersBar(),
           const SizedBox(height: 8),

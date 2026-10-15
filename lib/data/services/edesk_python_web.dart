@@ -9,13 +9,15 @@ import 'edesk_endpoint.dart';
 import 'edesk_extension.dart';
 import 'edesk_operation_history.dart';
 import 'web_release_monitor.dart';
+import '../../features/edesk/edesk_result_dialog.dart';
 
 Future<EdeskPythonResult> executarPythonEdesk({
   required String requestJson,
   required bool enviar,
   String script = 'edesk_comentario.py',
+  bool speakResult = false,
 }) async =>
-    EdeskActivity.track(() => _executar(requestJson: requestJson, enviar: enviar, script: script));
+    EdeskActivity.track(() => _executar(requestJson: requestJson, enviar: enviar, script: script, speakResult: speakResult));
 
 Future<EdeskPythonResult> executarPythonEdeskBackground({
   required String requestJson,
@@ -35,6 +37,7 @@ Future<EdeskPythonResult> _executar({
   required String requestJson,
   required bool enviar,
   required String script,
+  bool speakResult = false,
 }) async {
   EdeskReviewDecision decision = const EdeskReviewDecision(true);
   if (enviar) {
@@ -155,29 +158,12 @@ Future<EdeskPythonResult> _executar({
   if (enviar && context != null && context.mounted) {
     await showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
-              title: Text(result.confirmed
-                  ? 'Envio concluído'
-                  : 'Envio não confirmado'),
-              content: SizedBox(width: 480,
-                  child: Column(mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (result.confirmed && edeskProgressCounts.value.total > 0 &&
-                            edeskProgressCounts.value.completed == edeskProgressCounts.value.total) ...[
-                          const LinearProgressIndicator(value: 1),
-                          const SizedBox(height: 8),
-                          const Text('100% — envio confirmado'),
-                          const SizedBox(height: 16),
-                        ],
-                        Text(result.message),
-                      ])),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Entendi'))
-              ],
-            ));
+        builder: (context) => EdeskResultDialog(
+          confirmed: result.confirmed, message: result.message,
+          completeProgress: edeskProgressCounts.value.total > 0 &&
+              edeskProgressCounts.value.completed == edeskProgressCounts.value.total,
+          spokenHoursResult: speakResult && script == 'edesk_horas.py',
+          canSpeak: () => historyUid != null && FirebaseAuth.instance.currentUser?.uid == historyUid));
   }
   return result;
 }

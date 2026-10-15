@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Théo agora responde por voz e em texto: avisa que está ouvindo, orienta quando não entende e informa quantos apontamentos encontrou e o total de horas na conferência.",
-    "Na conferência, após a resposta do Théo, diga cancelar para fechar sem enviar. O envio continua dependendo da revisão e do clique em Confirmar e enviar; comandos de voz não confirmam o envio.",
-    "Use Respostas faladas para ligar ou desligar o áudio. A voz usa o recurso do navegador; os textos permanecem visíveis. A fala do assistente é bloqueada como entrada de comandos durante a reprodução. Nenhuma atualização do CMD é necessária."
+    "Théo responde ao terminar o envio de horas iniciado pelo comando de voz. A fala acontece na tela de resultado, sem precisar clicar em Entendi.",
+    "A confirmação de sucesso só é falada quando o E-Desk confirma os apontamentos. Se o resultado não for confirmado, Théo orienta conferir os registros antes de reenviar.",
+    "A resposta final respeita a opção Respostas faladas. Também é possível usar Silenciar Théo na tela de resultado; os detalhes continuam disponíveis em texto. Não é necessário atualizar o CMD."
   ]
 }
