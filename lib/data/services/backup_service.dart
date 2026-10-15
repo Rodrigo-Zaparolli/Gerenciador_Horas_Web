@@ -26,6 +26,8 @@ bool _secretKey(String key) =>
             caseSensitive: false)
         .hasMatch(key);
 
+bool backupIncludesDocument(String path) => path != 'configuracoes/edesk_credenciais';
+
 dynamic encodeBackupValue(dynamic value) {
   if (value is Timestamp)
     return {
@@ -127,6 +129,7 @@ BackupPlan validateBackup(String text, String uid, {FirebaseFirestore? db}) {
                     backupChildCollections.contains(parts[2]))));
     if (!valid || !seen.add(path))
       throw const FormatException('Caminho inválido ou repetido no backup.');
+    if (!backupIncludesDocument(path)) continue;
     final decoded = Map<String, dynamic>.from(
         decodeBackupValue(record['data'], uid: uid, db: db) as Map);
     documents.add(BackupDocument(path, decoded));
@@ -175,6 +178,7 @@ class BackupService {
           .collection(name)
           .get(const GetOptions(source: Source.server));
       for (final doc in snapshot.docs) {
+        if (!backupIncludesDocument('$name/${doc.id}')) continue;
         records.add(
             {'path': '$name/${doc.id}', 'data': encodeBackupValue(doc.data())});
         if (name == 'projects' || name == 'completed_projects') {

@@ -51,6 +51,16 @@ void main() {
         });
   });
 
+  test('cloud E-Desk credentials are excluded from export and restore', () {
+    expect(backupIncludesDocument('configuracoes/edesk_credenciais'), false);
+    expect(backupIncludesDocument('configuracoes/edesk_integracao'), true);
+    final plan = validateBackup(backup([
+      {'path': 'configuracoes/edesk_credenciais', 'data': {'email': 'fixture@example.test', 'senha': 'fixture'}},
+      {'path': 'configuracoes/edesk_integracao', 'data': {'mode': 'local'}},
+    ]), 'owner');
+    expect(plan.documents.map((doc) => doc.path), ['configuracoes/edesk_integracao']);
+  });
+
   test('backup validates all paths and owner before any restore', () {
     final documents = [
       {

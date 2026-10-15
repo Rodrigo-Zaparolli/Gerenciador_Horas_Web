@@ -235,6 +235,7 @@ class _CabecalhoState extends State<Cabecalho> {
     bool mostrarSenha = false;
     bool salvando = false;
     bool possuiCredenciais = false;
+    String? erroCarregamento;
 
     try {
       final dados = await _edeskCredentials.ler();
@@ -244,10 +245,8 @@ class _CabecalhoState extends State<Cabecalho> {
         senhaController.text = dados['senha'] ?? '';
         possuiCredenciais = true;
       }
-    } catch (e) {
-      debugPrint(
-        '[E-DESK] Erro lendo credenciais: $e',
-      );
+    } catch (_) {
+      erroCarregamento = 'Não foi possível recuperar as credenciais. Verifique a conexão e reabra esta janela.';
     }
 
     if (!mounted || !context.mounted) {
@@ -316,6 +315,11 @@ class _CabecalhoState extends State<Cabecalho> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    if (erroCarregamento != null) Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(erroCarregamento, style: TextStyle(color: CoresApp.erro)),
+                    ),
 
                     // ==================================================
                     // E-MAIL
@@ -447,9 +451,9 @@ class _CabecalhoState extends State<Cabecalho> {
                           const SizedBox(width: 9),
                           Expanded(
                             child: Text(
-                              'A senha não será armazenada no Firebase. '
-                              'Ela ficará armazenada localmente de forma segura '
-                              'neste computador.',
+                              'As credenciais serão salvas na sua conta do app no Firebase '
+                              'e carregadas ao entrar em outro computador. '
+                              'Uma cópia local permite reutilizar as credenciais neste navegador.',
                               style: TextStyle(
                                 color: CoresApp.textoSecundario,
                                 fontSize: 11,
@@ -524,6 +528,7 @@ class _CabecalhoState extends State<Cabecalho> {
                                 );
                               }
                             } catch (e) {
+                              if (!dialogContext.mounted) return;
                               setDialogState(() {
                                 salvando = false;
                               });
@@ -629,13 +634,14 @@ class _CabecalhoState extends State<Cabecalho> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Credenciais do E-Desk salvas com segurança.',
+                                    'Credenciais do E-Desk salvas na sua conta do app.',
                                   ),
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             }
                           } catch (e) {
+                            if (!dialogContext.mounted) return;
                             setDialogState(() {
                               salvando = false;
                             });

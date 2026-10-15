@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-mails: contatos da planilha disponíveis nos três modelos, independentemente de onde a planilha foi importada.",
-    "Recupera também contatos mantidos nos rascunhos locais de outros modelos ao reabrir. Use + em Para ou Cc para escolher os endereços."
+    "Credenciais E-Desk salvas no Firebase por conta do app, para carregar automaticamente em outro computador. Após atualizar, salve suas credenciais uma vez para sincronizar.",
+    "Cópia local por usuário para recuperação, confirmação do salvamento na nuvem e remoção sincronizada. Credenciais ficam fora dos backups."
   ]
 }
