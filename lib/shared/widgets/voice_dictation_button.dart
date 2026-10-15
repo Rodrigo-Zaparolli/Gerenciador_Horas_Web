@@ -14,12 +14,19 @@ class VoiceDictationButton extends StatefulWidget {
       this.activity,
       this.idleLabel = 'Ditar por voz',
       this.activeLabel = 'Parar ditado',
+      this.listeningHint,
+      this.idleHint,
+      this.cancelOnStop = false,
+      this.onStart,
       this.sessionKey,
       this.clientFactory});
   final ValueChanged<String> onText;
   final bool enabled;
   final VoiceActivity? activity;
   final String idleLabel, activeLabel;
+  final String? listeningHint, idleHint;
+  final bool cancelOnStop;
+  final VoidCallback? onStart;
   final Object? sessionKey;
   final VoiceClientFactory? clientFactory;
   @override
@@ -72,10 +79,15 @@ class _VoiceDictationButtonState extends State<VoiceDictationButton> {
 
   void _toggle() {
     if (_active) {
+      if (widget.cancelOnStop) {
+        setState(_cancel);
+        return;
+      }
       _client?.stop();
       return;
     }
     _cancel();
+    widget.onStart?.call();
     final generation = _generation;
     setState(() => _error = '');
     _client = _factory((type, value) {
@@ -123,8 +135,9 @@ class _VoiceDictationButtonState extends State<VoiceDictationButton> {
             : _state == 'stopping'
                 ? 'Concluindo ditado…'
                 : _active
-                    ? 'Ouvindo em português…'
-                    : 'Áudio pode ser processado online pelo navegador.';
+                    ? widget.listeningHint ?? 'Ouvindo em português…'
+                    : widget.idleHint ??
+                        'Áudio pode ser processado online pelo navegador.';
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Comando de voz em Tarefas: clique em Comando de voz e diga enviar horas do dia ou enviar horas de hoje.",
-    "O app busca os apontamentos registrados na data de hoje, independentemente dos filtros da tela, e mostra os registros e o total para conferência. O envio ao E-Desk exige Confirmar e enviar.",
-    "O microfone é encerrado antes da conferência. Falhas de consulta e alterações de conta interrompem a preparação para evitar envio incompleto. Não é necessário atualizar a integração CMD para acessar o novo comando."
+    "Assistente Théo em Tarefas: clique em Ativar Théo, permita o microfone e diga Théo, enviar horas do dia. O indicador mostra quando Théo está ouvindo.",
+    "Você também pode dizer Théo e falar o comando em até oito segundos. Conversas sem a chamada pelo nome não acionam esse modo. A conferência das horas continua obrigatória antes de enviar.",
+    "Desativar Théo encerra a escuta e descarta resultados pendentes. A escuta também para antes da conferência e ao sair da tela. Se o navegador encerrar a sessão, clique em Ativar Théo novamente. O áudio pode ser processado online pelo navegador; nenhuma atualização do CMD é necessária."
   ]
 }

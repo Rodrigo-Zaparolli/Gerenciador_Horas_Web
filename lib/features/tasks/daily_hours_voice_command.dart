@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theo_voice_button.dart';
 import '../../core/platform/voice.dart';
 import '../../core/theme/app_palette.dart';
 import '../../domain/models/dashboard_models.dart';
@@ -141,16 +142,26 @@ class _DailyHoursVoiceCommandState extends State<DailyHoursVoiceCommand> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            VoiceDictationButton(
-                idleLabel: 'Comando de voz',
-                activeLabel: 'Parar comando',
-                enabled: widget.enabled && !_busy && widget.accountKey != null,
-                sessionKey: '${widget.accountKey}/$_revision',
-                clientFactory: widget.clientFactory,
-                onText: _recognized),
+            Wrap(spacing: 16, runSpacing: 6, children: [
+              VoiceDictationButton(
+                  idleLabel: 'Comando de voz',
+                  activeLabel: 'Parar comando',
+                  enabled:
+                      widget.enabled && !_busy && widget.accountKey != null,
+                  sessionKey: '${widget.accountKey}/$_revision',
+                  clientFactory: widget.clientFactory,
+                  onText: _recognized),
+              TheoVoiceButton(
+                  enabled:
+                      widget.enabled && !_busy && widget.accountKey != null,
+                  sessionKey: '${widget.accountKey}/$_revision',
+                  clientFactory: widget.clientFactory,
+                  accepts: isSendTodayHoursCommand,
+                  onCommand: _recognized),
+            ]),
             Text(
                 _message.isEmpty
-                    ? 'Diga “enviar horas do dia” e confira antes de enviar.'
+                    ? 'Com Théo ativo, diga “Théo, enviar horas do dia”. Confira antes de enviar. O áudio pode ser processado online.'
                     : _message,
                 style: TextStyle(color: AppPalette.secondary, fontSize: 11)),
           ]);
