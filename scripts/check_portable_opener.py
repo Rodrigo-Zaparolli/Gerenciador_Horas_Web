@@ -13,6 +13,8 @@ with tempfile.TemporaryDirectory(prefix='opener-validation-', dir=validation_roo
     extracted = Path(directory).resolve()
     assert extracted.is_relative_to(validation_root)
     with zipfile.ZipFile(root / 'web/downloads/abertura-local-windows.zip') as archive:
+        for source in ['local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1']:
+            assert archive.read(source) == (root / source).read_bytes()
         for item in archive.infolist():
             target = (extracted / item.filename).resolve()
             assert target.is_relative_to(extracted)
@@ -32,7 +34,7 @@ health=client.get('/healthz')
 assert health.status_code==200 and health.json['nativeFiles'] is True
 assert health.json['excelMirror'] is True
 assert 'preview' in health.json['nativeActions']
-assert health.json['nativeFilesVersion'] == 'full-path-links-3'
+assert health.json['nativeFilesVersion'] == 'persistent-file-links-4'
 headers={'Origin':'https://gerenciador-horas.web.app','Authorization':'Bearer invalid-test-token'}
 with patch('local_edesk.files_server.verify_token',side_effect=ValueError):
     assert client.post('/api/local-files',json={'action':'open'},headers=headers).status_code==401

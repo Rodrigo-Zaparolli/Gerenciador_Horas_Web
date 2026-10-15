@@ -5,14 +5,25 @@ import re
 import sqlite3
 import threading
 import uuid
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path, PureWindowsPath
 from urllib.parse import quote, unquote, urlsplit
 
-DB_PATH = Path(__file__).resolve().parent.parent / '.edesk-local' / 'local-files.sqlite3'
+LEGACY_DB_PATH = Path(__file__).resolve().parent.parent / '.edesk-local' / 'local-files.sqlite3'
+
+
+def database_path():
+    override = os.environ.get('EDESK_LOCAL_FILES_DB_PATH')
+    if override:
+        return Path(override).expanduser().resolve()
+    local_data = Path(os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData' / 'Local')
+    return local_data / 'GerenciadorHoras' / 'integracao' / 'local-files.sqlite3'
+
+
+DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
-PROTOCOL_VERSION = 'full-path-links-3'
+PROTOCOL_VERSION = 'persistent-file-links-4'
 SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview'})
 
 
@@ -92,13 +103,39 @@ def _validate(path, kind):
 @contextmanager
 def _connection():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB_PATH)
-    con.execute('CREATE TABLE IF NOT EXISTS files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+    con = sqlite3.connect(DB_PATH, timeout=10)
     try:
         with con:
+            con.execute('CREATE TABLE IF NOT EXISTS files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+            _import_legacy(con)
             yield con
     finally:
         con.close()
+
+
+def _import_legacy(con, source_path=None):
+    """Merge authorizations from this extraction without replacing other links.
+
+    The stable database survives extracting a new package into another folder.
+    Each old database is imported once, including when the destination already
+    contains links from another extraction. The original is never modified.
+    """
+    legacy = Path(source_path or LEGACY_DB_PATH).resolve()
+    if legacy == DB_PATH.resolve() or not legacy.is_file():
+        return
+    con.execute('CREATE TABLE IF NOT EXISTS imported_file_databases(source TEXT PRIMARY KEY)')
+    source = str(legacy)
+    if con.execute('SELECT 1 FROM imported_file_databases WHERE source=?', (source,)).fetchone():
+        return
+    with closing(sqlite3.connect(legacy.as_uri() + '?mode=ro', uri=True, timeout=10)) as old:
+        rows = old.execute('SELECT uid,reference,path,kind FROM files').fetchall()
+    con.executemany('INSERT OR IGNORE INTO files(uid,reference,path,kind) VALUES(?,?,?,?)', rows)
+    con.execute('INSERT OR IGNORE INTO imported_file_databases(source) VALUES(?)', (source,))
+
+
+def import_authorizations(source):
+    with _connection() as con:
+        _import_legacy(con, source)
 
 
 def execute(uid, body):

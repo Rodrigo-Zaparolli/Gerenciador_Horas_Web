@@ -1,6 +1,9 @@
 import os
+import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import unquote, urlsplit, quote
 from pathlib import Path
 from unittest.mock import patch
@@ -16,10 +19,13 @@ class LocalFilesTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.db = patch.object(local_files, 'DB_PATH', self.root / 'files.db')
         self.db.start()
+        self.legacy = patch.object(local_files, 'LEGACY_DB_PATH', self.root / 'legacy' / 'local-files.sqlite3')
+        self.legacy.start()
         self.client = app.test_client()
         self.headers = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bearer fake-test-token'}
 
     def tearDown(self):
+        self.legacy.stop()
         self.db.stop()
         self.temp.cleanup()
 
@@ -34,6 +40,74 @@ class LocalFilesTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 local_files.execute('other', {'action': 'open', 'reference': ref})
             self.assertEqual(local_files.execute('owner', {'action': 'read', 'reference': ref})['base64'], 'b3JpZ2luYWwgdW5jaGFuZ2Vk')
+
+    def test_database_location_is_independent_of_package_extraction(self):
+        with patch.dict(os.environ, {'LOCALAPPDATA': str(self.root)}, clear=True):
+            self.assertEqual(local_files.database_path(), self.root / 'GerenciadorHoras' / 'integracao' / 'local-files.sqlite3')
+
+    def test_old_links_migrate_and_survive_another_extraction_and_restart(self):
+        folder = self.root / 'Orquinare' / 'Documentos'
+        folder.mkdir(parents=True)
+        workbook = folder / 'Projeto.xlsx'
+        workbook.write_bytes(b'original workbook')
+        references = [
+            'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos',
+            'desktop-file://local/owner/12345678-1234-1234-1234-123456789013/Projeto.xlsx',
+        ]
+        legacy = local_files.LEGACY_DB_PATH
+        legacy.parent.mkdir()
+        with closing(sqlite3.connect(legacy)) as old, old:
+            old.execute('CREATE TABLE files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+            old.executemany('INSERT INTO files VALUES(?,?,?,?)', [
+                ('owner', references[0], str(folder), 'folder'),
+                ('owner', references[1], str(workbook), 'file'),
+            ])
+        with local_files._connection() as con:
+            self.assertEqual(con.execute('SELECT COUNT(*) FROM files').fetchone()[0], 2)
+        # A new extraction has no private database, but uses the same durable map.
+        with patch.object(local_files, 'LEGACY_DB_PATH', self.root / 'new-package' / '.edesk-local' / 'local-files.sqlite3'), \
+             patch.object(local_files, 'choose') as picker, patch.object(local_files.os, 'startfile') as opener:
+            for ref, path in zip(references, [folder, workbook]):
+                local_files.execute('owner', {'action': 'open', 'reference': ref})
+                self.assertEqual(opener.call_args.args, (str(path.resolve()),))
+            picker.assert_not_called()
+        with closing(sqlite3.connect(legacy)) as old, old:
+            self.assertEqual(old.execute('SELECT COUNT(*) FROM files').fetchone()[0], 2)
+
+    def test_import_merges_accounts_and_keeps_existing_reference_destinations(self):
+        first = self.root / 'first'
+        second = self.root / 'second'
+        first.mkdir()
+        second.mkdir()
+        ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos'
+        local_files._save('owner', ref, first, 'folder')
+        source = self.root / 'other-extraction.sqlite3'
+        with closing(sqlite3.connect(source)) as old, old:
+            old.execute('CREATE TABLE files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+            old.executemany('INSERT INTO files VALUES(?,?,?,?)', [
+                ('owner', ref, str(second), 'folder'),
+                ('other', ref.replace('/owner/', '/other/'), str(second), 'folder'),
+            ])
+        local_files.import_authorizations(source)
+        local_files.import_authorizations(source)
+        with local_files._connection() as con:
+            self.assertEqual(con.execute('SELECT COUNT(*) FROM files').fetchone()[0], 2)
+            self.assertEqual(con.execute('SELECT path FROM files WHERE uid=?', ('owner',)).fetchone()[0], str(first))
+            self.assertEqual(con.execute('SELECT path FROM files WHERE uid=?', ('other',)).fetchone()[0], str(second))
+
+    def test_simultaneous_first_opens_import_legacy_only_once(self):
+        legacy = local_files.LEGACY_DB_PATH
+        legacy.parent.mkdir()
+        with closing(sqlite3.connect(legacy)) as old, old:
+            old.execute('CREATE TABLE files(uid TEXT,reference TEXT,path TEXT,kind TEXT,PRIMARY KEY(uid,reference))')
+            old.execute('INSERT INTO files VALUES(?,?,?,?)', ('owner', 'reference', str(self.root), 'folder'))
+        def open_database(_):
+            with local_files._connection() as con:
+                return con.execute('SELECT COUNT(*) FROM files').fetchone()[0]
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            self.assertEqual(list(pool.map(open_database, range(12))), [1] * 12)
+        with local_files._connection() as con:
+            self.assertEqual(con.execute('SELECT COUNT(*) FROM imported_file_databases').fetchone()[0], 1)
 
     def test_old_browser_reference_is_linked_once_and_opens_folder(self):
         folder = self.root / 'Projeto'

@@ -6,17 +6,32 @@ function Get-OpenerStatus {
 }
 $status = Get-OpenerStatus
 if ($status) {
-    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'full-path-links-3') {
+    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-4') {
         Write-Host 'Abertura local já está ativa. Pode usar o aplicativo web.'
         exit 0
     }
     if ($status.service -eq 'gerenciador-horas-edesk' -and $status.mode -eq 'files-only') {
         # A previous extraction may still own the port and have a different PID file.
+        $listener = Get-NetTCPConnection -LocalPort 8765 -State Listen |
+            Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
+        if (-not $listener) { throw 'Não foi possível identificar a integração anterior.' }
+        $previousProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
+        if (-not $previousProcess.ExecutablePath -or
+            (Split-Path $previousProcess.ExecutablePath -Leaf) -ne 'python.exe' -or
+            $previousProcess.CommandLine -notmatch '-m\s+local_edesk\.files_server(?:\s|$)') {
+            throw 'A conexão pertence a outro programa. Nenhum processo foi encerrado.'
+        }
+        $previousDirectory = [IO.Path]::GetFullPath((Split-Path (Split-Path $previousProcess.ExecutablePath -Parent) -Parent))
+        $previousDatabase = Join-Path $previousDirectory '.edesk-local\local-files.sqlite3'
         & (Join-Path $PSScriptRoot 'stop_local_files.ps1')
         for ($stopAttempt = 0; $stopAttempt -lt 10; $stopAttempt++) {
             $status = Get-OpenerStatus
             if (-not $status) { break }
             Start-Sleep -Milliseconds 500
+        }
+        if (-not $status -and (Test-Path -LiteralPath $previousDatabase)) {
+            & $openerPython (Join-Path $PSScriptRoot 'migrate_integration_data.py') --file-links $previousDatabase
+            if ($LASTEXITCODE -ne 0) { throw 'Não foi possível preservar os vínculos locais anteriores.' }
         }
     }
     if ($status) {
@@ -32,7 +47,7 @@ $openerProcess = Start-Process -FilePath $openerPython -ArgumentList '-m','local
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     Start-Sleep -Milliseconds 500
     $status = Get-OpenerStatus
-    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'full-path-links-3') {
+    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-4') {
         $openerProcess.Id | Set-Content -LiteralPath (Join-Path $openerLog 'service.pid')
         Write-Host 'Abertura local ativa. Você pode fechar esta janela.'
         Start-Process 'https://gerenciador-horas.web.app/abrir-arquivos.html' -WindowStyle Hidden

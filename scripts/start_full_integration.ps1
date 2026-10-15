@@ -2,13 +2,13 @@ $ErrorActionPreference = 'Stop'
 $integrationDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $integrationPython = Join-Path $integrationDirectory 'python\python.exe'
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $integrationDirectory 'python\ms-playwright'
-$env:EDESK_INTEGRATION_VERSION = 'project-file-paths-10'
+$env:EDESK_INTEGRATION_VERSION = 'persistent-file-links-11'
 $health = $null
 try { $health = Invoke-RestMethod 'http://127.0.0.1:8765/healthz' -TimeoutSec 3 } catch { }
 if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
     if ($health.busy) { throw 'Aguarde o envio atual terminar antes de iniciar este pacote.' }
     if ($health.mode -eq 'central') { throw 'Existe uma integração central ativa neste PC. Encerre-a antes de iniciar este pacote local.' }
-    if ($health.integrationPackageVersion -ne 'project-file-paths-10' -or $health.mode -ne 'local') {
+    if ($health.integrationPackageVersion -ne 'persistent-file-links-11' -or $health.mode -ne 'local') {
         $listener = Get-NetTCPConnection -LocalPort 8765 -State Listen |
             Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
         if (-not $listener) { throw 'Não foi possível identificar a integração anterior.' }
@@ -35,6 +35,11 @@ if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
         foreach ($databaseName in @('local-files.sqlite3', 'history.sqlite3')) {
             $previousDatabase = Join-Path $previousDirectory ".edesk-local\$databaseName"
             $currentDatabase = Join-Path $integrationDirectory ".edesk-local\$databaseName"
+            if ($databaseName -eq 'local-files.sqlite3' -and (Test-Path -LiteralPath $previousDatabase)) {
+                & $integrationPython (Join-Path $PSScriptRoot 'migrate_integration_data.py') --file-links $previousDatabase
+                if ($LASTEXITCODE -ne 0) { throw 'Não foi possível preservar os vínculos locais da integração anterior.' }
+                continue
+            }
             if ($previousDirectory -ne $integrationDirectory -and
                 (Test-Path -LiteralPath $previousDatabase) -and
                 -not (Test-Path -LiteralPath $currentDatabase)) {

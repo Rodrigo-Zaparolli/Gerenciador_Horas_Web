@@ -45,7 +45,7 @@ def package(complete=False):
             if source.is_relative_to(SITE.resolve()):
                 add(source, 'python/Lib/site-packages/' + source.relative_to(SITE.resolve()).as_posix())
     for name in ['local_edesk/files_server.py', 'local_edesk/local_files.py', 'local_edesk/authentication.py', 'local_edesk/excel_mirror.py', 'edesk_bot/excel_preview.py',
-                 'scripts/start_local_files.ps1', 'scripts/stop_local_files.ps1']:
+                 'scripts/start_local_files.ps1', 'scripts/stop_local_files.ps1', 'scripts/migrate_integration_data.py']:
         add(ROOT / name, name)
     if complete:
         for name in ['local_edesk/server.py', 'local_edesk/central.py', 'local_edesk/journal.py',
@@ -79,7 +79,9 @@ def package(complete=False):
                 'Substitui a abertura local simples automaticamente, sem apagar a pasta antiga.\r\n'
                 'Apos reiniciar o Windows, execute Iniciar integracao E-Desk.cmd novamente.\r\n'
                 'Ao enviar, entre no E-Desk se o navegador da integracao solicitar login.\r\n'
-                'Mantenha esta pasta. Os dados e a sessao deste PC ficam somente nela.\r\n'))
+                'Mantenha esta pasta para preservar a sessao e o historico deste PC.\r\n'
+                'Os vinculos de pastas e planilhas ficam no perfil do Windows e sobrevivem a novas extracoes.\r\n'
+                'Na primeira atualizacao para esta versao, extraia na pasta anterior sem apagar .edesk-local.\r\n'))
         else:
             write_opener_instructions(archive)
     print(f'Pacote: {output_path.name}; {output_path.stat().st_size / 1024 / 1024:.1f} MB; {len(files)} arquivos; {len(seen)} dependencias publicas.')
@@ -96,7 +98,9 @@ def write_opener_instructions(archive):
             '5. Se solicitado, localize a pasta ou planilha original uma vez.\r\n\r\n'
             'Apos reiniciar o Windows, execute Iniciar abertura local.cmd novamente.\r\n'
             'Este pacote abre originais no Windows; nao envia horas ao E-Desk.\r\n'
-            'Nao precisa instalar Python, compartilhar senhas ou usar PC central.\r\n'))
+            'Nao precisa instalar Python, compartilhar senhas ou usar PC central.\r\n'
+            'Vinculos de pastas e planilhas ficam no perfil do Windows e sobrevivem a atualizacoes.\r\n'
+            'Na primeira atualizacao para esta versao, extraia na pasta anterior sem apagar .edesk-local.\r\n'))
 
 
 if __name__ == '__main__':

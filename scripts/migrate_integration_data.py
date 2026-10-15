@@ -21,4 +21,9 @@ def migrate(source, destination):
 
 
 if __name__ == '__main__':
-    migrate(sys.argv[1], sys.argv[2])
+    if sys.argv[1] == '--file-links':
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from local_edesk.local_files import import_authorizations
+        import_authorizations(sys.argv[2])
+    else:
+        migrate(sys.argv[1], sys.argv[2])
