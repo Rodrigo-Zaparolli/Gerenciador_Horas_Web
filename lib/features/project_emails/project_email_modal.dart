@@ -162,7 +162,9 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
         if (shared == null) {
           for (final other
               in ProjectEmailKind.values.where((kind) => kind != _kind)) {
-            shared = await _store.loadDraft(_uid!, widget.project.id, other);
+            shared = _cache[other] ??
+                RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}') ??
+                await _store.loadDraft(_uid!, widget.project.id, other);
             if (shared != null) break;
           }
         }
@@ -182,14 +184,21 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           for (final other in ProjectEmailKind.values.where((kind) => kind != _kind))
             () async {
               try {
-                return _cache[other] ?? await _store.loadDraft(_uid!, widget.project.id, other);
+                return [
+                  _cache[other],
+                  RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}'),
+                  await _store.loadDraft(_uid!, widget.project.id, other),
+                ];
               } catch (_) {
-                return null;
+                return [
+                  _cache[other],
+                  RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}'),
+                ];
               }
             }(),
         ]);
         if (!mounted || !_sameAccount) return;
-        for (final source in sources) {
+        for (final source in sources.expand((items) => items)) {
           mergeAvailableEmailContacts(_projectContacts, [
             for (final item in source?['contacts'] as List? ?? [])
               EmailContact.fromJson(Map<String, dynamic>.from(item)),
@@ -367,7 +376,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
         }
         _render();
         _message =
-            '${parsed.contacts.length} contatos e ${parsed.fields.length} campos importados. Destinatários preenchidos conforme o modelo. Revise Para e Cc antes de gerar.';
+            '${parsed.contacts.length} contatos e ${parsed.fields.length} campos importados. Os endereços ficam disponíveis nos três modelos, pelo + de Para e Cc. Revise os destinatários antes de gerar.';
       });
     } catch (error) {
       if (mounted) {

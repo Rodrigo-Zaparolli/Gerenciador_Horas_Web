@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/core/platform/local_user_state.dart';
+import 'package:gerenciador_horas/data/services/recoverable_draft.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_theme.dart';
 import 'package:gerenciador_horas/domain/models/project_model.dart';
@@ -101,6 +102,41 @@ void main() {
     expect(find.text('Cliente importado \u2014 cliente@example.com'), findsNothing);
     expect(find.text('Relacionamento \u2014 er@example.com'), findsOneWidget);
     expect(store.drafts['owner-a/2256824/finalization']!['contacts'], isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('all three models offer contacts recovered from a different local draft', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemoryEmailStore();
+    for (final kind in ProjectEmailKind.values) {
+      store.drafts['owner-a/2256824/${kind.name}'] = {
+        'contacts': [], 'recipientsConfigured': true,
+      };
+    }
+    RecoverableDraft.save('owner-a', 'email.2256824.internal', {
+      'contacts': [EmailContact(name: 'Contato da planilha', email: 'planilha@example.com',
+        group: 'Cliente').toJson()], 'recipientsConfigured': true,
+    });
+    await tester.pumpWidget(MaterialApp(theme: AppTheme.light,
+      home: Scaffold(body: ProjectEmailModal(project: project, store: store))));
+    await tester.pumpAndSettle();
+    for (final kind in ProjectEmailKind.values) {
+      final model = find.widgetWithText(ChoiceChip, kind.label);
+      await tester.ensureVisible(model);
+      await tester.tap(model);
+      await tester.pumpAndSettle();
+      final add = find.byTooltip('Adicionar em Para');
+      await tester.ensureVisible(add);
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+      expect(find.text('Contato da planilha — planilha@example.com'), findsOneWidget);
+      // Close the menu without selecting: availability must not select recipients.
+      await tester.tapAt(const Offset(1430, 10));
+      await tester.pumpAndSettle();
+    }
+    expect(store.drafts.values.every((draft) => (draft['contacts'] as List).isEmpty), true);
     expect(tester.takeException(), isNull);
   });
   testWidgets('unsaved text survives reopening without sending or cloud save',

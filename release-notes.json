@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Tarefas Executadas: visão mensal com semanas limitadas aos dias do próprio mês, incluindo dias sem apontamentos e totais mensais consistentes.",
-    "Navegação por mês, botão Hoje, intervalos reais das semanas e resumo de horas cobradas e não cobradas. Layout adaptado para telas menores."
+    "E-mails: contatos da planilha disponíveis nos três modelos, independentemente de onde a planilha foi importada.",
+    "Recupera também contatos mantidos nos rascunhos locais de outros modelos ao reabrir. Use + em Para ou Cc para escolher os endereços."
   ]
 }
