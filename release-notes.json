@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Correção na integração local: seleção do trabalho pelo número exato também quando o número é texto e o botão de abertura fica em outra célula. Links e abertura em nova aba são reconhecidos sem bloquear a navegação.",
-    "A abertura do retroativo agora exige que o formulário de horas esteja visível. O cadastro completo só é confirmado quando todos os apontamentos tiverem confirmação individual.",
-    "Para receber esta correção no outro PC, baixe a integração completa atualizada (work-selection-13), extraia na pasta anterior preservando .edesk-local e execute Iniciar integração E-Desk.cmd. Os vínculos existentes e o início automático são preservados."
+    "Download leve da correção work-selection-13 para quem já tem a integração completa instalada, sem baixar novamente o Python e o navegador. Extraia na mesma pasta preservando os arquivos existentes e reinicie a integração.",
+    "A página de instalação agora oferece as duas opções: atualização leve e instalação completa. A verificação de conexão reconhece a versão atual work-selection-13."
   ]
 }
