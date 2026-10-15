@@ -17,8 +17,7 @@ compiled = (root / 'main.dart.js').read_bytes()
 assert release.encode() in compiled, 'Manifest and compiled application differ'
 assert 'web-release.json' not in (root / 'flutter_service_worker.js').read_text(encoding='utf-8')
 assert 'flutter_bootstrap.js?release=' in (root / 'index.html').read_text(encoding='utf-8')
-assert 'voice_recognition.js' in (root / 'index.html').read_text(encoding='utf-8')
-assert (root / 'voice_recognition.js').is_file()
+assert 'voice_recognition.js' not in (root / 'index.html').read_text(encoding='utf-8'), 'Voice must not start in this release'
 digest = hashlib.sha256(compiled).hexdigest()
 print(f'LOCAL_RELEASE_OK: {release} SHA256={digest}')
 if args.public:
@@ -34,7 +33,5 @@ if args.public:
         response = session.get(base, params={'check': time.time_ns()}, timeout=30)
         response.raise_for_status()
         assert 'flutter_bootstrap.js?release=' in response.text
-        response = session.get(base + 'voice_recognition.js', params={'check': time.time_ns()}, timeout=30)
-        response.raise_for_status()
-        assert response.content == (root / 'voice_recognition.js').read_bytes(), 'Public voice bridge differs'
+        assert 'voice_recognition.js' not in response.text, 'Public page still starts voice'
     print('PUBLIC_RELEASE_OK: manifest, compiled application and loader match')

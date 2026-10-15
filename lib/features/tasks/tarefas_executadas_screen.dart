@@ -1,6 +1,5 @@
 import 'hours_send_selection.dart';
 import 'task_history_month.dart';
-import 'daily_hours_voice_command.dart';
 import 'task_history_month_panel.dart';
 import 'dart:async';
 import 'package:gerenciador_horas/core/platform/local_user_state.dart';
@@ -95,7 +94,6 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
   final FirebaseService _firebaseService = FirebaseService();
   bool _enviandoEdesk = false;
-  bool _preparandoHorasVoz = false;
 
   String _search = '';
   String _filter = 'Todas';
@@ -1516,14 +1514,16 @@ class _TarefasScreenState extends State<TarefasScreen> {
 // MODAL PRINCIPAL DE CONFERÊNCIA E-DESK
 // ============================================================
 
-  Future<void> _enviarHorasDireto(List<TimeLog> logs, {bool fromVoice = false, bool speakResult = false}) async {
-    if (_enviandoEdesk || (_preparandoHorasVoz && !fromVoice) || logs.isEmpty) return;
+  Future<void> _enviarHorasDireto(List<TimeLog> logs) async {
+    if (_enviandoEdesk || logs.isEmpty) return;
     final sendOwner = FirebaseAuth.instance.currentUser?.uid;
     if (sendOwner == null) return;
     setState(() => _enviandoEdesk = true);
     try {
-      if (!fromVoice) {
+      {
         final selection = await selectHoursForSend(context, logs,
+            save: widget.timeLogStore.updateFirebaseLog,
+            delete: widget.timeLogStore.deleteFirebaseLog,
             canSend: () => mounted && FirebaseAuth.instance.currentUser?.uid == sendOwner);
         if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner || selection == null || selection.isEmpty) return;
         logs = selection;
@@ -1644,7 +1644,6 @@ class _TarefasScreenState extends State<TarefasScreen> {
         requestJson: requestJson,
         enviar: true,
         script: 'edesk_horas.py',
-        speakResult: speakResult,
       );
 
       if (resultado.statusCode == 499) {
@@ -3744,14 +3743,6 @@ class _TarefasScreenState extends State<TarefasScreen> {
             totalDias: totalDias,
           ),
           const SizedBox(height: 12),
-          DailyHoursVoiceCommand(
-            accountKey: FirebaseAuth.instance.currentUser?.uid,
-            accountIsCurrent: (uid) => FirebaseAuth.instance.currentUser?.uid == uid,
-            enabled: widget.selectedIndex == 5 && !_enviandoEdesk,
-            loadDay: widget.timeLogStore.loadRegisteredDay,
-            onBusyChanged: (busy) { if (mounted) setState(() => _preparandoHorasVoz = busy); },
-            onSend: (logs, speakResult) => _enviarHorasDireto(logs, fromVoice: true, speakResult: speakResult)),
-          const SizedBox(height: 8),
           _buildFiltersBar(),
           const SizedBox(height: 8),
           _buildMonthNavigation(registeredLogs, dia),

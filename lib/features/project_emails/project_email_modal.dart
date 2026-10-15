@@ -20,17 +20,13 @@ import 'email_draft_store.dart';
 import 'products_image_field.dart';
 import 'email_body_preview.dart';
 import 'email_recipient_fields.dart';
-import '../../shared/widgets/voice_dictation_button.dart';
-import '../../shared/widgets/dictation_text.dart';
-import '../../core/platform/voice.dart';
 
 class ProjectEmailModal extends StatefulWidget {
   final ProjectModel project;
   final EmailDraftStore? store;
   final Future<Uint8List?> Function()? workbookLoader;
-  final VoiceClientFactory? voiceFactory;
   const ProjectEmailModal(
-      {super.key, required this.project, this.store, this.workbookLoader, this.voiceFactory});
+      {super.key, required this.project, this.store, this.workbookLoader});
   static Future<void> show(BuildContext context, ProjectModel project) =>
       showDialog<void>(
           context: context,
@@ -46,7 +42,6 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   ProjectEmailKind _kind = ProjectEmailKind.initial;
   final _fields = <String, TextEditingController>{};
   final _subject = TextEditingController(), _body = TextEditingController();
-  final _voiceActivity = VoiceActivity();
   final _contacts = <EmailContact>[];
   final _projectContacts = <EmailContact>[];
   bool _projectContactsLoaded = false;
@@ -275,10 +270,6 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   }
 
   Future<void> _save() async {
-    if (_voiceActivity.active) {
-      setState(() => _message = 'Pare o ditado e revise o texto antes de salvar.');
-      return;
-    }
     if (!(_recipientKey.currentState?.commitPending() ?? true)) return;
     setState(() => _busy = true);
     try {
@@ -422,10 +413,6 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   }
 
   Future<void> _generate() async {
-    if (_voiceActivity.active) {
-      setState(() => _message = 'Pare o ditado e revise o texto antes de gerar o e-mail.');
-      return;
-    }
     if (!(_recipientKey.currentState?.commitPending() ?? true)) {
       await _generationError('Revise os e-mails digitados nos campos Para e Cc.');
       return;
@@ -930,19 +917,6 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
             style: TextStyle(fontSize: 12)),
       ]));
   Widget _messageEditor({bool visible = true}) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    VoiceDictationButton(
-      activity: _voiceActivity,
-      enabled: visible && !_busy && _ready && !_closing && _sameAccount,
-      sessionKey: _kind,
-      clientFactory: widget.voiceFactory,
-      onText: (text) {
-        if (!_sameAccount || _busy || !_ready || _closing) return;
-        setState(() {
-          _customBody = true;
-          insertDictation(_body, text);
-        });
-      }),
-    const SizedBox(height: 8),
     TextField(
       controller: _body,
       minLines: 20,

@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Seleção de apontamentos antes de enviar horas ao E-Desk, pelo botão ou pelo comando de voz do Théo. Marque ou desmarque cada registro e confira o total escolhido.",
-    "A conferência oferece Selecionar todas e bloqueia o envio quando nenhum apontamento estiver marcado. Somente os registros selecionados são encaminhados."
+    "Removidos o Théo, os comandos de voz e os botões de ditado do app.",
+    "Ao clicar em enviar horas ao E-Desk, abre a conferência com edição, exclusão e seleção individual ou de todos os apontamentos. O total acompanha apenas os itens marcados.",
+    "Edições e exclusões são salvas no app. A exclusão pede confirmação e não remove horas já cadastradas no E-Desk; registros desmarcados ficam fora do envio."
   ]
 }
