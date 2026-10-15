@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Pastas e planilhas locais: novas seleções preservam o caminho completo e cada vínculo mantém seu próprio destino, sem permitir substituição por outra pasta com o mesmo nome.",
-    "Editor de trabalho mostra caminhos completos em até três linhas. Atualize a integração local para usar a correção e selecione novamente os vínculos antigos que exibem apenas o nome da pasta."
+    "Comentários: após a confirmação do envio ao E-Desk, o app salva automaticamente o comentário e informa que foi publicado.",
+    "Se o salvamento no app falhar após a publicação, use Salvar publicação para tentar novamente sem reenviar ao E-Desk ou duplicar o histórico."
   ]
 }

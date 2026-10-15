@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/features/dashboard/comentario/comment_save_gate.dart';
 
@@ -10,9 +11,12 @@ void main() {
     gate.receiveResult(content: 'text', sending: true, confirmed: false);
     expect(gate.canSave('text'), false);
   });
-  test('confirmed content remains available for explicit save without resending', () {
+  test(
+      'confirmed content remains available for explicit save without resending',
+      () {
     final gate = CommentSaveGate();
-    gate.receiveResult(content: 'text and image', sending: true, confirmed: true);
+    gate.receiveResult(
+        content: 'text and image', sending: true, confirmed: true);
     expect(gate.canSave('text and image'), true);
     expect(gate.alreadySent('text and image'), true);
     expect(gate.canSave('changed text'), false);
@@ -27,5 +31,61 @@ void main() {
     gate.receiveResult(content: 'second', sending: true, confirmed: true);
     expect(gate.canSave('second'), true);
     expect(gate.canSave('first'), false);
+  });
+  test('only a confirmed publication triggers project persistence', () async {
+    final gate = CommentSaveGate();
+    var writes = 0;
+    Future<void> persist() async {
+      writes++;
+    }
+
+    expect(await gate.persistPending(persist), false);
+    gate.receiveResult(content: 'text', sending: false, confirmed: true);
+    expect(await gate.persistPending(persist), false);
+    gate.receiveResult(content: 'text', sending: true, confirmed: false);
+    expect(await gate.persistPending(persist), false);
+    expect(writes, 0);
+    gate.receiveResult(content: 'text', sending: true, confirmed: true);
+    expect(await gate.persistPending(persist), true);
+    expect(writes, 1);
+    expect(gate.hasPendingSave, false);
+    expect(gate.alreadySent('text'), true);
+    expect(await gate.persistPending(persist), false);
+    expect(writes, 1);
+  });
+  test(
+      'failed project persistence retries without losing publication confirmation',
+      () async {
+    final gate = CommentSaveGate();
+    gate.receiveResult(
+        content: 'published snapshot', sending: true, confirmed: true);
+    await expectLater(gate.persistPending(() async {
+      throw StateError('offline');
+    }), throwsStateError);
+    expect(gate.hasPendingSave, true);
+    expect(gate.alreadySent('published snapshot'), true);
+    expect(await gate.persistPending(() async {}), true);
+    expect(gate.hasPendingSave, false);
+  });
+  test('concurrent project save requests wait for the same acknowledgement',
+      () async {
+    final gate = CommentSaveGate();
+    gate.receiveResult(content: 'published', sending: true, confirmed: true);
+    final acknowledgement = Completer<void>();
+    var writes = 0;
+    Future<void> persist() {
+      writes++;
+      return acknowledgement.future;
+    }
+
+    final first = gate.persistPending(persist);
+    final second = gate.persistPending(persist);
+    expect(identical(first, second), true);
+    expect(gate.hasPendingSave, true);
+    expect(writes, 1);
+    acknowledgement.complete();
+    expect(await first, true);
+    expect(await second, true);
+    expect(gate.hasPendingSave, false);
   });
 }

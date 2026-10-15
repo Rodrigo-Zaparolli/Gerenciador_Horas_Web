@@ -1658,74 +1658,62 @@ class ComentarioModal {
       'tipo': tipoComentario,
     });
     bool podeSalvarEnviado() => comentarioEnviadoParaSalvar != null &&
-        commentSaveGate.canSave(identidadeConteudoAtual());
+        commentSaveGate.hasPendingSave;
+
+    Future<void> persistirPublicacao() async {
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+
+      if (firebaseUser == null) {
+        throw Exception('Usuário não autenticado no Firebase.');
+      }
+
+      final ref = comentariosRef();
+
+      if (comentarioEnviadoParaSalvar!['usuarioId'] != firebaseUser.uid) {
+        throw StateError('A conta foi alterada. Abra novamente o coment\u00e1rio.');
+      }
+      final dados = Map<String, dynamic>.from(comentarioEnviadoParaSalvar!);
+
+      if (idComentarioEnviadoParaSalvar == null) {
+        // Reserve the ID before writing: an uncertain Firebase response can
+        // then be retried without creating a second history entry.
+        idComentarioEnviadoParaSalvar = ref.doc().id;
+        comentarioEnviadoParaSalvar!['dataHora'] = FieldValue.serverTimestamp();
+      }
+      dados.addAll(comentarioEnviadoParaSalvar!);
+      dados['atualizadoEm'] = FieldValue.serverTimestamp();
+      await commentSaveGate.persistPending(() => ref
+          .doc(idComentarioEnviadoParaSalvar)
+          .set(dados, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 20)));
+
+    }
 
     Future<void> salvarComentario(
       BuildContext dialogContext,
       StateSetter setDialogState,
     ) async {
       if (!podeSalvarEnviado()) return;
-      final texto = montarTextoOrdenado();
-
-      if (texto.isEmpty && imagensBase64.isEmpty && imagemBase64 == null) {
-        ScaffoldMessenger.of(dialogContext).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Digite um comentário ou adicione uma imagem.',
-            ),
-            backgroundColor: CoresApp.erro,
-          ),
-        );
-
-        return;
+      if (dialogContext.mounted) {
+        setDialogState(() {
+          salvando = true;
+        });
       }
 
-      setDialogState(() {
-        salvando = true;
-      });
-
       try {
-        final firebaseUser = FirebaseAuth.instance.currentUser;
-
-        if (firebaseUser == null) {
-          throw Exception('Usuário não autenticado no Firebase.');
-        }
-
-        final ref = comentariosRef();
-
-        if (comentarioEnviadoParaSalvar!['usuarioId'] != firebaseUser.uid) {
-          throw StateError('A conta foi alterada. Abra novamente o coment\u00e1rio.');
-        }
-        final dados = Map<String, dynamic>.from(comentarioEnviadoParaSalvar!);
-
-        if (idComentarioEnviadoParaSalvar == null) {
-          dados['status'] = 'Enviado';
-          dados['dataHora'] = FieldValue.serverTimestamp();
-          dados['tentativas'] = 0;
-
-          final documento = await ref.add(dados);
-
-          setDialogState(() {
-            comentarioSelecionadoId = documento.id;
-            idComentarioEnviadoParaSalvar = documento.id;
-          });
-        } else {
-          dados['atualizadoEm'] = FieldValue.serverTimestamp();
-          await ref.doc(idComentarioEnviadoParaSalvar).update(dados);
-        }
-
-        comentarioFocusNode.unfocus();
+        await persistirPublicacao();
 
         if (!dialogContext.mounted) return;
+        comentarioFocusNode.unfocus();
 
         setDialogState(() {
           salvando = false;
-          commentSaveGate.markSaved();
+          comentarioSelecionadoId = idComentarioEnviadoParaSalvar;
         });
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
           SnackBar(
-            content: const Text('Comentário salvo com sucesso.'),
+            content: const Text('Comentário publicado no E-Desk e salvo no app.'),
             backgroundColor: CoresApp.sucesso,
           ),
         );
@@ -1738,7 +1726,9 @@ class ComentarioModal {
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
           SnackBar(
-            content: Text(recoveryError(e, operation: 'salvar o coment\u00e1rio')),
+            content: Text('Publicado no E-Desk, mas não foi possível confirmar o salvamento no app. '
+                'Use Salvar publicação para tentar novamente, sem reenviar. '
+                '${recoveryError(e, operation: 'salvar o comentário')}'),
             backgroundColor: CoresApp.erro,
           ),
         );
@@ -1754,9 +1744,13 @@ class ComentarioModal {
       required StateSetter setDialogState,
       required bool enviar,
     }) async {
+      if (enviar && podeSalvarEnviado()) {
+        await salvarComentario(dialogContext, setDialogState);
+        return;
+      }
       if (enviar && commentSaveGate.alreadySent(identidadeConteudoAtual())) {
         ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
-          content: Text('Este coment\u00e1rio j\u00e1 foi enviado. Use Salvar para guardar no projeto.')));
+          content: Text('Este comentário já foi publicado no E-Desk e salvo no app.')));
         return;
       }
       if (!validarPercentual(dialogContext)) return;
@@ -1912,7 +1906,7 @@ class ComentarioModal {
 
         if (resultado.statusCode == 499) return;
         if (enviar && resultado.confirmed) {
-          setDialogState(() {
+          void registrarPublicacao() {
             idComentarioEnviadoParaSalvar = idDoComentarioEnviado;
             comentarioEnviadoParaSalvar = {
               ...dadosDoEnvio,
@@ -1923,16 +1917,25 @@ class ComentarioModal {
               'tentativas': 1,
             };
             commentSaveGate.receiveResult(content: identidadeDoEnvio, sending: enviar, confirmed: resultado.confirmed);
-          });
+          }
+          if (dialogContext.mounted) {
+            setDialogState(registrarPublicacao);
+          } else {
+            registrarPublicacao();
+          }
+          if (!dialogContext.mounted) {
+            await persistirPublicacao();
+            return;
+          }
+          await salvarComentario(dialogContext, setDialogState);
+          return;
         }
 
         if (!dialogContext.mounted) return;
 
         ScaffoldMessenger.of(dialogContext).showSnackBar(
           SnackBar(
-            content: Text(enviar && resultado.confirmed
-                ? '${resultado.message} Clique em Salvar para guardar no projeto.'
-                : resultado.message),
+            content: Text(resultado.message),
             backgroundColor:
                 resultado.confirmed ? CoresApp.sucesso : CoresApp.erro,
             duration: const Duration(seconds: 5),
@@ -7341,7 +7344,7 @@ class ComentarioModal {
                                                     style: TextStyle(
                                                         fontSize: 11)),
                                               ),
-                                              ElevatedButton.icon(
+                                              if (podeSalvarEnviado()) ElevatedButton.icon(
                                                 onPressed: (!podeSalvarEnviado() || salvando ||
                                                         testandoEdesk ||
                                                         enviandoEdesk)
@@ -7373,7 +7376,7 @@ class ComentarioModal {
                                                 label: Text(
                                                   salvando
                                                       ? 'Salvando...'
-                                                      : 'Salvar',
+                                                      : 'Salvar publicação',
                                                   style: const TextStyle(
                                                       fontSize: 11),
                                                 ),
