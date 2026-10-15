@@ -4,6 +4,35 @@ import 'package:gerenciador_horas/features/project_emails/email_document.dart';
 import 'package:gerenciador_horas/features/project_emails/email_recipient_fields.dart';
 
 void main() {
+  for (final width in [360.0, 1000.0]) {
+    testWidgets('all imported addresses wrap and remain reachable at width $width', (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final contacts = List.generate(16, (i) => EmailContact(
+        name: 'Contato importado $i', email: 'contato$i@example.com',
+        destination: i < 8 ? 'Para' : 'Cc'));
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12), child: EmailRecipientFields(
+          contacts: contacts, onChanged: () {})))));
+      await tester.pumpAndSettle();
+      expect(find.byType(InputChip), findsNWidgets(16));
+      final first = find.text('Contato importado 0\ncontato0@example.com');
+      final eighth = find.text('Contato importado 7\ncontato7@example.com');
+      expect(tester.getRect(eighth).top, greaterThan(tester.getRect(first).top));
+      final last = find.text('Contato importado 15\ncontato15@example.com');
+      await tester.ensureVisible(last);
+      await tester.pumpAndSettle();
+      expect(last.hitTestable(), findsOneWidget);
+      for (final chip in tester.widgetList<InputChip>(find.byType(InputChip))) {
+        final bounds = tester.getRect(find.byWidget(chip));
+        expect(bounds.left, greaterThanOrEqualTo(12));
+        expect(bounds.right, lessThanOrEqualTo(width - 12));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('Para and Cc exclude each other, including typed emails and add all', (tester) async {
     final contacts = [EmailContact(name: 'Cliente', email: 'cliente@example.com', group: 'Cliente')];
     final key = GlobalKey<EmailRecipientFieldsState>();

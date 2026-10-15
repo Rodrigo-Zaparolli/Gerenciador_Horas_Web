@@ -930,17 +930,6 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                         tooltip: 'Fechar')
                   ])),
               if (_busy) const LinearProgressIndicator(),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: AbsorbPointer(
-                      absorbing: _busy || !_ready,
-                      child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 190),
-                          child: SingleChildScrollView(
-                              child: EmailRecipientFields(
-                                  key: _recipientKey,
-                                  contacts: _contacts,
-                                  onChanged: () => setState(_render)))))),
               const Divider(height: 1),
               Expanded(
                   child: AbsorbPointer(
@@ -950,6 +939,12 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                EmailRecipientFields(
+                                    key: _recipientKey,
+                                    contacts: _contacts,
+                                    onChanged: () => setState(_render)),
+                                const Divider(),
+
                                 Wrap(spacing: 8, runSpacing: 8, children: [
                                   for (final kind in ProjectEmailKind.values)
                                     ChoiceChip(

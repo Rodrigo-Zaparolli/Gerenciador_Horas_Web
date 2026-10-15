@@ -70,18 +70,17 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
               errorText: _errors[destination],
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
-          child: Row(children: [
-            Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal,
-                child: Row(children: [
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: LayoutBuilder(builder: (context, constraints) => Wrap(
+                spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
         for (final contact in widget.contacts.where((c) => c.destination == destination))
-          Padding(padding: const EdgeInsets.only(right: 6),
-              child: InputChip(label: Tooltip(message: '${contact.name} <${contact.email}>',
-                  child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 180),
-                      child: Text(contact.name.trim().isEmpty ? contact.email : contact.name,
-                          overflow: TextOverflow.ellipsis))),
-              onDeleted: () { contact.destination = 'Não incluir'; widget.onChanged(); }),
-          ),
-      SizedBox(width: 220, child: TextField(
+          InputChip(label: Tooltip(message: '${contact.name} <${contact.email}>',
+              child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: (constraints.maxWidth - 76).clamp(1, 320).toDouble()),
+                  child: Text(contact.name.trim().isEmpty
+                      ? contact.email : '${contact.name}\n${contact.email}', softWrap: true))),
+              onDeleted: () { contact.destination = 'N\u00e3o incluir'; widget.onChanged(); }),
+      SizedBox(width: constraints.maxWidth.clamp(1, 220).toDouble(), child: TextField(
           key: ValueKey('recipient-input-$destination'),
           controller: _controllers[destination],
           keyboardType: TextInputType.emailAddress, autocorrect: false,

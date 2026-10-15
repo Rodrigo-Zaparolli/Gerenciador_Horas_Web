@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-Desk: após salvar o comentário, volta à solicitação, seleciona Trabalhos e salva o %Realizado no trabalho correto.",
-    "Abertura com menos consultas repetidas, acesso local direto e reaproveitamento da sessão do comentário. Atualize também a integração E-Desk."
+    "E-mails do projeto: destinatários Para e Cc distribuídos em várias linhas, com nome e endereço visíveis.",
+    "Lista de destinatários acompanha a rolagem vertical do formulário, sem esconder contatos em uma linha horizontal."
   ]
 }
