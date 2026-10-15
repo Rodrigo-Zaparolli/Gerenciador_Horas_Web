@@ -1,3 +1,4 @@
+import 'hours_send_selection.dart';
 import 'task_history_month.dart';
 import 'daily_hours_voice_command.dart';
 import 'task_history_month_panel.dart';
@@ -1521,6 +1522,12 @@ class _TarefasScreenState extends State<TarefasScreen> {
     if (sendOwner == null) return;
     setState(() => _enviandoEdesk = true);
     try {
+      if (!fromVoice) {
+        final selection = await selectHoursForSend(context, logs,
+            canSend: () => mounted && FirebaseAuth.instance.currentUser?.uid == sendOwner);
+        if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner || selection == null || selection.isEmpty) return;
+        logs = selection;
+      }
       final draftsSelecionados = logs
           .map((log) => _EdeskDraft(
                 log: log,

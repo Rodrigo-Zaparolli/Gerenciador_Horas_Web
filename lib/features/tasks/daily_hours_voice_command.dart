@@ -1,3 +1,4 @@
+import 'hours_send_selection.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'theo_voice_button.dart';
@@ -154,7 +155,7 @@ class _DailyHoursVoiceCommandState extends State<DailyHoursVoiceCommand> {
         return;
       }
       if (!mounted) return;
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showDialog<List<TimeLog>>(
           // Each day's total uses the same start/end calculation as delivery.
           context: context,
           barrierDismissible: false,
@@ -166,12 +167,12 @@ class _DailyHoursVoiceCommandState extends State<DailyHoursVoiceCommand> {
               clientFactory: widget.clientFactory,
               canInteract: sameScope));
       if (!current()) return;
-      if (confirmed != true) {
+      if (confirmed == null || confirmed.isEmpty) {
         _answer('Certo, nenhum apontamento foi enviado.');
         return;
       }
       setState(() => _message = 'Encaminhando horas ao E-Desk…');
-      await widget.onSend(logs, _spokenReplies);
+      await widget.onSend(confirmed, _spokenReplies);
     } catch (_) {
       if (current()) {
         setState(() => _message =
@@ -274,9 +275,11 @@ class _DailyHoursReviewState extends State<_DailyHoursReview> {
   late final TheoReplies _speaker;
   late String _reply;
   bool _closing = false;
+  late Set<int> _selected;
   @override
   void initState() {
     super.initState();
+    _selected = Set<int>.from(List.generate(widget.logs.length, (i) => i));
     _speaker = TheoReplies(factory: widget.speechFactory)
       ..enabled = widget.spokenReplies;
     final total =
@@ -308,10 +311,17 @@ class _DailyHoursReviewState extends State<_DailyHoursReview> {
 
   void _close(bool send) {
     if (_closing) return;
-    if (send && !widget.canInteract()) return;
+    if (send && (!widget.canInteract() || _selected.isEmpty)) return;
     _closing = true;
     _speaker.cancel();
-    Navigator.pop(context, send);
+    Navigator.pop(
+        context,
+        send
+            ? [
+                for (var i = 0; i < widget.logs.length; i++)
+                  if (_selected.contains(i)) widget.logs[i]
+              ]
+            : null);
   }
 
   void _heard(String text) {
@@ -363,19 +373,16 @@ class _DailyHoursReviewState extends State<_DailyHoursReview> {
                       onText: _heard,
                       clientFactory: widget.clientFactory),
                   const SizedBox(height: 8),
-                  for (final log in widget.logs)
-                    ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                            '${log.projectName ?? log.targetId} · ${log.taskName ?? ''}'),
-                        subtitle: Text(
-                            '${log.startTime}–${log.endTime}\n${log.description ?? ''}')),
+                  HoursSendSelection(
+                      logs: widget.logs,
+                      selected: _selected,
+                      onChanged: (value) => setState(() => _selected = value)),
                 ]))),
         actions: [
           TextButton(
               onPressed: () => _close(false), child: const Text('Cancelar')),
           FilledButton(
-              onPressed: () => _close(true),
+              onPressed: _selected.isEmpty ? null : () => _close(true),
               child: const Text('Confirmar e enviar'))
         ]);
   }

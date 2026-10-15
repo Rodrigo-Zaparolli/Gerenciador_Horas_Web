@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Download leve da correção work-selection-13 para quem já tem a integração completa instalada, sem baixar novamente o Python e o navegador. Extraia na mesma pasta preservando os arquivos existentes e reinicie a integração.",
-    "A página de instalação agora oferece as duas opções: atualização leve e instalação completa. A verificação de conexão reconhece a versão atual work-selection-13."
+    "Seleção de apontamentos antes de enviar horas ao E-Desk, pelo botão ou pelo comando de voz do Théo. Marque ou desmarque cada registro e confira o total escolhido.",
+    "A conferência oferece Selecionar todas e bloqueia o envio quando nenhum apontamento estiver marcado. Somente os registros selecionados são encaminhados."
   ]
 }
