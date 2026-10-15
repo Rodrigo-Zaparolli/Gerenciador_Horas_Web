@@ -22,9 +22,14 @@ with zipfile.ZipFile(PACKAGE) as archive:
         assert not path.is_absolute() and '..' not in path.parts
         assert path.parts[0] in {'python', 'edesk_bot', 'local_edesk', 'cloud_run',
                                 'scripts', 'LEIA-ME.txt', 'Iniciar integração E-Desk.cmd',
-                                'Parar integração E-Desk.cmd'}, name
+                                'Parar integração E-Desk.cmd', 'Ativar inicio automatico.cmd',
+                                'Desativar inicio automatico.cmd'}, name
         assert not any(part in {'.edesk-local', 'perfil', 'logs', '__pycache__'} for part in path.parts), name
-    for source in ['local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
+    for name, disable in [('Ativar inicio automatico.cmd', False), ('Desativar inicio automatico.cmd', True)]:
+        command = archive.read(name).decode('utf-8')
+        assert 'scripts\\integration_autostart.ps1' in command
+        assert ('-Disable' in command) == disable
+    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
         assert archive.read(source) == (ROOT / source).read_bytes()
     with tempfile.TemporaryDirectory(prefix='complete package ', dir=VALIDATION) as temporary:
         extracted = Path(temporary).resolve()
@@ -33,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='persistent-file-links-11',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='windows-autostart-12',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -92,7 +97,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'persistent-file-links-11'
+            assert health['integrationPackageVersion'] == 'windows-autostart-12'
             assert health['commentPercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',

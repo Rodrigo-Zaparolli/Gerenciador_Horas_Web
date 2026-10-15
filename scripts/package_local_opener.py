@@ -52,7 +52,8 @@ def package(complete=False):
                      'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py',
                      'edesk_bot/edesk_horas.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/phase_confirmation.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_fases.py',
                      'scripts/start_edesk_local.ps1', 'scripts/stop_edesk_local.ps1',
-                     'scripts/start_full_integration.ps1', 'scripts/migrate_integration_data.py']:
+                     'scripts/start_full_integration.ps1', 'scripts/migrate_integration_data.py',
+                     'scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1']:
             add(ROOT / name, name)
         for source in (RUNTIME / 'ms-playwright' / 'chromium-1187').rglob('*'):
             add(source, 'python/' + source.relative_to(RUNTIME).as_posix())
@@ -68,6 +69,8 @@ def package(complete=False):
             for name, script in [('Iniciar integração E-Desk.cmd', 'start_full_integration.ps1'),
                                  ('Parar integração E-Desk.cmd', 'stop_edesk_local.ps1')]:
                 archive.writestr(name, '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\' + script + '"\r\npause\r\n')
+            for name, arguments in [('Ativar inicio automatico.cmd', ''), ('Desativar inicio automatico.cmd', ' -Disable')]:
+                archive.writestr(name, '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\integration_autostart.ps1"' + arguments + '\r\npause\r\n')
             archive.writestr('LEIA-ME.txt', (
                 'INTEGRACAO E-DESK COMPLETA - WINDOWS 64 BITS\r\n\r\n'
                 '1. Use Extrair tudo para colocar o pacote em uma pasta permanente.\r\n'
@@ -77,7 +80,10 @@ def package(complete=False):
                 'Inclui Python, navegador e o script de horas fornecido. Nao precisa instalar Python.\r\n'
                 'Tambem abre pastas, planilhas e o espelho do Excel (Excel instalado necessario para o espelho).\r\n'
                 'Substitui a abertura local simples automaticamente, sem apagar a pasta antiga.\r\n'
-                'Apos reiniciar o Windows, execute Iniciar integracao E-Desk.cmd novamente.\r\n'
+                'Ao executar Iniciar integracao E-Desk.cmd, o inicio automatico e ativado para este usuario.\r\n'
+                'Nas proximas entradas no Windows, a integracao inicia em segundo plano sem abrir o navegador.\r\n'
+                'Para desativar, execute Desativar inicio automatico.cmd. Para reativar, Ativar inicio automatico.cmd.\r\n'
+                'Parar integracao E-Desk.cmd encerra apenas a execucao atual.\r\n'
                 'Ao enviar, entre no E-Desk se o navegador da integracao solicitar login.\r\n'
                 'Mantenha esta pasta para preservar a sessao e o historico deste PC.\r\n'
                 'Os vinculos de pastas e planilhas ficam no perfil do Windows e sobrevivem a novas extracoes.\r\n'

@@ -1,14 +1,15 @@
+param([switch]$Background)
 $ErrorActionPreference = 'Stop'
 $integrationDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $integrationPython = Join-Path $integrationDirectory 'python\python.exe'
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $integrationDirectory 'python\ms-playwright'
-$env:EDESK_INTEGRATION_VERSION = 'persistent-file-links-11'
+$env:EDESK_INTEGRATION_VERSION = 'windows-autostart-12'
 $health = $null
 try { $health = Invoke-RestMethod 'http://127.0.0.1:8765/healthz' -TimeoutSec 3 } catch { }
 if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
     if ($health.busy) { throw 'Aguarde o envio atual terminar antes de iniciar este pacote.' }
     if ($health.mode -eq 'central') { throw 'Existe uma integração central ativa neste PC. Encerre-a antes de iniciar este pacote local.' }
-    if ($health.integrationPackageVersion -ne 'persistent-file-links-11' -or $health.mode -ne 'local') {
+    if ($health.integrationPackageVersion -ne 'windows-autostart-12' -or $health.mode -ne 'local') {
         $listener = Get-NetTCPConnection -LocalPort 8765 -State Listen |
             Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
         if (-not $listener) { throw 'Não foi possível identificar a integração anterior.' }
@@ -52,4 +53,8 @@ if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
 }
 & (Join-Path $PSScriptRoot 'start_edesk_local.ps1')
 if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Não foi possível iniciar a integração completa.' }
-Start-Process 'https://gerenciador-horas.web.app/integracao-completa.html' -WindowStyle Hidden
+if (-not $Background) {
+    & (Join-Path $PSScriptRoot 'integration_autostart.ps1')
+    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw 'Nao foi possivel ativar o inicio automatico.' }
+    Start-Process 'https://gerenciador-horas.web.app/integracao-completa.html' -WindowStyle Hidden
+}

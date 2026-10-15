@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Projeto selecionado: até seis etapas visíveis na altura atual do card, incluindo Implantação e Pós-implantação. Projetos com mais etapas têm barra de rolagem.",
-    "Evolução de horas: novo indicador Falta (%) mostra o percentual restante para atingir a meta mensal de horas cobradas."
+    "Integração E-Desk: início automático em segundo plano ao entrar no Windows, ativado ao executar o CMD da versão atualizada uma vez.",
+    "Novos comandos para ativar e desativar o início automático. Atualizações comuns do app web não exigem baixar a integração novamente."
   ]
 }

@@ -4,17 +4,17 @@ body{background:#0b0f19;color:#e2e8f0;font:16px/1.6 system-ui;margin:0;padding:2
 </style></head><body><main>
 <h1>Conectar o E-Desk neste computador</h1>
 <p>Este pacote completo permite enviar horas, comentários e fases pelo app web. Também abre pastas e planilhas originais neste PC.</p>
-<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=persistent-file-links-11" download>Baixar integração completa para Windows</a></p>
+<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=windows-autostart-12" download>Baixar integração completa para Windows</a></p>
 <p><strong>Vínculos preservados nas atualizações:</strong> nesta primeira atualização, aguarde qualquer envio terminar e execute <strong>Parar integração E-Desk.cmd</strong> na pasta atual. Extraia o novo ZIP nessa mesma pasta, substituindo os arquivos e mantendo a pasta <strong>.edesk-local</strong>. Execute <strong>Iniciar integração E-Desk.cmd</strong>. Os vínculos existentes serão migrados automaticamente, preservando os originais.</p>
 <p>A partir desta versão, os vínculos ficam no perfil do Windows, separados da pasta extraída. Atualizações futuras da integração não exigem selecionar novamente as pastas e planilhas já autorizadas nesse computador e usuário. Atualizar apenas o app web não exige reinstalar a integração.</p>
 <ol><li>Baixe o ZIP e use <strong>Extrair tudo</strong> para colocá-lo em uma pasta permanente.</li>
-<li>Na pasta extraída, dê dois cliques em <strong>Iniciar integração E-Desk.cmd</strong>.</li>
+<li>Na pasta extraída, dê dois cliques em <strong>Iniciar integração E-Desk.cmd</strong>. Isso também ativa o início automático para seu usuário do Windows.</li>
 <li>Clique abaixo para verificar a conexão. Se o navegador pedir acesso à rede local ou a este dispositivo, escolha <strong>Permitir</strong>.</li></ol>
 <button id="check">Verificar conexão</button>
 <p id="status" role="status">Aguardando a verificação.</p>
 <p><a class="button" href="/">Abrir o app</a></p>
 <p>Atualize o app com <strong>Ctrl + F5</strong>. Ao enviar as horas, entre no E-Desk se o navegador da integração solicitar login. O envio usa o script fornecido, sem a confirmação da extensão.</p>
-<p>Depois de reiniciar o Windows, execute <strong>Iniciar integração E-Desk.cmd</strong> novamente. Não precisa instalar Python nem atualizar a extensão para usar este procedimento.</p>
+<p>Nas próximas entradas no Windows, a integração inicia em segundo plano, sem abrir o navegador. Mantenha a pasta extraída no mesmo local. Para desativar, execute <strong>Desativar inicio automatico.cmd</strong>; para reativar, execute <strong>Ativar inicio automatico.cmd</strong>. O comando Parar encerra apenas a execução atual.</p>
 <p>O espelho da planilha utiliza o Microsoft Excel instalado no PC. A verificação abaixo não cadastra horas.</p>
 </main><script src="native_local_files_v2.js"></script><script>
 const button=document.getElementById('check'),status=document.getElementById('status');
