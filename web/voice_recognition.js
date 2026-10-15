@@ -54,6 +54,14 @@
     recognition.onstart = () => { if (active === session) emit(session, 'state', 'listening'); };
     recognition.onresult = event => {
       if (active !== session) return;
+      // Never interpret the assistant's own spoken reply as a user command.
+      if (window.projectSpeechBusy || performance.now() < (window.projectSpeechQuietUntil || 0)) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) session.finalIndexes.add(i);
+        }
+        emit(session, 'interim', '');
+        return;
+      }
       const interim = [];
       for (let index = event.resultIndex; index < event.results.length; index++) {
         if (active !== session) return;
@@ -82,4 +90,57 @@
     return id;
   };
   window.addEventListener('pagehide', () => { if (active) release(active, true); });
+})();
+
+(() => {
+  let active = null, nextId = 0;
+  window.projectSpeechSupported = () => typeof window.SpeechSynthesisUtterance === 'function' &&
+    typeof window.speechSynthesis?.speak === 'function';
+  function finish(session, completed, abort = false) {
+    if (active !== session) return;
+    active = null;
+    clearTimeout(session.timer);
+    document.removeEventListener('visibilitychange', session.visibility);
+    session.utterance.onstart = session.utterance.onend = session.utterance.onerror = null;
+    window.projectSpeechBusy = false;
+    window.projectSpeechQuietUntil = performance.now() + 500;
+    if (abort) { try { window.speechSynthesis.cancel(); } catch (_) {} }
+    session.callback(completed);
+  }
+  window.projectSpeechCancel = id => {
+    if (active?.id === id) finish(active, false, true);
+  };
+  window.projectSpeechSpeak = (text, callback) => {
+    if (active) finish(active, false, true);
+    const id = ++nextId;
+    if (!window.projectSpeechSupported() || !text?.trim() || document.hidden) {
+      callback(false); return id;
+    }
+    let utterance;
+    try { utterance = new SpeechSynthesisUtterance(text); }
+    catch (_) { callback(false); return id; }
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const voice = voices.find(v => /^pt[-_]BR$/i.test(v.lang)) || voices.find(v => /^pt\b/i.test(v.lang));
+    if (voice) utterance.voice = voice;
+    const session = {id, utterance, callback};
+    active = session;
+    window.projectSpeechBusy = true;
+    utterance.onend = () => finish(session, true);
+    utterance.onerror = () => finish(session, false, true);
+    utterance.onstart = () => {
+      if (active !== session) return;
+      clearTimeout(session.timer);
+      session.timer = setTimeout(() => finish(session, false, true), 30000);
+    };
+    session.visibility = () => { if (document.hidden) finish(session, false, true); };
+    document.addEventListener('visibilitychange', session.visibility);
+    // Silent/blocked synthesis must not suppress user commands indefinitely.
+    session.timer = setTimeout(() => finish(session, false, true), 6000);
+    try { window.speechSynthesis.speak(utterance); }
+    catch (_) { finish(session, false, true); }
+    return id;
+  };
+  window.addEventListener('pagehide', () => { if (active) finish(active, false, true); });
 })();

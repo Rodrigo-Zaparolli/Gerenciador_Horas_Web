@@ -18,6 +18,8 @@ class VoiceDictationButton extends StatefulWidget {
       this.idleHint,
       this.cancelOnStop = false,
       this.onStart,
+      this.onStop,
+      this.autoStart = false,
       this.sessionKey,
       this.clientFactory});
   final ValueChanged<String> onText;
@@ -27,6 +29,8 @@ class VoiceDictationButton extends StatefulWidget {
   final String? listeningHint, idleHint;
   final bool cancelOnStop;
   final VoidCallback? onStart;
+  final VoidCallback? onStop;
+  final bool autoStart;
   final Object? sessionKey;
   final VoiceClientFactory? clientFactory;
   @override
@@ -44,6 +48,16 @@ class _VoiceDictationButtonState extends State<VoiceDictationButton> {
   void initState() {
     super.initState();
     _checkSupport();
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            widget.enabled &&
+            _supported &&
+            ModalRoute.of(context)?.isCurrent != false) {
+          _toggle();
+        }
+      });
+    }
   }
 
   void _checkSupport() {
@@ -79,6 +93,7 @@ class _VoiceDictationButtonState extends State<VoiceDictationButton> {
 
   void _toggle() {
     if (_active) {
+      widget.onStop?.call();
       if (widget.cancelOnStop) {
         setState(_cancel);
         return;

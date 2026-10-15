@@ -48,8 +48,43 @@ with sync_playwright() as p:
     assert page.evaluate('events.at(-1)') == {'type': 'state', 'value': 'idle'}
     page.evaluate('projectVoiceStart(receive);instances.at(-1).onerror({error:"not-allowed"})')
     assert page.evaluate('events.some(e=>e.type==="error" && e.value.includes("Permita o microfone"))')
-    page.evaluate('projectVoiceStart(receive);Object.defineProperty(document,"hidden",{configurable:true,get:()=>true});document.dispatchEvent(new Event("visibilitychange"))')
+    # Fake synthesis only: never play audio. Check language, ownership and echo.
+    page.evaluate('''
+      window.speechEvents=[];window.utterances=[];window.cancelledSpeech=0;
+      window.SpeechSynthesisUtterance=class {constructor(text){this.text=text;utterances.push(this);}};
+      Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{
+        speak:()=>{},cancel:()=>cancelledSpeech++,
+        getVoices:()=>[{lang:'en-US'},{lang:'pt-BR',name:'Portuguese fixture'}]
+      }});
+      window.spokenId=projectSpeechSpeak('Estou ouvindo.',value=>speechEvents.push(value));
+      window.echoRec=instances.at(-1);
+      window.echoSession=projectVoiceStart(receive);window.echoRec=instances.at(-1);
+    ''')
+    assert page.evaluate('utterances.at(-1).lang') == 'pt-BR'
+    assert page.evaluate('utterances.at(-1).voice.lang') == 'pt-BR'
+    before = page.evaluate('events.filter(e=>e.type==="final").length')
+    page.evaluate('result(echoRec,0,"Théo enviar horas do dia");utterances.at(-1).onend()')
+    assert page.evaluate('speechEvents') == [True]
+    assert page.evaluate('events.filter(e=>e.type==="final").length') == before
+    page.evaluate('window.projectSpeechQuietUntil=0;result(echoRec,0,"Théo enviar horas do dia");result(echoRec,1,"Théo enviar horas do dia")')
+    assert page.evaluate('events.filter(e=>e.type==="final").length') == before + 1
+    page.evaluate('''
+      window.oldSpeech=projectSpeechSpeak('Primeira resposta',value=>speechEvents.push(value));
+      window.lateSpeech=utterances.at(-1).onend;
+      window.currentSpeech=projectSpeechSpeak('Segunda resposta',value=>speechEvents.push(value));
+      projectSpeechCancel(oldSpeech);lateSpeech();
+    ''')
+    assert page.evaluate('window.projectSpeechBusy')
+    page.evaluate('projectSpeechCancel(currentSpeech)')
+    assert not page.evaluate('window.projectSpeechBusy')
+    assert page.evaluate('speechEvents') == [True, False, False]
+    page.evaluate('projectSpeechSpeak("Resposta interrompida",value=>speechEvents.push(value));projectVoiceStart(receive);Object.defineProperty(document,"hidden",{configurable:true,get:()=>true});document.dispatchEvent(new Event("visibilitychange"))')
     assert page.evaluate('instances.at(-1).aborted')
+    assert not page.evaluate('window.projectSpeechBusy')
+    page.evaluate('delete window.SpeechSynthesisUtterance')
+    assert not page.evaluate('projectSpeechSupported()')
+    page.evaluate('projectSpeechSpeak("Sem áudio",value=>speechEvents.push(value))')
+    assert page.evaluate('speechEvents.at(-1)') is False
     page.evaluate('delete window.webkitSpeechRecognition;delete window.SpeechRecognition')
     assert not page.evaluate('projectVoiceSupported()')
     page.evaluate('projectVoiceStart(receive)')
@@ -60,7 +95,7 @@ with sync_playwright() as p:
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.add_script_tag(path=str(adapter))
-    assert page.evaluate('window.voiceAdapterPassed === true'), errors
+    page.wait_for_function('window.voiceAdapterPassed === true', timeout=5000)
     assert not errors, errors
     browser.close()
-print('VOICE_BROWSER_OK: pt-BR, interim, final deduplication, session isolation, stop, permission, hidden tab, unsupported browser, compiled Dart adapter; no real audio')
+print('VOICE_BROWSER_OK: recognition and synthesis pt-BR, echo suppression, ownership, cancellation, hidden tab, unsupported fallback, compiled Dart adapters; no real audio')
