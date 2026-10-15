@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_theme.dart';
 import 'package:gerenciador_horas/data/services/user_cache.dart';
+import 'package:gerenciador_horas/domain/models/monthly_hours.dart';
 import 'package:gerenciador_horas/shared/widgets/cabecalho.dart';
 import 'package:gerenciador_horas/features/dashboard/widgets/controle_projetos_widget.dart';
 import 'package:gerenciador_horas/features/dashboard/widgets/progresso_projeto_widget.dart';
@@ -91,8 +92,12 @@ void main() {
                                 flex: 4,
                                 child: ProgressoProjetoWidget(
                                     activeProject: fixture.project([
+                                      fixture.task('1', '08:00'),
                                       fixture.task('2', '08:00'),
-                                      fixture.task('3', '09:00')
+                                      fixture.task('3', '09:00'),
+                                      fixture.task('4', '20:00'),
+                                      fixture.task('5', '20:00')..stage = 'Implantação',
+                                      fixture.task('6', '17:00')..stage = 'Pós-implantação',
                                     ]),
                                     timeLogs: [
                                       fixture.log('a', '100_2', '04:30')
@@ -104,6 +109,7 @@ void main() {
                             Expanded(
                                 flex: 4,
                                 child: GraficoHorasWidget(
+                                    monthly: MonthlyHours(DateTime(2026, 10), 183 + 20 / 60, 134, 72 + 1 / 60),
                                     points: const [
                                       DailyHoursPoint(
                                           label: '09/10', hours: 4.5)
@@ -114,6 +120,11 @@ void main() {
         ));
         await tester.pump(const Duration(seconds: 1));
         expect(tester.takeException(), isNull);
+        expect(find.text('Falta (%)'), findsOneWidget);
+        expect(find.text('46,3%'), findsOneWidget);
+        final stagesViewport = tester.getRect(find.byType(ListView));
+        expect(tester.getRect(find.text('Pós-implantação')).bottom,
+            lessThanOrEqualTo(stagesViewport.bottom + .1));
         await tester.tap(find.text('Novo trabalho'));
         expect(created, 1);
         await tester.pump(const Duration(milliseconds: 300));

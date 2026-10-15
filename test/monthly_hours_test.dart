@@ -49,12 +49,39 @@ void main() {
     expect(totals.charged, closeTo(36 + 20 / 60, .00001));
     expect(totals.planned, 176);
     expect(totals.remaining, closeTo(103 + 40 / 60, .00001));
+    expect(totals.remainingPercentage,
+        closeTo((103 + 40 / 60) / 140 * 100, .00001));
     expect(totals.progress, closeTo((36 + 20 / 60) / 140, .00001));
     final surpassed = MonthlyHours(now, 176, 140, 150);
     expect(surpassed.remaining, 0);
+    expect(surpassed.remainingPercentage, 0);
     expect(surpassed.progress, 1);
     expect(MonthlyHours(now, 176, 0, 20).progress, 0);
   });
+  for (final (goal, charged, label) in [
+    (134.0, 72 + 1 / 60, '46,3%'),
+    (134.0, 0.0, '100,0%'),
+    (134.0, 150.0, '0,0%'),
+    (0.0, 12.0, '—'),
+  ]) {
+    testWidgets('monthly chart shows remaining percentage $label',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: SizedBox(
+                  width: 320,
+                  height: 260,
+                  child: GraficoHorasWidget(
+                      points: const [],
+                      formatHours: (hours) => '${hours.floor()}:00',
+                      monthly: MonthlyHours(DateTime(2026, 10), 183 + 20 / 60,
+                          goal, charged))))));
+      expect(find.text('Falta (%)'), findsOneWidget);
+      expect(find.text(label), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   for (final width in [320.0, 550.0]) {
     testWidgets('Monthly chart fits compact height at width $width',
         (tester) async {

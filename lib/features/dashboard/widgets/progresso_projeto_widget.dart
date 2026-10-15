@@ -129,7 +129,7 @@ class ProgressoProjetoWidget extends StatelessWidget {
                               child: _text('Projeto selecionado',
                                   size: 13, bold: true))
                         ]),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Tooltip(
                             message:
                                 '${activeProject.id} · ${activeProject.client}',
@@ -137,14 +137,14 @@ class ProgressoProjetoWidget extends StatelessWidget {
                                 '${activeProject.id} · ${activeProject.client}',
                                 bold: true,
                                 size: 12)),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         _text(
                             '${activeProject.serviceType} · ${formatDateShort(activeProject.startDate)}',
                             size: 10,
                             color: muted),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 5),
                         Container(
-                            height: 43,
+                            height: 39,
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             decoration: BoxDecoration(
                                 color: AppPalette.field,
@@ -172,12 +172,12 @@ class ProgressoProjetoWidget extends StatelessWidget {
                                       .clamp(0.0, double.infinity),
                                   green)
                             ])),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 5),
                         _text('Etapas do projeto (${tasks.length})',
                             size: 11, bold: true),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 1),
                         SizedBox(
-                            height: 20,
+                            height: 16,
                             child: _tableRow(
                                 name: _text('Etapa', color: muted, size: 10),
                                 progress:
@@ -199,11 +199,9 @@ class ProgressoProjetoWidget extends StatelessWidget {
                                 ? Center(
                                     child: _text('Nenhuma etapa cadastrada',
                                         color: muted))
-                                : ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    primary: false,
+                                : _ProjectStagesViewport(
+                                    key: ValueKey(activeProject.id),
                                     itemCount: tasks.length,
-                                    itemExtent: 23,
                                     itemBuilder: (context, index) {
                                       final task = tasks[index];
                                       final estimate =
@@ -248,4 +246,45 @@ class ProgressoProjetoWidget extends StatelessWidget {
                       ])));
         }));
   }
+}
+
+class _ProjectStagesViewport extends StatefulWidget {
+  const _ProjectStagesViewport(
+      {super.key, required this.itemCount, required this.itemBuilder});
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  @override
+  State<_ProjectStagesViewport> createState() => _ProjectStagesViewportState();
+}
+
+class _ProjectStagesViewportState extends State<_ProjectStagesViewport> {
+  final controller = ScrollController();
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      LayoutBuilder(builder: (context, constraints) {
+        final rows = widget.itemCount.clamp(1, 6);
+        final extent = (constraints.maxHeight / rows).clamp(17.0, 23.0);
+        final overflow = widget.itemCount * extent > constraints.maxHeight + .1;
+        return Scrollbar(
+            controller: controller,
+            thumbVisibility: overflow,
+            interactive: true,
+            thickness: 5,
+            child: ListView.builder(
+                controller: controller,
+                padding: EdgeInsets.only(right: overflow ? 9 : 0),
+                primary: false,
+                physics: overflow
+                    ? const ClampingScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
+                itemCount: widget.itemCount,
+                itemExtent: extent,
+                itemBuilder: widget.itemBuilder));
+      });
 }

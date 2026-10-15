@@ -21,6 +21,8 @@ class MonthlyHours {
   final double planned, goal, charged;
   const MonthlyHours(this.month, this.planned, this.goal, this.charged);
   double get remaining => math.max(0, goal - charged);
+  double get remainingPercentage =>
+      goal > 0 ? (remaining / goal * 100).clamp(0, 100) : 0;
   double get progress => goal > 0 ? (charged / goal).clamp(0, 1) : 0;
   static double parse(String value) {
     final parts = value.trim().split(':');

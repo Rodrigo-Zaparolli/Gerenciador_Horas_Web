@@ -117,7 +117,28 @@ class GraficoHorasWidget extends StatelessWidget {
                 value('Previstas', values.planned, AppPalette.text),
                 value('Meta cobrada', values.goal, cyan),
                 value('Cobradas', values.charged, green),
-                value('Faltam', values.remaining, AppPalette.warning)
+                value('Faltam', values.remaining, AppPalette.warning),
+                Expanded(
+                    child: Tooltip(
+                        message: values.goal > 0
+                            ? '${values.remainingPercentage.toStringAsFixed(1).replaceAll('.', ',')}% para atingir a meta mensal de horas cobradas'
+                            : 'Defina a meta mensal de horas cobradas',
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _label('Falta (%)', size: 8),
+                              const SizedBox(height: 3),
+                              _label(
+                                  values.goal > 0
+                                      ? '${values.remainingPercentage.toStringAsFixed(1).replaceAll('.', ',')}%'
+                                      : '—',
+                                  size: 14,
+                                  color:
+                                      values.goal > 0 && values.remaining == 0
+                                          ? green
+                                          : AppPalette.warning,
+                                  bold: true),
+                            ]))),
               ]),
             ]);
             return Column(

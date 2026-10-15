@@ -46,6 +46,43 @@ ProjectModel project(List<TaskModel> tasks) => ProjectModel(
     subTasks: tasks);
 
 void main() {
+  for (final width in [320.0, 650.0]) {
+    testWidgets(
+        'six project stages are visible and extra stages scroll at $width',
+        (tester) async {
+      Future<void> render(int count) => tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: SizedBox(
+                  width: width,
+                  height: 260,
+                  child: ProgressoProjetoWidget(
+                      activeProject: project(List.generate(
+                          count, (index) => task('${index + 1}', '01:00'))),
+                      timeLogs: const [],
+                      parseTimeToHours: parseHours,
+                      formatHours: formatHours,
+                      formatDateShort: (_) => '15/10/2026')))));
+      await render(6);
+      final viewport = tester.getRect(find.byType(ListView));
+      for (var stage = 1; stage <= 6; stage++) {
+        final rect = tester.getRect(find.text('Etapa $stage'));
+        expect(rect.top, greaterThanOrEqualTo(viewport.top));
+        expect(rect.bottom, lessThanOrEqualTo(viewport.bottom + .1));
+      }
+      expect(tester.widget<Scrollbar>(find.byType(Scrollbar)).thumbVisibility,
+          false);
+      await render(9);
+      expect(tester.widget<Scrollbar>(find.byType(Scrollbar)).thumbVisibility,
+          true);
+      await tester.drag(find.byType(ListView), const Offset(0, -130));
+      await tester.pumpAndSettle();
+      final last = tester.getRect(find.text('Etapa 9'));
+      expect(last.bottom,
+          lessThanOrEqualTo(tester.getRect(find.byType(ListView)).bottom + .1));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   testWidgets(
       'horas do projeto contam logs uma vez e etapas usam suas previsões',
       (tester) async {
