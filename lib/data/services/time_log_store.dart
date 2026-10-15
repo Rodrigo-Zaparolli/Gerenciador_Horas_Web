@@ -46,6 +46,53 @@ class TimeLogStore extends ChangeNotifier {
 
   String? get _userId => _auth.currentUser?.uid;
 
+  /// Fresh server reads, independent of the history/search currently displayed.
+  /// Any failed query aborts the preparation instead of sending a partial day.
+  Future<List<TimeLog>> loadRegisteredDay(DateTime day) async {
+    final uid = _userId;
+    if (uid == null || _disposed) throw StateError('Entre novamente no app.');
+    void checkOwner() {
+      if (_disposed || uid != _userId) {
+        throw StateError('A conta foi alterada. Prepare o envio novamente.');
+      }
+    }
+    final start = DateTime(day.year, day.month, day.day);
+    final end = DateTime(day.year, day.month, day.day + 1);
+    final user = _firestore.collection('users').doc(uid);
+    final collections = await Future.wait([
+      user.collection('projects').get(const GetOptions(source: Source.server)),
+      user.collection('completed_projects').get(const GetOptions(source: Source.server)),
+    ]).timeout(const Duration(seconds: 20));
+    checkOwner();
+    final ids = <String>{
+      ...collections[0].docs.map((doc) => doc.id),
+      ...collections[1].docs.map((doc) => (doc.data()['id']?.toString().trim().isNotEmpty ?? false)
+          ? doc.data()['id'].toString().trim() : doc.id),
+      if (_subscriptionOwner == uid) ..._activeProjectIds,
+    }.toList()..sort();
+    final result = <TimeLog>[];
+    for (var offset = 0; offset < ids.length; offset += 6) {
+      final batch = ids.skip(offset).take(6);
+      final parts = await Future.wait(batch.map((id) async {
+        Query<Map<String, dynamic>> query = user.collection('projects').doc(id).collection('time_logs');
+        if (_subscriptionOwner == uid && _fullyLoadedProjects.contains(id) && !_legacyDateProjects.contains(id)) {
+          query = query.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+              .where('date', isLessThan: Timestamp.fromDate(end));
+        }
+        final snapshot = await query.get(const GetOptions(source: Source.server));
+        checkOwner();
+        // A missing date must never silently become "today" for a send.
+        return snapshot.docs.where((doc) => doc.data()['date'] is Timestamp || doc.data()['createdAt'] is Timestamp)
+            .map((doc) => _timeLogFromDocument(id, doc))
+            .where((log) => log.isRegistered && !log.date.isBefore(start) && log.date.isBefore(end)).toList();
+      })).timeout(const Duration(seconds: 20));
+      checkOwner();
+      result.addAll(parts.expand((part) => part));
+    }
+    result.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return result;
+  }
+
   // ============================================================
   // AUXILIAR: IDENTIFICA O ID DO PROJETO DE UM LOG
   // ============================================================

@@ -1,4 +1,5 @@
 import 'task_history_month.dart';
+import 'daily_hours_voice_command.dart';
 import 'task_history_month_panel.dart';
 import 'dart:async';
 import 'package:gerenciador_horas/core/platform/local_user_state.dart';
@@ -93,6 +94,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
   final FirebaseService _firebaseService = FirebaseService();
   bool _enviandoEdesk = false;
+  bool _preparandoHorasVoz = false;
 
   String _search = '';
   String _filter = 'Todas';
@@ -1513,8 +1515,10 @@ class _TarefasScreenState extends State<TarefasScreen> {
 // MODAL PRINCIPAL DE CONFERÊNCIA E-DESK
 // ============================================================
 
-  Future<void> _enviarHorasDireto(List<TimeLog> logs) async {
-    if (_enviandoEdesk || logs.isEmpty) return;
+  Future<void> _enviarHorasDireto(List<TimeLog> logs, {bool fromVoice = false}) async {
+    if (_enviandoEdesk || (_preparandoHorasVoz && !fromVoice) || logs.isEmpty) return;
+    final sendOwner = FirebaseAuth.instance.currentUser?.uid;
+    if (sendOwner == null) return;
     setState(() => _enviandoEdesk = true);
     try {
       final draftsSelecionados = logs
@@ -1612,6 +1616,8 @@ class _TarefasScreenState extends State<TarefasScreen> {
       }
 
       final credenciais = await EdeskCredentialsService().ler();
+
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner) return;
 
       final payload = {
         'url': 'https://promob.e-desk.com.br',
@@ -3730,6 +3736,14 @@ class _TarefasScreenState extends State<TarefasScreen> {
             totalDias: totalDias,
           ),
           const SizedBox(height: 12),
+          DailyHoursVoiceCommand(
+            accountKey: FirebaseAuth.instance.currentUser?.uid,
+            accountIsCurrent: (uid) => FirebaseAuth.instance.currentUser?.uid == uid,
+            enabled: widget.selectedIndex == 5 && !_enviandoEdesk,
+            loadDay: widget.timeLogStore.loadRegisteredDay,
+            onBusyChanged: (busy) { if (mounted) setState(() => _preparandoHorasVoz = busy); },
+            onSend: (logs) => _enviarHorasDireto(logs, fromVoice: true)),
+          const SizedBox(height: 8),
           _buildFiltersBar(),
           const SizedBox(height: 8),
           _buildMonthNavigation(registeredLogs, dia),

@@ -36,6 +36,9 @@ class TestDatabase extends Fake implements FirebaseFirestore {
   final documents = <String, List<TestDocument>>{};
   final streams = <TestQuery>[];
   bool failCompleted = false;
+  String? failPath;
+  void Function(String)? onRead;
+  final serverReads = <String>[];
   int subscriptions = 0;
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) =>
@@ -97,6 +100,15 @@ class TestQuery extends Fake
           end: invocation.namedArguments[#isLessThan] as Timestamp? ?? end);
     }
     if (invocation.memberName == #get) {
+      final options = invocation.positionalArguments.isNotEmpty
+          ? invocation.positionalArguments.first as GetOptions?
+          : null;
+      if (options?.source == Source.server) db.serverReads.add(path);
+      db.onRead?.call(path);
+      if (path == db.failPath) {
+        return Future<QuerySnapshot<Map<String, dynamic>>>.error(
+            StateError('Offline'));
+      }
       if (db.failCompleted && path.endsWith('completed_projects')) {
         return Future<QuerySnapshot<Map<String, dynamic>>>.error(
             StateError('Offline'));
@@ -148,6 +160,52 @@ void main() {
   tearDown(() async {
     store.dispose();
     await db.close();
+  });
+  test('daily voice preparation reads server independently of history scope',
+      () async {
+    final day = DateTime(2026, 10, 15);
+    db.documents['users/a/projects'] = [TestDocument('p', {})];
+    db.documents['users/a/projects/p/time_logs']!.addAll([
+      hour('today', day),
+      hour('legacy-today', day, legacy: true),
+      TestDocument(
+          'timer', {'date': Timestamp.fromDate(day), 'isRegistered': false}),
+      TestDocument('no-date', {'isRegistered': true}),
+    ]);
+    db.documents['users/a/projects/archived/time_logs']!
+        .add(hour('archived-today', day));
+    await store.startListeningToProjects(['p']);
+    await settle();
+    await store.setHistoryPeriod(DateTime(2026, 9, 1), DateTime(2026, 9, 30));
+    await settle();
+    final subscriptions = db.subscriptions;
+    final found = await store.loadRegisteredDay(day);
+    expect(found.map((log) => log.id).toSet(),
+        {'today', 'legacy-today', 'archived-today'});
+    expect(db.subscriptions, subscriptions);
+    expect(
+        db.serverReads,
+        containsAll([
+          'users/a/projects',
+          'users/a/completed_projects',
+          'users/a/projects/p/time_logs',
+          'users/a/projects/archived/time_logs'
+        ]));
+  });
+  test('daily preparation aborts entirely if one project fails', () async {
+    db.documents['users/a/projects'] = [TestDocument('p', {})];
+    db.failPath = 'users/a/projects/p/time_logs';
+    await expectLater(
+        store.loadRegisteredDay(DateTime(2026, 10, 15)), throwsStateError);
+  });
+  test('daily preparation rejects changed or unauthenticated account',
+      () async {
+    db.onRead = (_) => auth.user = TestUser('b');
+    await expectLater(
+        store.loadRegisteredDay(DateTime(2026, 10, 15)), throwsStateError);
+    auth.user = null;
+    await expectLater(
+        store.loadRegisteredDay(DateTime(2026, 10, 15)), throwsStateError);
   });
   test('dashboard revisits retain listeners and all project hours', () async {
     await store.startListeningToProjects(['p']);

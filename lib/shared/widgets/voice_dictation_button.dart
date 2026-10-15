@@ -12,11 +12,14 @@ class VoiceDictationButton extends StatefulWidget {
       required this.onText,
       this.enabled = true,
       this.activity,
+      this.idleLabel = 'Ditar por voz',
+      this.activeLabel = 'Parar ditado',
       this.sessionKey,
       this.clientFactory});
   final ValueChanged<String> onText;
   final bool enabled;
   final VoiceActivity? activity;
+  final String idleLabel, activeLabel;
   final Object? sessionKey;
   final VoiceClientFactory? clientFactory;
   @override
@@ -146,7 +149,8 @@ class _VoiceDictationButtonState extends State<VoiceDictationButton> {
                                 ? Icons.stop_circle_outlined
                                 : Icons.mic_none,
                             size: 17),
-                        label: Text(_active ? 'Parar ditado' : 'Ditar por voz'),
+                        label: Text(
+                            _active ? widget.activeLabel : widget.idleLabel),
                         style: OutlinedButton.styleFrom(
                             foregroundColor:
                                 _active ? AppPalette.danger : AppPalette.accent,

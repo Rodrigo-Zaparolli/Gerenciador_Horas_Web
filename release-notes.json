@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Ditado por voz em português nos comentários e nas mensagens dos e-mails: clique em Ditar por voz, permita o microfone e use Parar ditado ao terminar.",
-    "O texto fica no editor para revisão. Salvar e Enviar aguardam o encerramento do ditado; resultados atrasados não entram em outro comentário ou modelo de e-mail.",
-    "Recurso disponível pelo app web, sem atualizar a integração CMD. O navegador pode processar o áudio online."
+    "Comando de voz em Tarefas: clique em Comando de voz e diga enviar horas do dia ou enviar horas de hoje.",
+    "O app busca os apontamentos registrados na data de hoje, independentemente dos filtros da tela, e mostra os registros e o total para conferência. O envio ao E-Desk exige Confirmar e enviar.",
+    "O microfone é encerrado antes da conferência. Falhas de consulta e alterações de conta interrompem a preparação para evitar envio incompleto. Não é necessário atualizar a integração CMD para acessar o novo comando."
   ]
 }
