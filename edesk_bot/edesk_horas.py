@@ -15,6 +15,7 @@ from urllib.parse import (
 
 from playwright.sync_api import sync_playwright
 from send_progress import observe_log, hour_event
+from work_selection import resolve_work_selection
 
 from config import restore_session_cookies, save_session_cookies
 from config import (
@@ -954,66 +955,19 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         log(f"Tabela de trabalhos não visível: {erro}")
         return None
 
-    linhas = tabela.locator("tr")
-    quantidade = linhas.count()
-    log(f"Linhas encontradas na tabela de trabalhos: {quantidade}")
-
-    linha_alvo = None
-    for i in range(quantidade):
-        linha = linhas.nth(i)
-        try:
-            # O E-Desk coloca o número e o nome do trabalho em TDs que
-            # executam o mesmo btnSelTra. Procuramos o número EXATO nesses
-            # TDs, sem assumir que ele esteja em uma coluna fixa da Grid.
-            celulas_selecao_linha = linha.locator('td[onclick*="btnSelTra"]')
-            valores_visiveis = []
-
-            for j in range(celulas_selecao_linha.count()):
-                valor = celulas_selecao_linha.nth(j).inner_text(timeout=1000).strip()
-                if valor:
-                    valores_visiveis.append(valor)
-
-                if valor == id_trabalho:
-                    linha_alvo = linha
-                    log(
-                        f"Trabalho {id_trabalho} encontrado pelo ID exato "
-                        f"na linha {i}, usando o próprio btnSelTra."
-                    )
-                    break
-
-            if valores_visiveis:
-                log(f"LINHA {i} - CAMPOS btnSelTra: {valores_visiveis}")
-
-            if linha_alvo is not None:
-                break
-        except Exception:
-            continue
-
-    if linha_alvo is None:
-        log("")
-        log("============================================================")
-        log("ID EXATO NÃO ENCONTRADO")
-        log("============================================================")
-        log(f"ID recebido do Flutter: {id_trabalho}")
+    alvo = None
+    limite = time.monotonic() + 10
+    while time.monotonic() < limite:
+        alvo = resolve_work_selection(tabela, id_trabalho)
+        if alvo is not None:
+            break
+        page.wait_for_timeout(200)
+    if alvo is None:
+        log(f"Trabalho relativo {id_trabalho} nao localizado na tabela de trabalhos.")
         return None
 
-    celulas_selecao = linha_alvo.locator('td[onclick*="btnSelTra"]')
-    if celulas_selecao.count() == 0:
-        log("A linha encontrada não possui td com btnSelTra.")
-        try:
-            elementos = linha_alvo.locator('[onclick*="btnSelTra"]')
-            if elementos.count() > 0:
-                celulas_selecao = elementos
-        except Exception:
-            pass
-
-    if celulas_selecao.count() == 0:
-        log("Nenhum elemento de seleção btnSelTra encontrado.")
-        return None
-
-    alvo = celulas_selecao.first
     try:
-        onclick = alvo.get_attribute("onclick") or ""
+        onclick = alvo.get_attribute("onclick") or alvo.get_attribute("href") or ""
     except Exception:
         onclick = ""
 
@@ -1096,7 +1050,9 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         except Exception:
             pass
 
-        time.sleep(0.5)
+        # Keep Playwright's event dispatch alive: a normal Python sleep can
+        # leave a delayed link/popup navigation invisible until this loop ends.
+        page.wait_for_timeout(200)
 
     log("Tempo limite aguardando Trabalho.aspx.")
     log(f"URL atual: {page.url}")
@@ -1179,12 +1135,10 @@ def abrir_trabalho_retroativo(pagina_trabalho, dados_trabalho):
     log(f"ID TRABALHO E-DESK: {id_trabalho}")
 
     if not guid:
-        log("GUID não encontrado.")
-        return pagina_trabalho
+        raise RuntimeError('Não foi possível abrir o retroativo: sessão do trabalho não identificada.')
 
     if not id_trabalho:
-        log("ID do trabalho E-Desk não encontrado.")
-        return pagina_trabalho
+        raise RuntimeError('Não foi possível abrir o retroativo: identificador do trabalho ausente.')
 
     parametros = {
         "GUID": guid,
@@ -1199,9 +1153,8 @@ def abrir_trabalho_retroativo(pagina_trabalho, dados_trabalho):
 
     try:
         pagina_trabalho.goto(url_retroativo, wait_until="domcontentloaded", timeout=30000)
-        pagina_trabalho.wait_for_timeout(2500)
-
         if eh_trabalho_retroativo(pagina_trabalho.url):
+            pagina_trabalho.locator('#cph1_txtDatTem').wait_for(state='visible', timeout=20000)
             log("")
             log("****************************************")
             log("TELA TRABALHO RETROATIVO ABERTA COM SUCESSO")
@@ -1212,7 +1165,7 @@ def abrir_trabalho_retroativo(pagina_trabalho, dados_trabalho):
     except Exception as erro:
         log(f"Erro ao abrir TrabalhoRetroativo: {erro}")
 
-    return pagina_trabalho
+    raise RuntimeError('Não foi possível abrir o formulário de horas retroativas. Confira a sessão e as permissões no E-Desk.')
 
 def salvar_mapeamento(dados):
     arquivo = LOGS_PATH / "mapeamento_trabalho_cmd.json"
@@ -1283,19 +1236,8 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
                 tabela = pagina.locator(
                     "#cph1_rpvTrabalhos #cph1_gvwTra"
                 ).first
-                linhas = tabela.locator("tr")
-                for i in range(linhas.count()):
-                    # O número é identificado no próprio TD clicável que
-                    # dispara btnSelTra, sem depender da posição da coluna.
-                    celulas_trabalho = linhas.nth(i).locator(
-                        'td[onclick*="btnSelTra"]'
-                    )
-                    for j in range(celulas_trabalho.count()):
-                        valor_celula = celulas_trabalho.nth(j).inner_text(
-                            timeout=1000
-                        ).strip()
-                        if valor_celula == id_trabalho:
-                            return True
+                if tabela.count() and resolve_work_selection(tabela, id_trabalho) is not None:
+                    return True
             except Exception:
                 pass
 

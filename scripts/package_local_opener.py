@@ -49,7 +49,7 @@ def package(complete=False):
         add(ROOT / name, name)
     if complete:
         for name in ['local_edesk/server.py', 'local_edesk/central.py', 'local_edesk/journal.py',
-                     'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py',
+                     'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py', 'edesk_bot/work_selection.py',
                      'edesk_bot/edesk_horas.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/phase_confirmation.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_fases.py',
                      'scripts/start_edesk_local.ps1', 'scripts/stop_edesk_local.ps1',
                      'scripts/start_full_integration.ps1', 'scripts/migrate_integration_data.py',

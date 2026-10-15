@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Théo responde ao terminar o envio de horas iniciado pelo comando de voz. A fala acontece na tela de resultado, sem precisar clicar em Entendi.",
-    "A confirmação de sucesso só é falada quando o E-Desk confirma os apontamentos. Se o resultado não for confirmado, Théo orienta conferir os registros antes de reenviar.",
-    "A resposta final respeita a opção Respostas faladas. Também é possível usar Silenciar Théo na tela de resultado; os detalhes continuam disponíveis em texto. Não é necessário atualizar o CMD."
+    "Correção na integração local: seleção do trabalho pelo número exato também quando o número é texto e o botão de abertura fica em outra célula. Links e abertura em nova aba são reconhecidos sem bloquear a navegação.",
+    "A abertura do retroativo agora exige que o formulário de horas esteja visível. O cadastro completo só é confirmado quando todos os apontamentos tiverem confirmação individual.",
+    "Para receber esta correção no outro PC, baixe a integração completa atualizada (work-selection-13), extraia na pasta anterior preservando .edesk-local e execute Iniciar integração E-Desk.cmd. Os vínculos existentes e o início automático são preservados."
   ]
 }

@@ -110,9 +110,30 @@ class JournalTests(unittest.TestCase):
             process.return_value.returncode = 0
             response = self.client.post('/api/edesk/horas', headers=HEADERS,
                 json={'request': self.data, 'enviar': True, 'operationId': 'operation-test'})
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(response.json['confirmed'])
         self.assertIn('aguardam conferência', response.json['message'])
         self.assertEqual(list(journal.states('owner').values()), ['uncertain'])
+
+    def test_success_requires_confirmation_of_every_hour(self):
+        for confirmed in [False, True]:
+            with self.subTest(confirmed=confirmed):
+                journal.delete('owner', list(journal.states('owner')))
+                def run(*args, **kwargs):
+                    data = json.loads(Path(args[0][-1]).read_text(encoding='utf-8'))
+                    keys = [hour['_sendKey'] for work in data['trabalhos'] for hour in work['horas']]
+                    if confirmed:
+                        Path(kwargs['env']['EDESK_EVENTS_FILE']).write_text('\n'.join(
+                            json.dumps({'key': key, 'state': 'confirmed'}) for key in keys))
+                    return process.return_value
+                with patch('cloud_run.main.subprocess.Popen') as process:
+                    process.side_effect = run
+                    process.return_value.communicate.return_value = ('finished', '')
+                    process.return_value.returncode = 0
+                    response = self.client.post('/api/edesk/horas', headers=HEADERS,
+                        json={'request': self.data, 'enviar': True})
+                self.assertEqual(response.status_code, 200 if confirmed else 502)
+                self.assertEqual(response.json['confirmed'], confirmed)
 
     def test_manual_review_and_history_restore_never_downgrades_confirmed(self):
         _, keys, _ = journal.prepare('owner', self.data)

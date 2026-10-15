@@ -598,9 +598,13 @@ def run_edesk_automation(action: str):
                 if result and isinstance(result.get("message"), str)
                 else "Operação concluída no E-Desk."
             )
-            if uncertain:
-                message = (f"Envio concluído. {uncertain} hora(s) aguardam conferência no E-Desk. "
-                           "O app pedirá essa conferência antes de permitir novo envio dessas horas.")
+            if keys:
+                states = journal.states(uid)
+                missing = sum(states.get(key) != 'confirmed' for key in keys)
+                if missing:
+                    return _failure(
+                        f'{missing} hora(s) aguardam conferência no E-Desk. '
+                        'O cadastro completo não foi confirmado. Confira os registros antes de reenviar.', 502)
             if skipped:
                 message += f" {skipped} hora(s) já confirmadas foram ignoradas."
             return jsonify(
