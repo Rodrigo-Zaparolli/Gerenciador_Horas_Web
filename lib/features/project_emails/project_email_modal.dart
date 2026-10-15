@@ -43,6 +43,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   final _fields = <String, TextEditingController>{};
   final _subject = TextEditingController(), _body = TextEditingController();
   final _contacts = <EmailContact>[];
+  final _projectContacts = <EmailContact>[];
+  bool _projectContactsLoaded = false;
   final _recipientKey = GlobalKey<EmailRecipientFieldsState>();
   final _attachments = <EmailAttachment>[];
   Uint8List? _productsImage;
@@ -175,6 +177,26 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           };
         }
       }
+      if (!_projectContactsLoaded) {
+        final sources = await Future.wait([
+          for (final other in ProjectEmailKind.values.where((kind) => kind != _kind))
+            () async {
+              try {
+                return _cache[other] ?? await _store.loadDraft(_uid!, widget.project.id, other);
+              } catch (_) {
+                return null;
+              }
+            }(),
+        ]);
+        if (!mounted || !_sameAccount) return;
+        for (final source in sources) {
+          mergeAvailableEmailContacts(_projectContacts, [
+            for (final item in source?['contacts'] as List? ?? [])
+              EmailContact.fromJson(Map<String, dynamic>.from(item)),
+          ]);
+        }
+        _projectContactsLoaded = true;
+      }
       if (!mounted || !_sameAccount) return;
       _subjectTemplate =
           template?['subject'] as String? ?? defaultEmailSubject(_kind);
@@ -210,6 +232,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
               .add(EmailContact.fromJson(Map<String, dynamic>.from(contact)));
         }
       }
+      mergeAvailableEmailContacts(_projectContacts, _contacts);
+      mergeAvailableEmailContacts(_contacts, _projectContacts);
       if (draft?['recipientsConfigured'] != true &&
           !_contacts.any((c) => ['Para', 'Cc'].contains(c.destination))) {
         selectModelRecipients(_contacts, _kind);
@@ -327,6 +351,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       if (accepted != true || !mounted || !_sameAccount) return;
       setState(() {
         if (parsed.contacts.isNotEmpty) {
+          _projectContacts.clear();
+          mergeAvailableEmailContacts(_projectContacts, parsed.contacts);
           _contacts
             ..clear()
             ..addAll(parsed.contacts);

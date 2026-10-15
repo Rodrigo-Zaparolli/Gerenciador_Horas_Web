@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-mails do projeto: destinatários Para e Cc distribuídos em várias linhas, com nome e endereço visíveis.",
-    "Lista de destinatários acompanha a rolagem vertical do formulário, sem esconder contatos em uma linha horizontal."
+    "E-mails: contatos da planilha ficam disponíveis também em Finalização ao cliente + ER, inclusive quando esse modelo já tem rascunho salvo.",
+    "Use o botão + em Para ou Cc para selecionar os endereços carregados do projeto. As escolhas de destinatários de cada modelo são preservadas."
   ]
 }

@@ -33,6 +33,17 @@ class EmailContact {
       group: v['group'] ?? 'Cyncly');
 }
 
+/// Share available addresses between models without sharing Para/Cc selections.
+void mergeAvailableEmailContacts(List<EmailContact> target, Iterable<EmailContact> source) {
+  final emails = target.map((c) => c.email.trim().toLowerCase()).toSet();
+  for (final contact in source) {
+    final email = contact.email.trim();
+    if (!validEmail(email) || !emails.add(email.toLowerCase())) continue;
+    target.add(EmailContact(role: contact.role, name: contact.name,
+        email: email, group: contact.group));
+  }
+}
+
 class EmailAttachment {
   final String name;
   final Uint8List bytes;

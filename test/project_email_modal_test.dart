@@ -60,6 +60,49 @@ void main() {
       estimatedHours: '08:00',
       leader: '',
       hourType: 'Hs Cobradas');
+  testWidgets('finalization with existing empty draft offers workbook contacts from another model', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemoryEmailStore();
+    for (final kind in ['initial', 'finalization']) {
+      store.drafts['owner-a/2256824/$kind'] = {
+        'contacts': [], 'recipientsConfigured': true,
+      };
+    }
+    store.drafts['owner-a/2256824/internal'] = {
+      'contacts': [
+        EmailContact(name: 'Cliente importado', email: 'cliente@example.com',
+          group: 'Cliente', destination: 'Para').toJson(),
+        EmailContact(name: 'Relacionamento', email: 'er@example.com',
+          role: 'Exec. de Relacionamento', destination: 'Cc').toJson(),
+      ],
+    };
+    await tester.pumpWidget(MaterialApp(theme: AppTheme.light,
+      home: Scaffold(body: ProjectEmailModal(project: project, store: store))));
+    await tester.pumpAndSettle();
+    final model = find.widgetWithText(ChoiceChip, ProjectEmailKind.finalization.label);
+    await tester.ensureVisible(model);
+    await tester.tap(model);
+    await tester.pumpAndSettle();
+    final addTo = find.byTooltip('Adicionar em Para');
+    await tester.ensureVisible(addTo);
+    await tester.tap(addTo);
+    await tester.pumpAndSettle();
+    expect(find.text('Cliente importado \u2014 cliente@example.com'), findsOneWidget);
+    expect(find.text('Relacionamento \u2014 er@example.com'), findsOneWidget);
+    await tester.tap(find.text('Cliente importado \u2014 cliente@example.com'));
+    await tester.pumpAndSettle();
+    final addCc = find.byTooltip('Adicionar em Cc');
+    await tester.ensureVisible(addCc);
+    await tester.tap(addCc);
+    await tester.pumpAndSettle();
+    expect(find.text('Cliente importado \u2014 cliente@example.com'), findsNothing);
+    expect(find.text('Relacionamento \u2014 er@example.com'), findsOneWidget);
+    expect(store.drafts['owner-a/2256824/finalization']!['contacts'], isEmpty);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('unsaved text survives reopening without sending or cloud save',
       (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
