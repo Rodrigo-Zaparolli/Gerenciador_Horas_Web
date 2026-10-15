@@ -1,6 +1,6 @@
 {
   "changes": [
-    "E-mails: contatos da planilha ficam disponíveis também em Finalização ao cliente + ER, inclusive quando esse modelo já tem rascunho salvo.",
-    "Use o botão + em Para ou Cc para selecionar os endereços carregados do projeto. As escolhas de destinatários de cada modelo são preservadas."
+    "Tarefas Executadas: visão mensal com semanas limitadas aos dias do próprio mês, incluindo dias sem apontamentos e totais mensais consistentes.",
+    "Navegação por mês, botão Hoje, intervalos reais das semanas e resumo de horas cobradas e não cobradas. Layout adaptado para telas menores."
   ]
 }

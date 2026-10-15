@@ -1,3 +1,5 @@
+import 'task_history_month.dart';
+import 'task_history_month_panel.dart';
 import 'dart:async';
 import 'package:gerenciador_horas/core/platform/local_user_state.dart';
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
@@ -102,7 +104,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
   final Set<int> _anosExpandidos = {};
   final Set<String> _mesesExpandidos = {};
   DateTime? _diaSelecionado;
-  String _nivelHistoricoSelecionado = 'dia';
+  String _nivelHistoricoSelecionado = 'mes';
   int? _anoHistoricoSelecionado;
   int? _mesHistoricoSelecionado;
   DateTime? _semanaHistoricoSelecionada;
@@ -667,7 +669,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
               ),
               SizedBox(height: 4),
               Text(
-                'Histórico dos apontamentos organizados por semana',
+                'Apontamentos organizados por mês e semana',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -2901,8 +2903,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
   DateTime _diaInicial(List<TimeLog> logs) {
-    if (_diaSelecionado != null &&
-        logs.any((log) => _sameDay(log.date, _diaSelecionado!))) {
+    if (_diaSelecionado != null) {
       return _diaSelecionado!;
     }
     final hoje = DateTime.now();
@@ -2915,14 +2916,17 @@ class _TarefasScreenState extends State<TarefasScreen> {
   Map<int, Map<int, Map<DateTime, List<TimeLog>>>> _arvoreHistorico(
     List<TimeLog> logs,
   ) {
-    final arvore = <int, Map<int, Map<DateTime, List<TimeLog>>>>{};
-    final semanas = _groupLogsByWeek(logs);
-    for (final entry in semanas.entries) {
-      final inicio = _weekStart(entry.value.first.date);
-      final referencia = inicio.add(const Duration(days: 6));
-      arvore
-          .putIfAbsent(referencia.year, () => {})
-          .putIfAbsent(referencia.month, () => {})[inicio] = entry.value;
+    final arvore = taskHistoryTree(logs);
+    if (_anoHistoricoSelecionado != null && _mesHistoricoSelecionado != null) {
+      arvore.putIfAbsent(_anoHistoricoSelecionado!, () => {})
+          .putIfAbsent(_mesHistoricoSelecionado!, () => {});
+    }
+    for (final year in arvore.keys) {
+      for (final month in arvore[year]!.keys) {
+        for (final week in TaskHistoryMonth(year, month, []).weeks) {
+          arvore[year]![month]!.putIfAbsent(week.monday, () => []);
+        }
+      }
     }
     return arvore;
   }
@@ -3091,7 +3095,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                               ..sort((a, b) => b.compareTo(a))))
                           Builder(builder: (_) {
                             final logsSemana = semanasMap[inicio]!;
-                            final wk = _weekKey(inicio);
+                            final wk = '$ano-$mes-${_weekKey(inicio)}';
                             final semanaAberta =
                                 _semanasExpandidas.contains(wk);
                             final dias = <String, List<TimeLog>>{};
@@ -3100,17 +3104,16 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                   .putIfAbsent(_dayKey(log.date), () => [])
                                   .add(log);
                             }
-                            final datas = dias.values
-                                .map((e) => e.first.date)
-                                .toList()
-                              ..sort((a, b) => a.compareTo(b));
+                            final week = TaskHistoryMonth(ano, mes, []).weeks.firstWhere(
+                                (week) => _sameDay(week.monday, inicio));
+                            final datas = week.days;
                             return Column(children: [
                               _treeRow(
                                 level: 2,
                                 expanded: semanaAberta,
                                 expandable: true,
                                 icon: Icons.date_range_rounded,
-                                title: _formatWeekTitle(inicio),
+                                title: week.label,
                                 logs: logsSemana,
                                 onTap: () => setState(() {
                                   _nivelHistoricoSelecionado = 'semana';
@@ -3123,6 +3126,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                 }),
                                 selected: _nivelHistoricoSelecionado ==
                                         'semana' &&
+                                    _anoHistoricoSelecionado == ano && _mesHistoricoSelecionado == mes &&
                                     _semanaHistoricoSelecionada != null &&
                                     _sameDay(
                                         _semanaHistoricoSelecionada!, inicio),
@@ -3136,7 +3140,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
                                     icon: Icons.calendar_today_rounded,
                                     title:
                                         '${_formatShortDate(data)} (${_dayNameShort(data.weekday)})',
-                                    logs: dias[_dayKey(data)]!,
+                                    logs: dias[_dayKey(data)] ?? [],
                                     selected:
                                         _nivelHistoricoSelecionado == 'dia' &&
                                             _sameDay(data, selectedDay),
@@ -3189,7 +3193,9 @@ class _TarefasScreenState extends State<TarefasScreen> {
         final d = DateTime(log.date.year, log.date.month, log.date.day);
         final i = DateTime(inicio.year, inicio.month, inicio.day);
         final f = DateTime(fim.year, fim.month, fim.day);
-        return !d.isBefore(i) && !d.isAfter(f);
+        return !d.isBefore(i) && !d.isAfter(f) &&
+            (_anoHistoricoSelecionado == null || d.year == _anoHistoricoSelecionado) &&
+            (_mesHistoricoSelecionado == null || d.month == _mesHistoricoSelecionado);
       }).toList();
     }
 
@@ -3207,10 +3213,72 @@ class _TarefasScreenState extends State<TarefasScreen> {
     }
     final inicio = _semanaHistoricoSelecionada;
     if (inicio == null) return 'Semana';
+    final year = _anoHistoricoSelecionado;
+    final month = _mesHistoricoSelecionado;
+    if (year != null && month != null) {
+      return TaskHistoryMonth(year, month, []).weeks.firstWhere(
+          (week) => _sameDay(week.monday, inicio)).label;
+    }
     return _formatWeekTitle(inicio);
   }
 
+  void _selecionarMes(DateTime month) => setState(() {
+    _historicoInicializado = true;
+    _nivelHistoricoSelecionado = 'mes';
+    _anoHistoricoSelecionado = month.year;
+    _mesHistoricoSelecionado = month.month;
+    _semanaHistoricoSelecionada = null;
+    _anosExpandidos.add(month.year);
+    _mesesExpandidos.add(_monthKey(month.year, month.month));
+  });
+
+  Widget _buildMonthNavigation(List<TimeLog> logs, DateTime fallback) {
+    final month = DateTime(_anoHistoricoSelecionado ?? fallback.year,
+        _mesHistoricoSelecionado ?? fallback.month);
+    final months = <DateTime>{month, for (final log in logs) DateTime(log.date.year, log.date.month)}
+        .toList()..sort((a, b) => b.compareTo(a));
+    return Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      IconButton(tooltip: 'Mês anterior', onPressed: () => _selecionarMes(DateTime(month.year, month.month - 1)),
+          icon: const Icon(Icons.chevron_left)),
+      DropdownButton<DateTime>(value: month,
+          items: [for (final date in months) DropdownMenuItem(value: date,
+            child: Text('${taskHistoryMonths[date.month - 1]} ${date.year}'))],
+          onChanged: (date) { if (date != null) _selecionarMes(date); }),
+      IconButton(tooltip: 'Próximo mês', onPressed: () => _selecionarMes(DateTime(month.year, month.month + 1)),
+          icon: const Icon(Icons.chevron_right)),
+      if (_nivelHistoricoSelecionado != 'mes')
+        TextButton(onPressed: () => _selecionarMes(month), child: const Text('Ver mês')),
+      OutlinedButton.icon(icon: const Icon(Icons.today_outlined, size: 17), label: const Text('Hoje'),
+          onPressed: () => setState(() {
+            final today = DateTime.now();
+            _historicoInicializado = true;
+            _filter = 'Todas';
+            _startDate = null;
+            _endDate = null;
+            _diaSelecionado = DateTime(today.year, today.month, today.day);
+            _nivelHistoricoSelecionado = 'dia';
+            _anoHistoricoSelecionado = today.year;
+            _mesHistoricoSelecionado = today.month;
+            _anosExpandidos.add(today.year);
+            _mesesExpandidos.add(_monthKey(today.year, today.month));
+            _semanasExpandidas.add('${today.year}-${today.month}-${_weekKey(today)}');
+          })),
+    ]);
+  }
+
   Widget _buildSelectedPeriodPanel(List<TimeLog> allLogs) {
+    if (_nivelHistoricoSelecionado == 'mes' && _anoHistoricoSelecionado != null && _mesHistoricoSelecionado != null) {
+      return TaskHistoryMonthPanel(
+        data: TaskHistoryMonth(_anoHistoricoSelecionado!, _mesHistoricoSelecionado!, allLogs),
+        onEdit: _abrirModalEdicao,
+        onSelectDay: (day) => setState(() {
+          _nivelHistoricoSelecionado = 'dia';
+          _diaSelecionado = day;
+          _anoHistoricoSelecionado = day.year;
+          _mesHistoricoSelecionado = day.month;
+        }),
+      );
+    }
     final logs = _logsPeriodoSelecionado(allLogs)
       ..sort((a, b) {
         final data = a.date.compareTo(b.date);
@@ -3617,19 +3685,28 @@ class _TarefasScreenState extends State<TarefasScreen> {
   Widget build(BuildContext context) {
     AppAppearance.watch(context);
     final registeredLogs = _registeredLogs;
-    final totalRegistros = registeredLogs.length;
-    final totalHoras = _formatarMinutos(_totalMinutos(registeredLogs));
-    final totalProjetos = _projetosUnicos(registeredLogs).length;
-    final totalDias = _groupedLogsByDate.length;
     final dia =
         registeredLogs.isEmpty ? DateTime.now() : _diaInicial(registeredLogs);
+    _anoHistoricoSelecionado ??= dia.year;
+    _mesHistoricoSelecionado ??= dia.month;
 
     if (!_historicoInicializado && registeredLogs.isNotEmpty) {
       _historicoInicializado = true;
       _anosExpandidos.add(dia.year);
       _mesesExpandidos.add(_monthKey(dia.year, dia.month));
-      _semanasExpandidas.add(_weekKey(_weekStart(dia)));
+      _anoHistoricoSelecionado = dia.year;
+      _mesHistoricoSelecionado = dia.month;
+      _semanasExpandidas.add('${dia.year}-${dia.month}-${_weekKey(dia)}');
     }
+
+    final summaryLogs = _nivelHistoricoSelecionado == 'mes'
+        ? TaskHistoryMonth(_anoHistoricoSelecionado!, _mesHistoricoSelecionado!, registeredLogs).logs
+        : registeredLogs;
+    final totalRegistros = summaryLogs.length;
+    final totalHoras = _formatarMinutos(_totalMinutos(summaryLogs));
+    final totalProjetos = _projetosUnicos(summaryLogs).length;
+    final totalDias = _nivelHistoricoSelecionado == 'mes'
+        ? summaryLogs.map((log) => _dayKey(log.date)).toSet().length : _groupedLogsByDate.length;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -3654,9 +3731,11 @@ class _TarefasScreenState extends State<TarefasScreen> {
           ),
           const SizedBox(height: 12),
           _buildFiltersBar(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          _buildMonthNavigation(registeredLogs, dia),
+          const SizedBox(height: 8),
           Expanded(
-            child: registeredLogs.isEmpty
+            child: registeredLogs.isEmpty && _nivelHistoricoSelecionado != 'mes' && _nivelHistoricoSelecionado != 'dia'
                 ? Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -3666,9 +3745,9 @@ class _TarefasScreenState extends State<TarefasScreen> {
                     ),
                     child: _buildEmptyState(),
                   )
-                : Row(children: [
-                    SizedBox(
-                      width: 390,
+                : LayoutBuilder(builder: (context, constraints) => Row(children: [
+                    if (constraints.maxWidth >= 980) SizedBox(
+                      width: 300,
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -3711,13 +3790,13 @@ class _TarefasScreenState extends State<TarefasScreen> {
                             ]),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    if (constraints.maxWidth >= 980) const SizedBox(width: 10),
                     Expanded(
                       child: _nivelHistoricoSelecionado == 'dia'
                           ? _buildSelectedDayPanel(registeredLogs, dia)
                           : _buildSelectedPeriodPanel(registeredLogs),
                     ),
-                  ]),
+                  ])),
           ),
         ]),
       ),
