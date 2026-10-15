@@ -38,8 +38,9 @@ class EdeskCredentialsService {
   }
 
   Future<Map<String, String>?> ler() async {
-    final email = await lerEmail();
-    final senha = await lerSenha();
+    final values = await Future.wait([lerEmail(), lerSenha()]);
+    final email = values[0];
+    final senha = values[1];
 
     if (email == null ||
         email.trim().isEmpty ||

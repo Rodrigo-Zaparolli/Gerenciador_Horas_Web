@@ -104,9 +104,11 @@ Future<EdeskPythonResult> _executar({
   try {
     final requiresPercentage = script == 'edesk_comentario.py' &&
         (jsonDecode(requestJson) as Map)['percentualRealizado'] != null;
-    var useExtension = !requiresPercentage && await edeskExtensionAvailable();
+    final configuredUrl = hoursApiUrl ?? await EdeskIntegrationApi.currentUrl();
+    final host = Uri.parse(configuredUrl).host;
+    final localIntegration = host == '127.0.0.1' || host == 'localhost';
+    var useExtension = !requiresPercentage && !localIntegration && await edeskExtensionAvailable();
     if (useExtension) {
-      final configuredUrl = await EdeskIntegrationApi.currentUrl();
       try {
         final response = await http
             .get(Uri.parse('$configuredUrl/healthz'))
@@ -129,7 +131,7 @@ Future<EdeskPythonResult> _executar({
           requestJson, enviar, script, operationId, decision.retryUncertain);
     } else {
       result = await EdeskWebClient(
-              apiUrl: hoursApiUrl ?? await EdeskIntegrationApi.currentUrl())
+              apiUrl: hoursApiUrl ?? configuredUrl)
           .execute(
         requestJson: requestJson,
         enviar: enviar,

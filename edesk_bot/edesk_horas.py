@@ -934,6 +934,11 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         log("ID do trabalho não informado.")
         return None
 
+    try:
+        page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$')).click(timeout=15000)
+    except Exception as error:
+        raise RuntimeError('EDESK_WORK_TAB_NOT_OPENED') from error
+
     seletor_aba = "#cph1_rpvTrabalhos"
     try:
         aba = page.locator(seletor_aba).first
@@ -1040,7 +1045,6 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         return None
 
     log("Clique executado.")
-    page.wait_for_timeout(1500)
     log("Aguardando abertura de Trabalho.aspx...")
 
     inicio = time.time()

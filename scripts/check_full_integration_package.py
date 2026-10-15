@@ -33,7 +33,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-button-label-7',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='comment-percentage-work-tab-9',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -69,6 +69,10 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                                 env=env, capture_output=True, text=True, timeout=120)
         assert result.returncode == 0, result.stderr
         print(result.stdout.strip(), flush=True)
+        percentage_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_comment_percentage_flow.py'), str(extracted / 'edesk_bot')],
+            cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
+        assert percentage_check.returncode == 0, percentage_check.stderr
+        print(percentage_check.stdout.strip(), flush=True)
         with socket.socket() as listener:
             listener.bind(('127.0.0.1', 0))
             port = listener.getsockname()[1]
@@ -88,7 +92,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'comment-button-label-7'
+            assert health['integrationPackageVersion'] == 'comment-percentage-work-tab-9'
             assert health['commentPercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',

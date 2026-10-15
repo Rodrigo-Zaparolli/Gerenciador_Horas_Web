@@ -1,7 +1,8 @@
+from config import restore_session_cookies, save_session_cookies
 import sys
 import re
 from comment_percentage import (parse_percentage,
-                                save_work_percentage, save_comment_then_percentage)
+                                save_work_percentage, save_comment_then_percentage, update_percentage_after_comment)
 from edesk_horas import localizar_solicitacao as localizar_solicitacao_validada
 from edesk_horas import abrir_trabalho as abrir_trabalho_validado
 from edesk_horas import abrir_trabalho_na_solicitacao
@@ -2274,6 +2275,8 @@ def main():
             )
         )
 
+        restore_session_cookies(context)
+
         log(
             "Chromium iniciado."
         )
@@ -2337,6 +2340,8 @@ def main():
         # ========================================================
         # GUID DA SESSÃO
         # ========================================================
+
+        save_session_cookies(context)
 
         guid_sessao = obter_guid_da_url(
             page.url
@@ -2434,12 +2439,9 @@ def main():
                 if percentual is None:
                     return
                 log('Comentário salvo. Abrindo trabalho apenas para atualizar %Realizado.')
-                page.goto(url_solicitacao_comentario, wait_until='domcontentloaded', timeout=30000)
-                pagina_trabalho = abrir_trabalho_na_solicitacao(
-                    page, context, solicitacao, id_trabalho)
-                if pagina_trabalho is None:
-                    raise RuntimeError('Não foi possível abrir o trabalho para atualizar o percentual.')
-                save_work_percentage(pagina_trabalho, solicitacao, id_trabalho, percentual)
+                update_percentage_after_comment(
+                    page, context, url_solicitacao_comentario,
+                    solicitacao, id_trabalho, percentual)
                 log('Percentual confirmado depois de recarregar o trabalho.')
 
             save_comment_then_percentage(

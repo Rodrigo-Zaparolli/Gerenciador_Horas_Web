@@ -109,3 +109,20 @@ def save_comment_then_percentage(save_comment, save_percentage):
             'EDESK_PERCENTAGE_PENDING: O comentário recebeu resposta de salvamento, '
             'mas o percentual não foi confirmado. Confira o E-Desk antes de reenviar.'
         ) from error
+
+
+def update_percentage_after_comment(page, context, request_url, solicitation, work, value):
+    """Return to the request, explicitly select Works and save only the percentage."""
+    if parse_percentage(value) is None:
+        return
+    from edesk_horas import abrir_trabalho_na_solicitacao, eh_solicitacao
+    if not eh_solicitacao(request_url):
+        raise RuntimeError('URL da solicita\u00e7\u00e3o inv\u00e1lida para atualizar o percentual.')
+    if page.is_closed():
+        page = context.new_page()
+    page.goto(request_url, wait_until='domcontentloaded', timeout=30000)
+    page.bring_to_front()
+    work_page = abrir_trabalho_na_solicitacao(page, context, solicitation, work)
+    if work_page is None:
+        raise RuntimeError('O trabalho do percentual n\u00e3o foi localizado na solicita\u00e7\u00e3o.')
+    save_work_percentage(work_page, solicitation, work, value)

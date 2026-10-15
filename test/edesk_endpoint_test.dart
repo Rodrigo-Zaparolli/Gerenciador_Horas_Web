@@ -56,6 +56,32 @@ void main() {
         read: (_) async => throw StateError('offline'));
     await expectLater(settings.currentUrl(), throwsStateError);
   });
+  test('simultaneous startup and progress requests share one configuration read', () async {
+    final pending = Completer<Map<String, dynamic>?>();
+    var reads = 0;
+    final settings = EdeskEndpointSettings(
+      uidProvider: () => 'one',
+      read: (_) { reads++; return pending.future; },
+    );
+    final first = settings.currentUrl();
+    final second = settings.currentUrl();
+    pending.complete({'mode': 'local'});
+    expect(await first, defaultEdeskApiUrl);
+    expect(await second, defaultEdeskApiUrl);
+    expect(reads, 1);
+    expect(await settings.currentUrl(), defaultEdeskApiUrl);
+    expect(reads, 1);
+  });
+  test('explicit refresh still reads changes from another computer', () async {
+    var reads = 0;
+    final settings = EdeskEndpointSettings(
+      uidProvider: () => 'one',
+      read: (_) async => ++reads == 1 ? {'mode': 'local'} : {'mode': 'central', 'url': 'https://example.test'},
+    );
+    expect(await settings.currentUrl(), defaultEdeskApiUrl);
+    expect(await settings.currentUrl(refresh: true), 'https://example.test');
+    expect(reads, 2);
+  });
   test('troca de conta durante leitura rejeita o resultado antigo', () async {
     String? uid = 'one';
     final pending = Completer<Map<String, dynamic>?>();

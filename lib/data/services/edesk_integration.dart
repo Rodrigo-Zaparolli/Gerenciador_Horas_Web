@@ -29,7 +29,9 @@ class EdeskIntegrationApi {
       {Map<String, dynamic>? body,
       bool authenticated = true,
       String? baseUrl}) async {
-    if (baseUrl == null && await edeskExtensionAvailable()) {
+    final resolvedUrl = baseUrl ?? await urlProvider();
+    final host = Uri.parse(resolvedUrl).host;
+    if (baseUrl == null && host != '127.0.0.1' && host != 'localhost' && await edeskExtensionAvailable()) {
       final uid = authenticated ? FirebaseAuth.instance.currentUser?.uid : null;
       return edeskExtensionCall(path, body: body, uid: uid);
     }
@@ -43,7 +45,7 @@ class EdeskIntegrationApi {
         if (token != null) 'Authorization': 'Bearer $token',
         if (body != null) 'Content-Type': 'application/json',
       };
-      final base = Uri.parse(normalizeEdeskUrl(baseUrl ?? await urlProvider()));
+      final base = Uri.parse(normalizeEdeskUrl(resolvedUrl));
       final uri =
           base.resolve('${base.path.replaceFirst(RegExp(r'/+$'), '')}$path');
       final response = await (body == null

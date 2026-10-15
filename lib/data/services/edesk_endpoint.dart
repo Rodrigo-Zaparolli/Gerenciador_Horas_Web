@@ -47,6 +47,8 @@ class EdeskEndpointSettings {
   final Future<void> Function(String uid, Map<String, dynamic> value) write;
   String? _owner, _url;
   DateTime? _loaded;
+  Future<String>? _loading;
+  String? _loadingOwner;
   static String? _uid() =>
       Firebase.apps.isEmpty ? null : FirebaseAuth.instance.currentUser?.uid;
   static DocumentReference<Map<String, dynamic>> _document(String uid) =>
@@ -64,8 +66,23 @@ class EdeskEndpointSettings {
         _owner == uid &&
         _url != null &&
         _loaded != null &&
-        DateTime.now().difference(_loaded!) < const Duration(seconds: 20))
+        DateTime.now().difference(_loaded!) < const Duration(minutes: 5))
       return _url!;
+    if (!refresh && _loadingOwner == uid && _loading != null) return _loading!;
+    final loading = _load(uid);
+    _loadingOwner = uid;
+    _loading = loading;
+    try {
+      return await loading;
+    } finally {
+      if (identical(_loading, loading)) {
+        _loading = null;
+        _loadingOwner = null;
+      }
+    }
+  }
+
+  Future<String> _load(String uid) async {
     final settings = await read(uid).timeout(const Duration(seconds: 8));
     if (uidProvider() != uid)
       throw StateError('A conta mudou durante a configuração.');
