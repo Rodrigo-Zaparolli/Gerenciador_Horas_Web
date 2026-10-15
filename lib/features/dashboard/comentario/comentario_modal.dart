@@ -1,4 +1,6 @@
 import 'comment_save_gate.dart';
+import '../../../shared/widgets/voice_dictation_button.dart';
+import '../../../shared/widgets/dictation_text.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
 import '../../edesk/comment_document_snapshot.dart';
@@ -89,6 +91,9 @@ class ComentarioModal {
 
     String? comentarioSelecionadoId;
     String? idRascunhoParaSalvar;
+    int voiceRevision = 0;
+    final voiceOwner = FirebaseAuth.instance.currentUser?.uid;
+    final voiceActivity = VoiceActivity();
     String? imagemBase64;
     Uint8List? excelSelecionadoBytes;
 
@@ -962,6 +967,7 @@ class ComentarioModal {
       BuildContext dialogContext,
       StateSetter setDialogState,
     ) {
+      voiceRevision++;
       final modelo = modelosDescricao.where(
         (item) => item['nome'] == nomeModelo,
       );
@@ -1447,6 +1453,7 @@ class ComentarioModal {
       setDialogState(() {
         comentarioSelecionadoId = null;
         idRascunhoParaSalvar = null;
+        voiceRevision++;
         imagensBase64.clear();
         blocosComentario.clear();
         controllersBlocosTexto.clear();
@@ -1756,6 +1763,11 @@ class ComentarioModal {
       BuildContext dialogContext,
       StateSetter setDialogState,
     ) async {
+      if (voiceActivity.active) {
+        ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+          content: Text('Pare o ditado e revise o texto antes de salvar.')));
+        return;
+      }
       if (salvando || testandoEdesk || enviandoEdesk) return;
       final identidade = identidadeConteudoAtual();
       if (!podeSalvarEnviado() && commentSaveGate.alreadySent(identidade)) {
@@ -1831,6 +1843,11 @@ class ComentarioModal {
       required StateSetter setDialogState,
       required bool enviar,
     }) async {
+      if (voiceActivity.active) {
+        ScaffoldMessenger.of(dialogContext).showSnackBar(const SnackBar(
+          content: Text('Pare o ditado e revise o texto antes de continuar.')));
+        return;
+      }
       if (enviar && podeSalvarEnviado()) {
         await salvarPublicacao(dialogContext, setDialogState);
         return;
@@ -2365,6 +2382,7 @@ class ComentarioModal {
                                             comentarioSelecionadoId =
                                                 editar ? doc.id : null;
                                             idRascunhoParaSalvar = null;
+                                            voiceRevision++;
                                             percentualController.text =
                                                 (dados['percentualRealizado'] ??
                                                         '')
@@ -4808,6 +4826,7 @@ class ComentarioModal {
                                   comentarioSelecionadoId =
                                       editar ? doc.id : null;
                                   idRascunhoParaSalvar = null;
+                                  voiceRevision++;
                                   percentualController.text =
                                       (dados['percentualRealizado'] ?? '')
                                           .toString();
@@ -6103,6 +6122,21 @@ class ComentarioModal {
                                                     color: AppPalette.secondary,
                                                     fontSize: 10))]),
                                             const SizedBox(height: 10),
+                                            VoiceDictationButton(
+                                              activity: voiceActivity,
+                                              enabled: !salvando && !testandoEdesk && !enviandoEdesk && FirebaseAuth.instance.currentUser?.uid == voiceOwner,
+                                              sessionKey: '$voiceRevision/${comentarioSelecionadoId ?? 'novo'}',
+                                              onText: (text) {
+                                                if (!editorOpen || salvando || testandoEdesk || enviandoEdesk || FirebaseAuth.instance.currentUser?.uid != voiceOwner) return;
+                                                final edit = planDictation(
+                                                  editorController.document.toPlainText(),
+                                                  editorController.selection, text,
+                                                  maxOffset: editorController.document.length - 1);
+                                                if (edit.text.isNotEmpty) {
+                                                  editorController.replaceText(edit.start, edit.length, edit.text, edit.selection);
+                                                }
+                                              }),
+                                            const SizedBox(height: 6),
                                             // Editor principal no estilo Word.
                                             // Ocupa TODO o espaço vertical livre do painel esquerdo.
                                             // A barra de anexos/ações permanece ancorada na parte inferior.

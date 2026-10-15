@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Integração E-Desk: início automático em segundo plano ao entrar no Windows, ativado ao executar o CMD da versão atualizada uma vez.",
-    "Novos comandos para ativar e desativar o início automático. Atualizações comuns do app web não exigem baixar a integração novamente."
+    "Ditado por voz em português nos comentários e nas mensagens dos e-mails: clique em Ditar por voz, permita o microfone e use Parar ditado ao terminar.",
+    "O texto fica no editor para revisão. Salvar e Enviar aguardam o encerramento do ditado; resultados atrasados não entram em outro comentário ou modelo de e-mail.",
+    "Recurso disponível pelo app web, sem atualizar a integração CMD. O navegador pode processar o áudio online."
   ]
 }

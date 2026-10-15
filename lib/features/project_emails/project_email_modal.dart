@@ -20,13 +20,17 @@ import 'email_draft_store.dart';
 import 'products_image_field.dart';
 import 'email_body_preview.dart';
 import 'email_recipient_fields.dart';
+import '../../shared/widgets/voice_dictation_button.dart';
+import '../../shared/widgets/dictation_text.dart';
+import '../../core/platform/voice.dart';
 
 class ProjectEmailModal extends StatefulWidget {
   final ProjectModel project;
   final EmailDraftStore? store;
   final Future<Uint8List?> Function()? workbookLoader;
+  final VoiceClientFactory? voiceFactory;
   const ProjectEmailModal(
-      {super.key, required this.project, this.store, this.workbookLoader});
+      {super.key, required this.project, this.store, this.workbookLoader, this.voiceFactory});
   static Future<void> show(BuildContext context, ProjectModel project) =>
       showDialog<void>(
           context: context,
@@ -42,6 +46,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   ProjectEmailKind _kind = ProjectEmailKind.initial;
   final _fields = <String, TextEditingController>{};
   final _subject = TextEditingController(), _body = TextEditingController();
+  final _voiceActivity = VoiceActivity();
   final _contacts = <EmailContact>[];
   final _projectContacts = <EmailContact>[];
   bool _projectContactsLoaded = false;
@@ -55,6 +60,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   String _lastRecovery = '';
   String _summaryInMessage = '';
   bool _closing = false, _allowClose = false, _discardOnClose = false;
+  bool _messageExpanded = false;
   String get _recoveryKey => 'email.${widget.project.id}.${_kind.name}';
 
   void _recoverLocally() {
@@ -269,6 +275,10 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   }
 
   Future<void> _save() async {
+    if (_voiceActivity.active) {
+      setState(() => _message = 'Pare o ditado e revise o texto antes de salvar.');
+      return;
+    }
     if (!(_recipientKey.currentState?.commitPending() ?? true)) return;
     setState(() => _busy = true);
     try {
@@ -412,6 +422,10 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   }
 
   Future<void> _generate() async {
+    if (_voiceActivity.active) {
+      setState(() => _message = 'Pare o ditado e revise o texto antes de gerar o e-mail.');
+      return;
+    }
     if (!(_recipientKey.currentState?.commitPending() ?? true)) {
       await _generationError('Revise os e-mails digitados nos campos Para e Cc.');
       return;
@@ -629,7 +643,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       child: Material(type: MaterialType.transparency, child: child));
   Future<void> _close() async {
     if (_closing || _busy) return;
-    _closing = true;
+    setState(() => _closing = true);
     try {
       final keep = await showDialog<bool>(
           context: context,
@@ -671,7 +685,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       await WidgetsBinding.instance.endOfFrame;
       if (mounted) Navigator.pop(context);
     } finally {
-      _closing = false;
+      if (mounted) setState(() => _closing = false);
     }
   }
 
@@ -887,7 +901,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           ExpansionTile(
               title: const Text('Editar mensagem'),
               maintainState: true,
-              children: [_messageEditor()]),
+              onExpansionChanged: (expanded) => setState(() => _messageExpanded = expanded),
+              children: [_messageEditor(visible: _messageExpanded)]),
         ] else
           _messageEditor(),
         const SizedBox(height: 12),
@@ -914,12 +929,26 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
             'Revise texto, destinatários e anexos. O rascunho não é enviado automaticamente.',
             style: TextStyle(fontSize: 12)),
       ]));
-  Widget _messageEditor() => TextField(
+  Widget _messageEditor({bool visible = true}) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    VoiceDictationButton(
+      activity: _voiceActivity,
+      enabled: visible && !_busy && _ready && !_closing && _sameAccount,
+      sessionKey: _kind,
+      clientFactory: widget.voiceFactory,
+      onText: (text) {
+        if (!_sameAccount || _busy || !_ready || _closing) return;
+        setState(() {
+          _customBody = true;
+          insertDictation(_body, text);
+        });
+      }),
+    const SizedBox(height: 8),
+    TextField(
       controller: _body,
       minLines: 20,
       maxLines: null,
       decoration: const InputDecoration(labelText: 'Mensagem — editável'),
-      onChanged: (_) => setState(() => _customBody = true));
+      onChanged: (_) => setState(() => _customBody = true))]);
   @override
   Widget build(BuildContext context) {
     AppAppearance.watch(context);
@@ -992,6 +1021,7 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                                           _cache[_kind] = _snapshot();
                                           _attachments.clear();
                                           _kind = kind;
+                                          _messageExpanded = false;
                                           _load();
                                         })
                                 ]),

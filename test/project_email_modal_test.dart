@@ -11,6 +11,8 @@ import 'package:gerenciador_horas/features/project_emails/email_draft_store.dart
 import 'package:gerenciador_horas/features/project_emails/project_email_modal.dart';
 import 'package:gerenciador_horas/features/project_emails/products_image_field.dart';
 import 'products_image_field_test.dart' show png;
+import 'voice_dictation_test.dart' show FakeVoice;
+import 'package:gerenciador_horas/core/platform/voice.dart';
 
 class MemoryEmailStore implements EmailDraftStore {
   @override
@@ -61,6 +63,45 @@ void main() {
       estimatedHours: '08:00',
       leader: '',
       hourType: 'Hs Cobradas');
+  testWidgets('dictation edits the email without sending and is isolated when switching models', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemoryEmailStore();
+    final clients = <FakeVoice>[];
+    FakeVoice factory(VoiceEventHandler cb) { final client = FakeVoice(cb); clients.add(client); return client; }
+    store.drafts['owner-a/2256824/initial'] = {'body': 'Mensagem existente.', 'contacts': [], 'recipientsConfigured': true};
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ProjectEmailModal(project: project, store: store, voiceFactory: factory))));
+    await tester.pumpAndSettle();
+    final message = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Mensagem — editável');
+    await tester.ensureVisible(find.text('Ditar por voz'));
+    await tester.tap(find.text('Ditar por voz'));
+    await tester.pump();
+    final recording = clients.last;
+    recording.onEvent('final', 'O treinamento foi concluído.');
+    await tester.pump();
+    expect(tester.widget<TextField>(message).controller!.text, 'Mensagem existente. O treinamento foi concluído.');
+    expect(store.drafts['owner-a/2256824/initial']!['body'], 'Mensagem existente.');
+    await tester.tap(find.text('Salvar neste projeto'));
+    await tester.pump();
+    expect(store.drafts['owner-a/2256824/initial']!['body'], 'Mensagem existente.');
+    expect(find.text('Pare o ditado e revise o texto antes de salvar.'), findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, ProjectEmailKind.finalization.label));
+    await tester.tap(find.widgetWithText(ChoiceChip, ProjectEmailKind.finalization.label));
+    await tester.pumpAndSettle();
+    expect(recording.disposed, true);
+    recording.onEvent('final', 'Não deve entrar em outro modelo');
+    expect(tester.widget<TextField>(message).controller!.text, isNot(contains('Não deve entrar')));
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, ProjectEmailKind.initial.label));
+    await tester.tap(find.widgetWithText(ChoiceChip, ProjectEmailKind.initial.label));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(message).controller!.text, contains('O treinamento foi concluído.'));
+    await tester.tap(find.text('Salvar neste projeto'));
+    await tester.pumpAndSettle();
+    expect(store.drafts['owner-a/2256824/initial']!['body'], contains('O treinamento foi concluído.'));
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('finalization with existing empty draft offers workbook contacts from another model', (tester) async {
     tester.view.physicalSize = const Size(1440, 1000);
     tester.view.devicePixelRatio = 1;
