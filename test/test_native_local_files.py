@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from urllib.parse import unquote, urlsplit, quote
 from pathlib import Path
 from unittest.mock import patch
 
@@ -62,8 +63,60 @@ class LocalFilesTests(unittest.TestCase):
             self.assertEqual(local_files.execute('owner', {'action':'open', 'reference':r'C:\antiga\Projeto.xlsx'}), {'cancelled':True})
             opener.assert_not_called()
         with patch.object(local_files, 'choose', return_value=str(original)), patch.object(local_files.os, 'startfile') as opener:
-            local_files.execute('owner', {'action':'open', 'reference':r'C:\antiga\Projeto.xlsx'})
+            with self.assertRaises(ValueError):
+                local_files.execute('owner', {'action':'open', 'reference':r'C:\antiga\Projeto.xlsx'})
+            opener.assert_not_called()
+            local_files.execute('owner', {'action':'open', 'reference':str(original.resolve())})
             opener.assert_called_once_with(str(original.resolve()))
+
+    def test_same_named_project_folders_and_workbooks_stay_separate_after_reload(self):
+        for kind, action, name in [('folder', 'pick-folder', 'Documentos'), ('file', 'pick-file', 'Projeto.xlsx')]:
+            paths, refs = [], []
+            for client in ['Orquinare', 'Sin Moveis']:
+                parent = self.root / kind / client
+                parent.mkdir(parents=True)
+                path = parent / name
+                if kind == 'folder':
+                    path.mkdir()
+                else:
+                    path.write_bytes(client.encode())
+                paths.append(path.resolve())
+                with patch.object(local_files, 'choose', return_value=str(path)):
+                    ref = local_files.execute('owner', {'action': action})['reference']
+                self.assertEqual(unquote(urlsplit(ref).path.split('/')[-1]), str(path.resolve()))
+                refs.append(ref)
+            self.assertNotEqual(*refs)
+            # Every execute reopens SQLite, as happens after a helper restart.
+            with patch.object(local_files, 'choose') as chooser, patch.object(local_files.os, 'startfile') as opener:
+                for index in [0, 1, 0, 1]:
+                    local_files.execute('owner', {'action': 'open', 'reference': refs[index]})
+                    self.assertEqual(opener.call_args.args, (str(paths[index]),))
+                chooser.assert_not_called()
+
+    def test_existing_reference_cannot_be_rebound_to_another_same_named_folder(self):
+        first, second = self.root / 'Orquinare' / 'Documentos', self.root / 'Sin' / 'Documentos'
+        first.mkdir(parents=True)
+        second.mkdir(parents=True)
+        ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos'
+        local_files._save('owner', ref, first, 'folder')
+        with self.assertRaises(ValueError):
+            local_files._save('owner', ref, second, 'folder')
+        with patch.object(local_files.os, 'startfile') as opener:
+            local_files.execute('owner', {'action': 'open', 'reference': ref})
+            opener.assert_called_once_with(str(first.resolve()))
+
+    def test_full_path_recovery_rejects_another_same_named_folder(self):
+        first, second = self.root / 'Orquinare' / 'Documentos', self.root / 'Sin' / 'Documentos'
+        first.mkdir(parents=True)
+        second.mkdir(parents=True)
+        ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/' + quote(str(first.resolve()), safe='')
+        with patch.object(local_files, 'choose', return_value=str(second)), patch.object(local_files.os, 'startfile') as opener:
+            with self.assertRaises(ValueError):
+                local_files.execute('owner', {'action': 'open', 'reference': ref})
+            opener.assert_not_called()
+        with patch.object(local_files, 'choose', return_value=str(first)), patch.object(local_files.os, 'startfile') as opener:
+            local_files.execute('owner', {'action': 'open', 'reference': ref})
+            opener.assert_called_once_with(str(first.resolve()))
 
     def test_preview_uses_only_the_account_approved_workbook(self):
         original = self.root / 'trabalho.xlsx'

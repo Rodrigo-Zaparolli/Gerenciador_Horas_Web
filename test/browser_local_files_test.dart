@@ -25,6 +25,52 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
   });
+  testWidgets(
+      'full paths stay with their project when switching editor controllers',
+      (tester) async {
+    const paths = [
+      r'C:\Clientes\226144 - Orquinare\Documentos',
+      r'C:\Clientes\Sin Moveis Planejados\Documentos'
+    ];
+    final refs = List.generate(
+        2,
+        (i) => Uri(scheme: 'desktop-folder', host: 'local', pathSegments: [
+              'owner',
+              '12345678-1234-1234-1234-123456789ab$i',
+              paths[i]
+            ]).toString());
+    final controllers =
+        refs.map((r) => TextEditingController(text: r)).toList();
+    for (final index in [0, 1, 0]) {
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: SizedBox(
+                  width: 320,
+                  child: ProjectReferenceField(
+                      controller: controllers[index],
+                      decoration:
+                          const InputDecoration(labelText: 'Pasta'))))));
+      expect(BrowserLocalFiles.isReference(refs[index]), true);
+      expect(find.text(paths[index]), findsOneWidget);
+      expect(controllers[0].text, refs[0]);
+      expect(controllers[1].text, refs[1]);
+      expect(tester.takeException(), isNull);
+    }
+    await tester.pumpWidget(const SizedBox());
+    for (final controller in controllers) {
+      controller.dispose();
+    }
+  });
+  test('full spreadsheet paths retain spaces accents and URI delimiters', () {
+    const path = r'C:\Clientes\Orquinare\Implantação #1 %.xlsx';
+    final ref = Uri(scheme: 'desktop-file', host: 'local', pathSegments: [
+      'owner',
+      '12345678-1234-1234-1234-123456789abc',
+      path
+    ]).toString();
+    expect(BrowserLocalFiles.isReference(ref), true);
+    expect(BrowserLocalFiles.label(ref), path);
+  });
   test('browser references preserve filenames and reject unrelated schemes',
       () {
     const reference =

@@ -6,7 +6,7 @@ function Get-OpenerStatus {
 }
 $status = Get-OpenerStatus
 if ($status) {
-    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'excel-preview-2') {
+    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'full-path-links-3') {
         Write-Host 'Abertura local já está ativa. Pode usar o aplicativo web.'
         exit 0
     }
@@ -32,7 +32,7 @@ $openerProcess = Start-Process -FilePath $openerPython -ArgumentList '-m','local
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     Start-Sleep -Milliseconds 500
     $status = Get-OpenerStatus
-    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'excel-preview-2') {
+    if ($status.service -eq 'gerenciador-horas-edesk' -and $status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'full-path-links-3') {
         $openerProcess.Id | Set-Content -LiteralPath (Join-Path $openerLog 'service.pid')
         Write-Host 'Abertura local ativa. Você pode fechar esta janela.'
         Start-Process 'https://gerenciador-horas.web.app/abrir-arquivos.html' -WindowStyle Hidden

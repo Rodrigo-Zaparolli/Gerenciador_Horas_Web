@@ -32,7 +32,7 @@ health=client.get('/healthz')
 assert health.status_code==200 and health.json['nativeFiles'] is True
 assert health.json['excelMirror'] is True
 assert 'preview' in health.json['nativeActions']
-assert health.json['nativeFilesVersion'] == 'excel-preview-2'
+assert health.json['nativeFilesVersion'] == 'full-path-links-3'
 headers={'Origin':'https://gerenciador-horas.web.app','Authorization':'Bearer invalid-test-token'}
 with patch('local_edesk.files_server.verify_token',side_effect=ValueError):
     assert client.post('/api/local-files',json={'action':'open'},headers=headers).status_code==401

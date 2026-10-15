@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Credenciais E-Desk salvas no Firebase por conta do app, para carregar automaticamente em outro computador. Após atualizar, salve suas credenciais uma vez para sincronizar.",
-    "Cópia local por usuário para recuperação, confirmação do salvamento na nuvem e remoção sincronizada. Credenciais ficam fora dos backups."
+    "Pastas e planilhas locais: novas seleções preservam o caminho completo e cada vínculo mantém seu próprio destino, sem permitir substituição por outra pasta com o mesmo nome.",
+    "Editor de trabalho mostra caminhos completos em até três linhas. Atualize a integração local para usar a correção e selecione novamente os vínculos antigos que exibem apenas o nome da pasta."
   ]
 }

@@ -56,6 +56,8 @@ class _ProjectReferenceFieldState extends State<ProjectReferenceField> {
     final local = BrowserLocalFiles.isReference(widget.controller.text);
     return TextField(
         controller: display,
+        minLines: 1,
+        maxLines: 3,
         style: widget.style,
         readOnly: widget.readOnly || local,
         onTap: widget.onTap,

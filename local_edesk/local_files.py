@@ -12,23 +12,55 @@ from urllib.parse import quote, unquote, urlsplit
 DB_PATH = Path(__file__).resolve().parent.parent / '.edesk-local' / 'local-files.sqlite3'
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
-PROTOCOL_VERSION = 'excel-preview-2'
+PROTOCOL_VERSION = 'full-path-links-3'
 SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview'})
+
+
+def _absolute_windows_path(value):
+    return (isinstance(value, str) and len(value) <= 4096
+            and not re.search(r'[\x00-\x1f]', value)
+            and PureWindowsPath(value).is_absolute())
+
+
+def _expected_path(reference):
+    if _absolute_windows_path(reference):
+        return reference
+    uri = urlsplit(reference)
+    if uri.scheme in {'desktop-file', 'desktop-folder'}:
+        label = unquote(uri.path.split('/')[-1])
+        if _absolute_windows_path(label):
+            return label
+    return None
+
+
+def _same_path(first, second):
+    return PureWindowsPath(str(first)).as_posix().rstrip('/').casefold() == PureWindowsPath(str(second)).as_posix().rstrip('/').casefold()
+
+
+def _check_expected_path(reference, path):
+    expected = _expected_path(reference)
+    if expected is not None and not _same_path(expected, path):
+        raise ValueError('A pasta ou planilha selecionada não corresponde ao caminho salvo. Selecione o destino correto no editor deste trabalho.')
 
 
 def parse_reference(reference, uid):
     # Legacy editor paths also require a one-time native selection; never open
     # the client-provided path directly, even if it already exists.
-    if len(reference) <= 4096 and re.match(r'^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)', reference):
+    if _absolute_windows_path(reference):
         legacy = PureWindowsPath(reference)
-        return ('file' if legacy.suffix.lower() in EXTENSIONS else 'folder'), legacy.name
+        return ('file' if legacy.suffix.lower() in EXTENSIONS else 'folder'), legacy.name or legacy.anchor
     uri = urlsplit(reference)
     parts = [unquote(part) for part in uri.path.split('/')[1:]]
     if (uri.scheme not in {'browser-file', 'browser-folder', 'desktop-file', 'desktop-folder'}
             or uri.netloc != 'local' or uri.query or uri.fragment or len(parts) != 3
             or parts[0] != uid or not re.fullmatch(r'[0-9a-f-]{36}', parts[1])
-            or not parts[2] or '/' in parts[2] or '\\' in parts[2]):
+            or not parts[2]):
         raise ValueError('Vínculo local inválido para esta conta.')
+    if '/' in parts[2] or '\\' in parts[2]:
+        if not uri.scheme.startswith('desktop-') or not _absolute_windows_path(parts[2]):
+            raise ValueError('Caminho local inválido.')
+        label = PureWindowsPath(parts[2])
+        return ('folder' if uri.scheme.endswith('folder') else 'file'), label.name or label.anchor
     return ('folder' if uri.scheme.endswith('folder') else 'file'), parts[2]
 
 
@@ -86,6 +118,9 @@ def execute(uid, body):
             record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
         if record:
             path = _validate(record[0], kind)
+            if record[1] != kind:
+                raise ValueError('O tipo do vínculo local não corresponde ao arquivo ou pasta.')
+            _check_expected_path(reference, path)
         elif action == 'read':
             raise ValueError('Selecione novamente o arquivo no editor deste computador.')
         else:
@@ -96,7 +131,8 @@ def execute(uid, body):
                 if not selected:
                     return {'cancelled': True}
                 path = _validate(selected, kind)
-                if path.name.casefold() != expected_name.casefold():
+                _check_expected_path(reference, path)
+                if (path.name or path.anchor).casefold() != expected_name.casefold():
                     raise ValueError('O nome selecionado é diferente do vínculo. Altere o arquivo ou pasta no editor.')
                 _save(uid, reference, path, kind)
             finally:
@@ -129,7 +165,9 @@ def execute(uid, body):
             path = path / name
             path.mkdir(exist_ok=True)
             path = _validate(path, kind)
-        reference = f'desktop-{kind}://local/{quote(uid, safe="")}/{uuid.uuid4()}/{quote(path.name or "Raiz do disco", safe="")}'
+        # Persist the selected full path as display/identity metadata. It is
+        # never trusted as permission to open a path without native selection.
+        reference = f'desktop-{kind}://local/{quote(uid, safe="")}/{uuid.uuid4()}/{quote(str(path), safe="")}'
         _save(uid, reference, path, kind)
         return {'reference': reference}
     finally:
@@ -137,5 +175,9 @@ def execute(uid, body):
 
 
 def _save(uid, reference, path, kind):
+    _check_expected_path(reference, path)
     with _connection() as con:
-        con.execute('INSERT OR REPLACE INTO files VALUES(?,?,?,?)', (uid, reference, str(path), kind))
+        con.execute('INSERT OR IGNORE INTO files VALUES(?,?,?,?)', (uid, reference, str(path), kind))
+        existing = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
+        if existing[1] != kind or not _same_path(existing[0], path):
+            raise ValueError('Este vínculo já pertence a outra pasta ou planilha. Faça uma nova seleção no editor do trabalho.')
