@@ -1458,7 +1458,64 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
 
     if not abrir_retroativo:
         return pagina_trabalho
-    return abrir_trabalho_retroativo(pagina_trabalho, dados_trabalho)
+    pagina_horas = abrir_trabalho_retroativo(pagina_trabalho, dados_trabalho)
+    pagina_horas._edesk_hours_reference = {
+        'urlSolicitacao': url_solicitacao_mapeamento,
+        'dadosTrabalho': dict(dados_trabalho),
+    }
+    return pagina_horas
+
+
+def preparar_tela_hora(page, context, numero_solicitacao, id_trabalho, referencia):
+    """Re-enter the validated work after Save redirects/closes the hours page.
+
+    Only navigation is retried here, never Save. A previous hour's journal
+    events stay intact and the next hour has not been submitted yet.
+    """
+    dados_esperados = referencia.get('dadosTrabalho', {})
+    url_solicitacao = referencia.get('urlSolicitacao', '')
+    if not dados_esperados.get('id_trabalho') or not eh_solicitacao(url_solicitacao):
+        raise RuntimeError('Não foi possível recuperar a referência validada do trabalho para a próxima hora.')
+
+    if page is not None and not page.is_closed():
+        # Deliver pending Playwright navigation events after the previous POST.
+        page.wait_for_timeout(100)
+        if eh_trabalho_retroativo(page.url):
+            atuais = extrair_dados_url(page.url)
+            corresponde = all(str(atuais.get(key, '')) == str(dados_esperados.get(key, ''))
+                              for key in ('solicitacao', 'id_trabalho'))
+            if corresponde and page.locator('#cph1_txtDatTem').is_visible():
+                return page
+    else:
+        page = context.new_page()
+
+    log('O E-Desk saiu do formulário de horas. Reabrindo o trabalho validado antes do próximo apontamento.')
+    atuais = extrair_dados_url(page.url)
+    mesmo_trabalho = all(str(atuais.get(key, '')) == str(dados_esperados.get(key, ''))
+                        for key in ('solicitacao', 'id_trabalho'))
+    if not (eh_trabalho(page.url) and mesmo_trabalho and validar_tela_trabalho(page, numero_solicitacao, id_trabalho)):
+        atuais = extrair_dados_url(page.url)
+        mesma_solicitacao = (eh_solicitacao(page.url) and
+                            str(atuais.get('solicitacao', '')) == str(dados_esperados.get('solicitacao', '')))
+        if not mesma_solicitacao:
+            try:
+                page.goto(url_solicitacao, wait_until='domcontentloaded', timeout=30000)
+            except Exception as erro:
+                raise RuntimeError('Não foi possível reabrir a solicitação. Confira a sessão e a conexão antes de enviar as horas restantes.') from erro
+        if not eh_solicitacao(page.url):
+            raise RuntimeError('O E-Desk não reabriu a solicitação. Confira a sessão antes de enviar as horas restantes.')
+        page = abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho)
+
+    if page is None or not validar_tela_trabalho(page, numero_solicitacao, id_trabalho):
+        raise RuntimeError('O trabalho da próxima hora não foi confirmado. Nenhum novo apontamento foi enviado.')
+    dados_trabalho = extrair_dados_url(page.url)
+    if any(str(dados_trabalho.get(key, '')) != str(dados_esperados.get(key, ''))
+           for key in ('solicitacao', 'id_trabalho')):
+        raise RuntimeError('A referência do trabalho mudou entre as horas. Nenhum novo apontamento foi enviado.')
+    pagina_horas = abrir_trabalho_retroativo(page, dados_trabalho)
+    referencia['dadosTrabalho'] = dict(dados_trabalho)
+    pagina_horas._edesk_hours_reference = referencia
+    return pagina_horas
 
 
 def acrescentar_trabalho_realizado(anterior, atual, data, descritivo):
@@ -2392,9 +2449,13 @@ def main():
             # A partir daqui usamos SOMENTE a página
             # retornada para esta hora.
             pagina_hora = pagina_final
+            referencia_horas = pagina_final._edesk_hours_reference
 
             for indice_hora, hora in enumerate(horas, start=1):
                 log(f"PROCESSANDO HORA {indice_hora} DE {total_horas} NO MESMO TRABALHO")
+                pagina_hora = preparar_tela_hora(
+                    pagina_hora, context, solicitacao, id_trabalho, referencia_horas
+                )
                 # ----------------------------------------------------
                 # 5. SALVA SOMENTE ESTA HORA
                 # ----------------------------------------------------

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Revisão geral dos ajustes: testes de horas, comentários, e-mails, métricas, temas, PDF, backup e integração local.",
-    "A conferência de horas agora libera o fechamento quando uma exclusão demora a ser confirmada, mostra a orientação de recuperação e bloqueia o envio de registros com exclusão incerta.",
-    "Corrigido o empacotamento para servidor E-Desk para incluir o módulo de seleção exata do trabalho. A atualização da conferência não exige baixar outra integração local."
+    "Corrigida a navegação entre horas do mesmo trabalho: antes de cada apontamento, a integração verifica o retroativo e reabre o trabalho correto se o E-Desk voltou à solicitação, mudou de tela ou fechou a aba.",
+    "Somente a navegação é recuperada; a ação Salvar de uma hora anterior não é repetida. A integração interrompe se a sessão falhar ou se a referência do trabalho não for confirmada.",
+    "Para receber esta correção no PC dos envios, baixe a atualização leve hours-batch-14 na página da integração. Aguarde os envios terminarem, pare a integração, extraia na mesma pasta preservando .edesk-local e execute Iniciar integração E-Desk.cmd."
   ]
 }

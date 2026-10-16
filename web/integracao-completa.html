@@ -4,9 +4,9 @@ body{background:#0b0f19;color:#e2e8f0;font:16px/1.6 system-ui;margin:0;padding:2
 </style></head><body><main>
 <h1>Conectar o E-Desk neste computador</h1>
 <p>Este pacote completo permite enviar horas, comentários e fases pelo app web. Também abre pastas e planilhas originais neste PC.</p>
-<p><a class="button" href="/downloads/correcao-envio-horas-work-selection-13.zip" download>Já tenho a integração: baixar correção leve</a></p>
+<p><a class="button" href="/downloads/correcao-envio-horas-hours-batch-14.zip" download>Já tenho a integração: baixar correção leve</a></p>
 <p>Para uma instalação completa já existente: aguarde os envios terminarem, execute <strong>Parar integração E-Desk.cmd</strong>, extraia a correção na mesma pasta substituindo os arquivos e execute <strong>Iniciar integração E-Desk.cmd</strong>. Preserve a pasta <strong>.edesk-local</strong> e os demais arquivos. A correção leve não funciona sozinha em uma pasta nova.</p>
-<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=work-selection-13" download>Baixar integração completa para Windows</a></p>
+<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=hours-batch-14" download>Baixar integração completa para Windows</a></p>
 <p><strong>Vínculos preservados nas atualizações:</strong> nesta primeira atualização, aguarde qualquer envio terminar e execute <strong>Parar integração E-Desk.cmd</strong> na pasta atual. Extraia o novo ZIP nessa mesma pasta, substituindo os arquivos e mantendo a pasta <strong>.edesk-local</strong>. Execute <strong>Iniciar integração E-Desk.cmd</strong>. Os vínculos existentes serão migrados automaticamente, preservando os originais.</p>
 <p>A partir desta versão, os vínculos ficam no perfil do Windows, separados da pasta extraída. Atualizações futuras da integração não exigem selecionar novamente as pastas e planilhas já autorizadas nesse computador e usuário. Atualizar apenas o app web não exige reinstalar a integração.</p>
 <ol><li>Baixe o ZIP e use <strong>Extrair tudo</strong> para colocá-lo em uma pasta permanente.</li>
@@ -24,7 +24,7 @@ button.onclick=async()=>{button.disabled=true;status.textContent='Verificando a 
 const result=JSON.parse(await nativeLocalFilesRequest(JSON.stringify({action:'health',interactive:true})));
 if(result.error){status.textContent=result.message;return;}
 const health=result.data;
-status.textContent=result.status===200&&health?.service==='gerenciador-horas-edesk'&&health.mode==='local'&&health.integrationPackageVersion==='work-selection-13'
+status.textContent=result.status===200&&health?.service==='gerenciador-horas-edesk'&&health.mode==='local'&&health.integrationPackageVersion==='hours-batch-14'
 ?'Integração completa conectada. Abra o app e atualize com Ctrl + F5.'
 :health?.mode==='files-only'?'Está ativa apenas a abertura de arquivos. Execute Iniciar integração E-Desk.cmd na pasta do pacote completo.'
 :'Execute Iniciar integração E-Desk.cmd na pasta extraída e verifique novamente.';

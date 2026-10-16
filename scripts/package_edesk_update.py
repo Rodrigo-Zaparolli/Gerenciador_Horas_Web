@@ -1,4 +1,4 @@
-"""Build the small work-selection-13 update for an existing full installation."""
+"""Build the small hours-batch-14 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -9,7 +9,7 @@ FILES = (
     'cloud_run/main.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO work-selection-13 — instalação completa já existente
+README = '''ATUALIZAÇÃO hours-batch-14 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -22,14 +22,16 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
 Correção: localizar o trabalho exato na solicitação, aguardar a navegação
-e exigir a abertura do formulário retroativo antes do envio de horas.
+e reabrir o trabalho e o retroativo antes da próxima hora quando o E-Desk
+voltar à solicitação ou fechar a tela após salvar. Apenas a navegação é
+recuperada; o comando Salvar de uma hora anterior não é repetido.
 O resultado só confirma o cadastro quando todos os apontamentos constarem
 como confirmados. Os vínculos e o início automático são preservados.
 '''
 
 
 def main():
-    target = ROOT / 'web/downloads/correcao-envio-horas-work-selection-13.zip'
+    target = ROOT / 'web/downloads/correcao-envio-horas-hours-batch-14.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:
