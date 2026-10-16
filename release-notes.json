@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Removidos o Théo, os comandos de voz e os botões de ditado do app.",
-    "Ao clicar em enviar horas ao E-Desk, abre a conferência com edição, exclusão e seleção individual ou de todos os apontamentos. O total acompanha apenas os itens marcados.",
-    "Edições e exclusões são salvas no app. A exclusão pede confirmação e não remove horas já cadastradas no E-Desk; registros desmarcados ficam fora do envio."
+    "Revisão geral dos ajustes: testes de horas, comentários, e-mails, métricas, temas, PDF, backup e integração local.",
+    "A conferência de horas agora libera o fechamento quando uma exclusão demora a ser confirmada, mostra a orientação de recuperação e bloqueia o envio de registros com exclusão incerta.",
+    "Corrigido o empacotamento para servidor E-Desk para incluir o módulo de seleção exata do trabalho. A atualização da conferência não exige baixar outra integração local."
   ]
 }

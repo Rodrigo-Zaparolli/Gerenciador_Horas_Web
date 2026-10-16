@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/models/dashboard_models.dart';
 import '../../domain/models/work_duration.dart';
@@ -107,10 +108,11 @@ class _HoursReviewState extends State<_HoursReview> {
   late final logs = List<TimeLog>.from(widget.logs);
   late Set<int> selected = Set<int>.from(List.generate(logs.length, (i) => i));
   bool busy = false;
+  bool needsRefresh = false;
   String? error;
 
   Future<void> edit(int index) async {
-    if (busy || !widget.canSend()) return;
+    if (busy || needsRefresh || !widget.canSend()) return;
     setState(() {
       busy = true;
       error = null;
@@ -122,9 +124,10 @@ class _HoursReviewState extends State<_HoursReview> {
         builder: (_) => TaskLogEditDialog(
             log: logs[index],
             save: (value) async {
-              if (!widget.canSend())
+              if (!widget.canSend()) {
                 throw StateError(
                     'A conta mudou. Abra a conferência novamente.');
+              }
               await widget.save!(value);
               updated = value;
             }));
@@ -136,7 +139,7 @@ class _HoursReviewState extends State<_HoursReview> {
   }
 
   Future<void> remove(int index) async {
-    if (busy || !widget.canSend()) return;
+    if (busy || needsRefresh || !widget.canSend()) return;
     setState(() {
       busy = true;
       error = null;
@@ -157,7 +160,7 @@ class _HoursReviewState extends State<_HoursReview> {
                 ]));
     try {
       if (confirmed != true || !widget.canSend()) return;
-      await widget.delete!(logs[index]);
+      await widget.delete!(logs[index]).timeout(const Duration(seconds: 30));
       if (!mounted) return;
       setState(() {
         logs.removeAt(index);
@@ -167,9 +170,14 @@ class _HoursReviewState extends State<_HoursReview> {
         };
       });
     } catch (failure) {
-      if (mounted)
-        setState(() =>
-            error = recoveryError(failure, operation: 'excluir o apontamento'));
+      if (mounted) {
+        setState(() {
+          needsRefresh = failure is TimeoutException;
+          error = needsRefresh
+              ? 'A exclusão ainda não foi confirmada. Feche a conferência e confira os registros antes de enviar. O envio fica bloqueado nesta conferência para evitar usar um registro que pode ter sido excluído.'
+              : recoveryError(failure, operation: 'excluir o apontamento');
+        });
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -197,7 +205,7 @@ class _HoursReviewState extends State<_HoursReview> {
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.error))),
                   AbsorbPointer(
-                      absorbing: busy,
+                      absorbing: busy || needsRefresh,
                       child: HoursSendSelection(
                           logs: logs,
                           selected: selected,
@@ -211,7 +219,7 @@ class _HoursReviewState extends State<_HoursReview> {
               onPressed: busy ? null : () => Navigator.pop(context),
               child: const Text('Cancelar')),
           FilledButton(
-              onPressed: busy || selected.isEmpty
+                onPressed: busy || needsRefresh || selected.isEmpty
                   ? null
                   : () {
                       if (!widget.canSend()) return;

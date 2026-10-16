@@ -9,6 +9,7 @@
 !edesk_bot/comment_percentage.py
 !edesk_bot/phase_confirmation.py
 !edesk_bot/send_progress.py
+!edesk_bot/work_selection.py
 !local_edesk/
 !local_edesk/__init__.py
 !local_edesk/central.py

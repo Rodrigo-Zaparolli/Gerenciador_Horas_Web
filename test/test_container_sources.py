@@ -18,6 +18,7 @@ class ContainerSourcesTest(unittest.TestCase):
         requirements = (ROOT / 'cloud_run/requirements.txt').read_text(encoding='utf-8')
         self.assertIn('firebase-admin==', requirements)
         required = ['edesk_bot/comment_percentage.py', 'edesk_bot/send_progress.py',
+                    'edesk_bot/work_selection.py',
                     'edesk_bot/phase_confirmation.py', 'local_edesk/__init__.py',
                     'local_edesk/central.py', 'local_edesk/journal.py']
         for source in required:

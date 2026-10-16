@@ -1,9 +1,33 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/domain/models/dashboard_models.dart';
 import 'package:gerenciador_horas/features/tasks/hours_send_selection.dart';
 
 void main() {
+  testWidgets('unconfirmed deletion releases modal but blocks stale sends', (tester) async {
+    final pending = Completer<void>();
+    final log = TimeLog(id: '1', targetId: '123_4', date: DateTime(2026, 10, 15),
+      startTime: '08:00', endTime: '09:00', durationFormatted: '01:00', isRegistered: true);
+    List<TimeLog>? sent;
+    await tester.pumpWidget(MaterialApp(home: Builder(builder: (context) => Scaffold(
+      body: TextButton(onPressed: () async {
+        sent = await selectHoursForSend(context, [log], canSend: () => true,
+          delete: (_) => pending.future);
+      }, child: const Text('Open'))))));
+    await tester.tap(find.text('Open')); await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Excluir apontamento')); await tester.pumpAndSettle();
+    await tester.tap(find.text('Excluir')); await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 31)); await tester.pumpAndSettle();
+    expect(find.textContaining('A exclusão ainda não foi confirmada'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Confirmar e enviar')).onPressed, isNull);
+    expect(find.text('1 de 1 selecionado(s) · 01:00'), findsOneWidget);
+    pending.complete(); await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Confirmar e enviar')).onPressed, isNull);
+    await tester.tap(find.text('Cancelar')); await tester.pumpAndSettle();
+    expect(sent, isNull);
+    expect(find.text('Conferir horas para enviar'), findsNothing);
+  });
   testWidgets('review with edit and delete fits a small screen', (tester) async {
     tester.view.physicalSize = const Size(390, 700);
     tester.view.devicePixelRatio = 1;
