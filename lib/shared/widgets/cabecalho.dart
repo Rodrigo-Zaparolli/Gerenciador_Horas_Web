@@ -1311,7 +1311,7 @@ class _CabecalhoState extends State<Cabecalho> {
     final width = MediaQuery.of(context).size.width;
 
     final bool isVeryCompact = width < 850;
-    final bool isCompact = width < 1400;
+    final bool isCompact = width < 1150;
 
     // ============================================================
     // DIMENSÕES RESPONSIVAS
@@ -1320,14 +1320,14 @@ class _CabecalhoState extends State<Cabecalho> {
     final double logoWidth = isVeryCompact
         ? (width < 400 ? 80 : 96)
         : isCompact
-            ? 135
+            ? 150
             : 190;
 
     final double searchWidth = isCompact ? 125 : 185;
 
-    final bool mostrarNomeUsuario = !isCompact;
+    final bool mostrarNomeUsuario = width >= 980;
 
-    final double nomeUsuarioWidth = isCompact ? 82 : 145;
+    final double nomeUsuarioWidth = width >= 1200 ? 145 : 82;
 
     final userName = _getUserName();
 
@@ -1590,7 +1590,7 @@ class _CabecalhoState extends State<Cabecalho> {
                         ),
                         if (mostrarNomeUsuario) ...[
                           SizedBox(
-                            width: isCompact ? 6 : 9,
+                            width: width >= 1200 ? 9 : 6,
                           ),
                           ConstrainedBox(
                             constraints: BoxConstraints(

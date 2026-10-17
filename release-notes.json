@@ -1,7 +1,6 @@
 {
     "changes":  [
-                    "Cabeçalho adaptável ao espaço disponível: todas as abas permanecem acessíveis, sem cortar Solicitações ao lado da pesquisa.",
-                    "Em telas menores, a navegação usa ícones com o nome ao passar o mouse quando os títulos completos não cabem.",
-                    "Logo, busca e perfil ocupam menos espaço em notebooks; o perfil permanece acessível pelo avatar."
+                    "Restaurado o espaço original do nome no cabeçalho, incluindo a identificação do sistema e o nome do usuário nos notebooks.",
+                    "A correção de navegação permanece: todas as abas ficam acessíveis, sem cortar Solicitações ao lado da pesquisa."
                 ]
 }

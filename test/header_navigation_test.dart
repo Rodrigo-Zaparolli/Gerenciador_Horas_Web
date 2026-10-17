@@ -42,6 +42,9 @@ void main() {
         await tester.pumpAndSettle();
         final request = find.byTooltip('Solicitações');
         expect(request, findsOneWidget);
+        if (width >= 980) {
+          expect(find.text('Usuário de conferência').hitTestable(), findsOneWidget);
+        }
         final requestRect = tester.getRect(request);
         final searchRect = tester.getRect(find.byType(TextField));
         expect(requestRect.right, lessThanOrEqualTo(searchRect.left));
