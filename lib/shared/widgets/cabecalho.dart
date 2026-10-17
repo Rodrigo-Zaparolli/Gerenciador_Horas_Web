@@ -1095,9 +1095,9 @@ class _CabecalhoState extends State<Cabecalho> {
       icon: Icons.dashboard_outlined,
     ),
     _MenuItemData(
-      index: 1,
-      label: 'Cadastro de Trabalhos',
-      icon: Icons.work_outline_rounded,
+      index: 5,
+      label: 'Tarefas',
+      icon: Icons.playlist_add_check_rounded,
     ),
     _MenuItemData(
       index: 2,
@@ -1105,9 +1105,9 @@ class _CabecalhoState extends State<Cabecalho> {
       icon: Icons.analytics_outlined,
     ),
     _MenuItemData(
-      index: 3,
-      label: 'Projetos Finalizados',
-      icon: Icons.task_alt_rounded,
+      index: 1,
+      label: 'Cadastro de Trabalhos',
+      icon: Icons.work_outline_rounded,
     ),
     _MenuItemData(
       index: 4,
@@ -1115,9 +1115,9 @@ class _CabecalhoState extends State<Cabecalho> {
       icon: Icons.menu_book_outlined,
     ),
     _MenuItemData(
-      index: 5,
-      label: 'Tarefas',
-      icon: Icons.playlist_add_check_rounded,
+      index: 3,
+      label: 'Projetos Finalizados',
+      icon: Icons.task_alt_rounded,
     ),
     _MenuItemData(
       index: 6,

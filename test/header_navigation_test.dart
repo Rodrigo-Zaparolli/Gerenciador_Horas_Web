@@ -83,6 +83,18 @@ void main() {
                     userName: 'Usuário'))));
         await tester.pumpAndSettle();
         final request = find.byTooltip('Solicitações');
+        const destinations = {
+          'Projetos': 0,
+          'Tarefas': 5,
+          'Métricas': 2,
+          'Cadastro de Trabalhos': 1,
+          'Orientações': 4,
+          'Projetos Finalizados': 3,
+          'Check List': 6,
+          'Solicitações': 7,
+        };
+        expect(tester.widget<AdaptiveHeaderNavigation>(find.byType(AdaptiveHeaderNavigation)).labels,
+            destinations.keys.toList());
         expect(request, findsOneWidget);
         for (var attempt = 0;
             request.hitTestable().evaluate().isEmpty && attempt < 20;
@@ -116,16 +128,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(position.pixels, 0);
         }
-        for (final label in [
-          'Projetos',
-          'Cadastro de Trabalhos',
-          'Métricas',
-          'Projetos Finalizados',
-          'Orientações',
-          'Tarefas',
-          'Check List',
-          'Solicitações'
-        ]) {
+        for (final label in destinations.keys) {
           final text = find.descendant(
               of: find.byTooltip(label), matching: find.byType(Text));
           expect(text, findsOneWidget);
@@ -133,6 +136,8 @@ void main() {
           await Scrollable.ensureVisible(tester.element(text), alignment: .5);
           await tester.pumpAndSettle();
           expect(text.hitTestable(), findsOneWidget);
+          await tester.tap(text);
+          expect(selected, destinations[label]);
         }
         await tester.tap(request);
         expect(selected, 7);

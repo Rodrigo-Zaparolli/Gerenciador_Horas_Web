@@ -1,7 +1,6 @@
 {
     "changes":  [
-                    "Todas as abas do cabeçalho mantêm os nomes completos, inclusive Cadastro de Trabalhos, Projetos Finalizados e Solicitações.",
-                    "Quando faltar espaço, todas as abas ficam na mesma faixa de rolagem com setas; Solicitações não fica mais separada.",
-                    "Preservado o espaço original do nome do usuário e da identificação do sistema."
+                    "Nova ordem das abas: Projetos, Tarefas, Métricas, Cadastro de Trabalhos, Orientações, Projetos Finalizados, Check List e Solicitações.",
+                    "Mantidos os nomes completos e a faixa de rolagem com setas quando faltar espaço."
                 ]
 }
