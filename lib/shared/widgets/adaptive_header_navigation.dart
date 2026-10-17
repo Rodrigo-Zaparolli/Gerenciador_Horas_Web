@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 /// Keep every navigation destination inside its allotted header space.
 class AdaptiveHeaderNavigation extends StatefulWidget {
   const AdaptiveHeaderNavigation(
-      {super.key, required this.labels, required this.itemBuilder});
+      {super.key,
+      required this.labels,
+      required this.shortLabels,
+      required this.itemBuilder})
+      : assert(labels.length == shortLabels.length);
   final List<String> labels;
+  final List<String> shortLabels;
   final Widget Function(int index, bool compact) itemBuilder;
 
   @override
@@ -35,26 +40,33 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
-        var requiredWidth = 0.0;
-        for (final label in widget.labels) {
-          final painter = TextPainter(
-              text: TextSpan(
-                  text: label,
-                  style: DefaultTextStyle.of(context)
-                      .style
-                      .copyWith(fontSize: 11, fontWeight: FontWeight.w700)),
-              textDirection: Directionality.of(context),
-              textScaler: scaler,
-              maxLines: 1)
-            ..layout();
-          requiredWidth += math.max(20, painter.width.ceilToDouble()) + 22;
-          painter.dispose();
+        double measure(List<String> labels, bool compact) {
+          var requiredWidth = 0.0;
+          for (final label in labels) {
+            final painter = TextPainter(
+                text: TextSpan(
+                    text: label,
+                    style: DefaultTextStyle.of(context).style.copyWith(
+                        fontSize: compact ? 10.5 : 11,
+                        fontWeight: FontWeight.w700)),
+                textDirection: Directionality.of(context),
+                textScaler: scaler,
+                maxLines: 1)
+              ..layout();
+            requiredWidth += math.max(20, painter.width.ceilToDouble()) +
+                (compact ? 14 : 22);
+            painter.dispose();
+          }
+          return requiredWidth;
         }
-        final overflow = requiredWidth > constraints.maxWidth;
+
+        final compact = measure(widget.labels, false) > constraints.maxWidth;
+        final overflow =
+            compact && measure(widget.shortLabels, true) > constraints.maxWidth;
         if (!overflow) {
           return Row(children: [
             for (var i = 0; i < widget.labels.length; i++)
-              widget.itemBuilder(i, false)
+              widget.itemBuilder(i, compact)
           ]);
         }
         // Keep Solicitações fully visible next to search; scroll the other
@@ -73,7 +85,7 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
                   scrollDirection: Axis.horizontal,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     for (var i = 0; i < widget.labels.length - 1; i++)
-                      widget.itemBuilder(i, false),
+                      widget.itemBuilder(i, true),
                   ]))),
           SizedBox(
               width: 24,
@@ -83,7 +95,7 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
                   onPressed: () => move(1),
                   icon: const Icon(Icons.chevron_right))),
           if (widget.labels.isNotEmpty)
-            widget.itemBuilder(widget.labels.length - 1, false),
+            widget.itemBuilder(widget.labels.length - 1, true),
         ]);
       });
 }

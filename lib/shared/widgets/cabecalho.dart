@@ -1150,7 +1150,7 @@ class _CabecalhoState extends State<Cabecalho> {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 8 : 10,
+            horizontal: compact ? 6 : 10,
             vertical: 6,
           ),
           decoration: BoxDecoration(
@@ -1170,17 +1170,17 @@ class _CabecalhoState extends State<Cabecalho> {
                 color:
                     selecionado ? CoresApp.primaria : CoresApp.textoSecundario,
               ),
-              if (!compact) ...[
+              ...[
                 const SizedBox(height: 3),
                 Text(
-                  item.label,
+                  compact ? item.shortLabel : item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: selecionado
                         ? CoresApp.textoPrincipal
                         : CoresApp.textoSecundario,
-                    fontSize: 11,
+                    fontSize: compact ? 10.5 : 11,
                     fontWeight: selecionado ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
@@ -1416,6 +1416,7 @@ class _CabecalhoState extends State<Cabecalho> {
                 Expanded(
                   child: AdaptiveHeaderNavigation(
                     labels: _menuItems.map((item) => item.label).toList(),
+                    shortLabels: _menuItems.map((item) => item.shortLabel).toList(),
                     itemBuilder: (index, compact) =>
                         _buildTopTabItem(_menuItems[index], compact),
                   ),
@@ -1637,6 +1638,12 @@ class _MenuItemData {
   final int index;
   final String label;
   final IconData icon;
+  String get shortLabel => switch (index) {
+    1 => 'Trabalhos',
+    3 => 'Finalizados',
+    6 => 'Checklist',
+    _ => label,
+  };
 
   const _MenuItemData({
     required this.index,

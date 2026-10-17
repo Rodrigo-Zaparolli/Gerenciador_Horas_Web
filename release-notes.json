@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "Restaurados os nomes de todas as abas do cabeçalho; eles não são mais substituídos por ícones quando falta espaço.",
-                    "Solicitações permanece inteira ao lado da pesquisa. Quando necessário, use as setas para navegar pelas demais abas com seus nomes.",
-                    "Preservado o espaço original do nome do usuário e da identificação do sistema."
+                    "O cabeçalho agora usa nomes reduzidos quando os nomes completos não cabem: Trabalhos, Finalizados e Checklist. Todas as abas mantêm texto.",
+                    "O nome completo continua disponível ao passar o mouse. As setas aparecem somente quando nem os nomes reduzidos cabem.",
+                    "Solicitações permanece inteira e o espaço original do nome do usuário é preservado."
                 ]
 }
