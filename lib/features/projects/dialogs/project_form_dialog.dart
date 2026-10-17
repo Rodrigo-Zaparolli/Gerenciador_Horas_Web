@@ -1544,7 +1544,14 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         }
         await showProjectStorageFilesDialog(context, folderReference: path);
       } else {
-        await ProjectFileService.openFile(path);
+        final isFolder = _folderPathController.text.trim() == path;
+        final resolved = await ProjectFileService.openFile(path,
+            projectId: widget.projectToEdit?.id,
+            field: isFolder ? 'folderPath' : 'excelLink');
+        if (resolved != null && mounted) {
+          final controller = isFolder ? _folderPathController : _excelLinkController;
+          if (controller.text.trim() == path) setState(() => controller.text = resolved);
+        }
       }
     } catch (e) {
       if (!mounted || !context.mounted) {

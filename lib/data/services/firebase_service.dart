@@ -7,11 +7,31 @@ import 'package:flutter/foundation.dart';
 import 'package:gerenciador_horas/domain/models/checklist_format_model.dart';
 import 'package:gerenciador_horas/domain/models/project_model.dart';
 import 'package:gerenciador_horas/domain/models/work_format_model.dart';
+import 'project_reference_upgrade.dart';
 
 class FirebaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> upgradeProjectLocalReference(String projectId,
+      {required String field, required String previous, required String resolved}) async {
+    final uid = _userId;
+    final owner = _db.collection('users').doc(uid);
+    final refs = [owner.collection('projects').doc(projectId),
+      owner.collection('completed_projects').doc(projectId)];
+    await _db.runTransaction((transaction) async {
+      final snapshots = [await transaction.get(refs[0]), await transaction.get(refs[1])];
+      if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou. Abra o trabalho novamente.');
+      for (var i = 0; i < refs.length; i++) {
+        final data = snapshots[i].data();
+        if (data == null) continue;
+        final patch = projectReferenceUpgrade(data, uid: uid, field: field,
+            previous: previous, resolved: resolved);
+        if (patch != null) transaction.update(refs[i], patch);
+      }
+    });
+  }
 
   // ============================================================
   // USUÁRIO ATUAL

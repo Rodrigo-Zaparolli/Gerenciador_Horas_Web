@@ -4094,7 +4094,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                         await showProjectStorageFilesDialog(context,
                             folderReference: reference);
                       } else {
-                        await ProjectFileService.openFile(reference);
+                        await ProjectFileService.openFile(reference, projectId: project.id, field: 'folderPath');
                       }
                     } catch (e) {
                       if (mounted && context.mounted) {
@@ -4120,7 +4120,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                 ? () async {
                     onActionSelected?.call();
                     try {
-                      await ProjectFileService.openFile(project.excelLink!);
+                      await ProjectFileService.openFile(project.excelLink!, projectId: project.id, field: 'excelLink');
                     } catch (e) {
                       if (mounted && context.mounted) {
                         showLocalFileError(context, e, resource: 'o arquivo ou planilha');

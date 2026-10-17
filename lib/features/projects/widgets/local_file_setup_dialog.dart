@@ -31,7 +31,7 @@ class LocalFileSetupDialog extends StatelessWidget {
                     '2. Use Extrair tudo e execute Iniciar integração E-Desk.cmd na pasta extraída.\n'
                     '3. Clique em Verificar conexão e permita o acesso à rede local ou a este dispositivo, se o navegador solicitar.\n'
                     '4. Volte ao app e tente abrir novamente.\n\n'
-                    'Se já instalou o pacote neste PC, basta iniciar a integração. Após reiniciar o Windows, inicie-a novamente.'))),
+                    'Se já instalou o pacote neste PC, basta iniciar a integração. Nas versões atuais ela inicia automaticamente com o Windows, se essa opção estiver ativada.'))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),

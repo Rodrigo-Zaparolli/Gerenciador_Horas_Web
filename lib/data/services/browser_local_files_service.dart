@@ -40,14 +40,14 @@ class BrowserLocalFiles {
   }
 
   static Future<String?> pickFolder({String? createName}) async =>
-      (await (await NativeLocalFiles.available()
+      (await (NativeLocalFiles.preferred || await NativeLocalFiles.available()
           ? NativeLocalFiles.call(
               createName == null ? 'pick-folder' : 'create-folder',
               name: createName)
           : call(createName == null ? 'pick-folder' : 'create-folder',
               name: createName)))['reference'] as String?;
   static Future<String?> pickFile() async =>
-      (await (await NativeLocalFiles.available()
+      (await (NativeLocalFiles.preferred || await NativeLocalFiles.available()
           ? NativeLocalFiles.call('pick-file')
           : call('pick-file')))['reference'] as String?;
   static Future<Uint8List> read(String reference) async =>

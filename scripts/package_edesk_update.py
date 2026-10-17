@@ -1,4 +1,4 @@
-"""Build the small hours-batch-14 update for an existing full installation."""
+"""Build the small persistent-links-15 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -7,9 +7,10 @@ FILES = (
     'edesk_bot/edesk_horas.py',
     'edesk_bot/work_selection.py',
     'cloud_run/main.py',
+    'local_edesk/local_files.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO hours-batch-14 — instalação completa já existente
+README = '''ATUALIZAÇÃO persistent-links-15 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -21,17 +22,19 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Correção: localizar o trabalho exato na solicitação, aguardar a navegação
-e reabrir o trabalho e o retroativo antes da próxima hora quando o E-Desk
-voltar à solicitação ou fechar a tela após salvar. Apenas a navegação é
-recuperada; o comando Salvar de uma hora anterior não é repetido.
-O resultado só confirma o cadastro quando todos os apontamentos constarem
-como confirmados. Os vínculos e o início automático são preservados.
+Correção dos vínculos: recuperar pastas e planilhas já autorizadas pelo
+caminho completo, sem confundir projetos com pastas de mesmo nome.
+Vínculos antigos são atualizados com o caminho completo ao abrir pelo app.
+Os vínculos ficam no perfil do Windows e não na pasta extraída.
+
+Inclui a correção anterior das horas: se o E-Desk voltar à solicitação,
+o trabalho e o retroativo são reabertos antes do próximo apontamento.
+A ação Salvar de uma hora anterior não é repetida.
 '''
 
 
 def main():
-    target = ROOT / 'web/downloads/correcao-envio-horas-hours-batch-14.zip'
+    target = ROOT / 'web/downloads/correcao-vinculos-persistent-links-15.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

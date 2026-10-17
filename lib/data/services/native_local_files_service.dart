@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../core/platform/native_file_transport.dart';
+import '../../core/platform/local_user_state.dart';
 
 class NativeFilesException implements Exception {
   final String message;
@@ -14,6 +16,8 @@ class NativeFilesException implements Exception {
 }
 
 class NativeLocalFiles {
+  static bool get preferred => Firebase.apps.isNotEmpty &&
+      LocalUserState.read(FirebaseAuth.instance.currentUser?.uid, 'native-local-files')?['preferred'] == true;
   static Future<bool> available() async {
     try {
       final result =
@@ -70,6 +74,9 @@ class NativeLocalFiles {
       }
       throw NativeFilesException(
           data['message']?.toString() ?? 'Não foi possível abrir o arquivo.');
+    }
+    if (data['cancelled'] != true) {
+      LocalUserState.write(user.uid, 'native-local-files', {'preferred': true});
     }
     return data;
   }

@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Corrigida a navegação entre horas do mesmo trabalho: antes de cada apontamento, a integração verifica o retroativo e reabre o trabalho correto se o E-Desk voltou à solicitação, mudou de tela ou fechou a aba.",
-    "Somente a navegação é recuperada; a ação Salvar de uma hora anterior não é repetida. A integração interrompe se a sessão falhar ou se a referência do trabalho não for confirmada.",
-    "Para receber esta correção no PC dos envios, baixe a atualização leve hours-batch-14 na página da integração. Aguarde os envios terminarem, pare a integração, extraia na mesma pasta preservando .edesk-local e execute Iniciar integração E-Desk.cmd."
+    "Corrigida a recuperação de pastas e planilhas já autorizadas neste PC: o caminho completo é reutilizado quando a identificação do vínculo muda, sem confundir pastas de projetos diferentes com o mesmo nome.",
+    "Ao abrir vínculos antigos pelo projeto ou editor, o app atualiza a referência com o caminho completo no Firebase, preservando alterações mais recentes e os demais campos do trabalho.",
+    "A preferência pela integração local permanece salva; uma demora na conexão não troca silenciosamente a seleção para o navegador.",
+    "Atualização local persistent-links-15 disponível na página da integração. Aplique a correção leve na pasta existente, preserve .edesk-local e reinicie a integração. Inclui as correções anteriores dos envios de horas."
   ]
 }

@@ -23,7 +23,7 @@ def database_path():
 DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
-PROTOCOL_VERSION = 'persistent-file-links-4'
+PROTOCOL_VERSION = 'persistent-file-links-5'
 SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview'})
 
 
@@ -138,6 +138,32 @@ def import_authorizations(source):
         _import_legacy(con, source)
 
 
+def _authorized_path(con, uid, reference, kind):
+    """Recover a changed reference only from this account's exact approved path.
+
+    Names such as Documentos are never used to associate different projects.
+    Metadata from the web alone does not authorize a new filesystem path.
+    """
+    expected = _expected_path(reference)
+    if expected is None:
+        return None
+    for path, saved_kind in con.execute('SELECT path,kind FROM files WHERE uid=? AND kind=?', (uid, kind)):
+        if _same_path(expected, path):
+            return path, saved_kind
+    return None
+
+
+def _persistent_reference(uid, reference, path, kind):
+    # Upgrade old browser/name-only links to an identity with the full path.
+    if reference.startswith('desktop-') and _expected_path(reference) is not None:
+        return reference
+    identity = f'{uid}/{kind}/{PureWindowsPath(str(path)).as_posix().casefold()}'
+    stable_id = uuid.uuid5(uuid.NAMESPACE_URL, identity)
+    persistent = f'desktop-{kind}://local/{quote(uid, safe="")}/{stable_id}/{quote(str(path), safe="")}'
+    _save(uid, persistent, path, kind)
+    return persistent
+
+
 def execute(uid, body):
     if os.name != 'nt':
         raise ValueError('A abertura local está disponível no Windows.')
@@ -153,11 +179,16 @@ def execute(uid, body):
             raise ValueError('Selecione a planilha do trabalho, não a pasta.')
         with _connection() as con:
             record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
+            recovered = record is None
+            if recovered:
+                record = _authorized_path(con, uid, reference, kind)
         if record:
             path = _validate(record[0], kind)
             if record[1] != kind:
                 raise ValueError('O tipo do vínculo local não corresponde ao arquivo ou pasta.')
             _check_expected_path(reference, path)
+            if recovered:
+                _save(uid, reference, path, kind)
         elif action == 'read':
             raise ValueError('Selecione novamente o arquivo no editor deste computador.')
         else:
@@ -174,15 +205,16 @@ def execute(uid, body):
                 _save(uid, reference, path, kind)
             finally:
                 picker_lock.release()
+        persistent = _persistent_reference(uid, reference, path, kind)
         if action == 'open':
             os.startfile(str(path))
-            return {'opened': True}
+            return {'opened': True, 'reference': persistent}
         if action == 'preview':
             from local_edesk.excel_mirror import render
-            return render(path, body.get('range', ''))
+            return {**render(path, body.get('range', '')), 'reference': persistent}
         if kind != 'file' or path.stat().st_size > 25 * 1024 * 1024:
             raise ValueError('Selecione um arquivo de até 25 MB para a prévia.')
-        return {'base64': base64.b64encode(path.read_bytes()).decode('ascii')}
+        return {'base64': base64.b64encode(path.read_bytes()).decode('ascii'), 'reference': persistent}
     kind = 'file' if action == 'pick-file' else 'folder'
     name = body.get('name', '')
     if action == 'create-folder' and (not isinstance(name, str) or not name.strip()):
