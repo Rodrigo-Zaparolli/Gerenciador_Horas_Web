@@ -4,14 +4,9 @@ import 'package:flutter/material.dart';
 /// Keep every navigation destination inside its allotted header space.
 class AdaptiveHeaderNavigation extends StatefulWidget {
   const AdaptiveHeaderNavigation(
-      {super.key,
-      required this.labels,
-      required this.shortLabels,
-      required this.itemBuilder})
-      : assert(labels.length == shortLabels.length);
+      {super.key, required this.labels, required this.itemBuilder});
   final List<String> labels;
-  final List<String> shortLabels;
-  final Widget Function(int index, bool compact) itemBuilder;
+  final Widget Function(int index) itemBuilder;
 
   @override
   State<AdaptiveHeaderNavigation> createState() =>
@@ -40,37 +35,32 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
-        double measure(List<String> labels, bool compact) {
+        double measure(List<String> labels) {
           var requiredWidth = 0.0;
           for (final label in labels) {
             final painter = TextPainter(
                 text: TextSpan(
                     text: label,
-                    style: DefaultTextStyle.of(context).style.copyWith(
-                        fontSize: compact ? 10.5 : 11,
-                        fontWeight: FontWeight.w700)),
+                    style: DefaultTextStyle.of(context)
+                        .style
+                        .copyWith(fontSize: 11, fontWeight: FontWeight.w700)),
                 textDirection: Directionality.of(context),
                 textScaler: scaler,
                 maxLines: 1)
               ..layout();
-            requiredWidth += math.max(20, painter.width.ceilToDouble()) +
-                (compact ? 14 : 22);
+            requiredWidth += math.max(20, painter.width.ceilToDouble()) + 22;
             painter.dispose();
           }
           return requiredWidth;
         }
 
-        final compact = measure(widget.labels, false) > constraints.maxWidth;
-        final overflow =
-            compact && measure(widget.shortLabels, true) > constraints.maxWidth;
+        final overflow = measure(widget.labels) > constraints.maxWidth;
         if (!overflow) {
           return Row(children: [
-            for (var i = 0; i < widget.labels.length; i++)
-              widget.itemBuilder(i, compact)
+            for (var i = 0; i < widget.labels.length; i++) widget.itemBuilder(i)
           ]);
         }
-        // Keep Solicitações fully visible next to search; scroll the other
-        // named tabs with explicit controls instead of removing their labels.
+        // All destinations, including Solicitações, share the same scroll area.
         return Row(children: [
           SizedBox(
               width: 24,
@@ -84,8 +74,8 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
                   controller: scroll,
                   scrollDirection: Axis.horizontal,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    for (var i = 0; i < widget.labels.length - 1; i++)
-                      widget.itemBuilder(i, true),
+                    for (var i = 0; i < widget.labels.length; i++)
+                      widget.itemBuilder(i),
                   ]))),
           SizedBox(
               width: 24,
@@ -94,8 +84,6 @@ class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
                   padding: EdgeInsets.zero,
                   onPressed: () => move(1),
                   icon: const Icon(Icons.chevron_right))),
-          if (widget.labels.isNotEmpty)
-            widget.itemBuilder(widget.labels.length - 1, true),
         ]);
       });
 }

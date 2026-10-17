@@ -1133,7 +1133,6 @@ class _CabecalhoState extends State<Cabecalho> {
 
   Widget _buildTopTabItem(
     _MenuItemData item,
-    bool compact,
   ) {
     final selecionado = widget.selectedIndex == item.index;
 
@@ -1150,7 +1149,7 @@ class _CabecalhoState extends State<Cabecalho> {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           padding: EdgeInsets.symmetric(
-            horizontal: compact ? 6 : 10,
+            horizontal: 10,
             vertical: 6,
           ),
           decoration: BoxDecoration(
@@ -1173,14 +1172,14 @@ class _CabecalhoState extends State<Cabecalho> {
               ...[
                 const SizedBox(height: 3),
                 Text(
-                  compact ? item.shortLabel : item.label,
+                  item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: selecionado
                         ? CoresApp.textoPrincipal
                         : CoresApp.textoSecundario,
-                    fontSize: compact ? 10.5 : 11,
+                    fontSize: 11,
                     fontWeight: selecionado ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
@@ -1416,9 +1415,7 @@ class _CabecalhoState extends State<Cabecalho> {
                 Expanded(
                   child: AdaptiveHeaderNavigation(
                     labels: _menuItems.map((item) => item.label).toList(),
-                    shortLabels: _menuItems.map((item) => item.shortLabel).toList(),
-                    itemBuilder: (index, compact) =>
-                        _buildTopTabItem(_menuItems[index], compact),
+                    itemBuilder: (index) => _buildTopTabItem(_menuItems[index]),
                   ),
                 ),
 
@@ -1638,12 +1635,6 @@ class _MenuItemData {
   final int index;
   final String label;
   final IconData icon;
-  String get shortLabel => switch (index) {
-    1 => 'Trabalhos',
-    3 => 'Finalizados',
-    6 => 'Checklist',
-    _ => label,
-  };
 
   const _MenuItemData({
     required this.index,

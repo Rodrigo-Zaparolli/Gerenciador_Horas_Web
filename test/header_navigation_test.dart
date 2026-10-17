@@ -5,20 +5,14 @@ import 'package:gerenciador_horas/shared/widgets/adaptive_header_navigation.dart
 import 'package:gerenciador_horas/data/services/user_cache.dart';
 
 void main() {
-  testWidgets(
-      'Usa nomes completos, depois reduzidos, e setas só quando necessário',
+  testWidgets('Mantém nomes completos e todas as abas na mesma rolagem',
       (tester) async {
     final labels = List.generate(8, (i) => 'Nome completo aba $i');
-    final short = List.generate(8, (i) => 'Aba $i');
     tester.view.physicalSize = const Size(2100, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    for (final layout in [
-      (2000.0, false, false),
-      (600.0, true, false),
-      (300.0, true, true)
-    ]) {
+    for (final layout in [(2000.0, false), (600.0, true), (300.0, true)]) {
       await tester.pumpWidget(MaterialApp(
           home: Scaffold(
               body: Align(
@@ -28,22 +22,27 @@ void main() {
                       height: 68,
                       child: AdaptiveHeaderNavigation(
                           labels: labels,
-                          shortLabels: short,
-                          itemBuilder: (i, compact) => Tooltip(
+                          itemBuilder: (i) => Tooltip(
                               message: labels[i],
                               child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: compact ? 6 : 10),
-                                  child: Text(compact ? short[i] : labels[i],
-                                      style: TextStyle(
-                                          fontSize:
-                                              compact ? 10.5 : 11))))))))));
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
+                                  child: Text(labels[i],
+                                      style: const TextStyle(
+                                          fontSize: 11))))))))));
       await tester.pumpAndSettle();
       for (var i = 0; i < 8; i++) {
-        expect(find.text(layout.$2 ? short[i] : labels[i]), findsOneWidget);
+        expect(find.text(labels[i]), findsOneWidget);
       }
       expect(find.byTooltip('Próximas abas'),
-          layout.$3 ? findsOneWidget : findsNothing);
+          layout.$2 ? findsOneWidget : findsNothing);
+      if (layout.$2) {
+        expect(
+            find.ancestor(
+                of: find.text(labels.last),
+                matching: find.byType(SingleChildScrollView)),
+            findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     }
   });
@@ -85,6 +84,14 @@ void main() {
         await tester.pumpAndSettle();
         final request = find.byTooltip('Solicitações');
         expect(request, findsOneWidget);
+        for (var attempt = 0;
+            request.hitTestable().evaluate().isEmpty && attempt < 20;
+            attempt++) {
+          await tester.tap(find.byTooltip('Próximas abas'));
+          await tester.pumpAndSettle();
+        }
+        await Scrollable.ensureVisible(tester.element(request), alignment: 1);
+        await tester.pumpAndSettle();
         expect(find.text('Solicitações').hitTestable(), findsOneWidget);
         if (width >= 980) {
           expect(find.text('Usuário de conferência').hitTestable(),
@@ -100,6 +107,8 @@ void main() {
                   of: find.byType(AdaptiveHeaderNavigation),
                   matching: find.byType(Scrollable)))
               .position;
+          position.jumpTo(0);
+          await tester.pumpAndSettle();
           await tester.tap(find.byTooltip('Próximas abas'));
           await tester.pumpAndSettle();
           expect(position.pixels, greaterThan(0));
@@ -120,13 +129,7 @@ void main() {
           final text = find.descendant(
               of: find.byTooltip(label), matching: find.byType(Text));
           expect(text, findsOneWidget);
-          final short = switch (label) {
-            'Cadastro de Trabalhos' => 'Trabalhos',
-            'Projetos Finalizados' => 'Finalizados',
-            'Check List' => 'Checklist',
-            _ => label,
-          };
-          expect(tester.widget<Text>(text).data, anyOf(label, short));
+          expect(tester.widget<Text>(text).data, label);
           await Scrollable.ensureVisible(tester.element(text), alignment: .5);
           await tester.pumpAndSettle();
           expect(text.hitTestable(), findsOneWidget);
