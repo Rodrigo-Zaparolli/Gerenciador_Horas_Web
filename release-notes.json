@@ -1,6 +1,7 @@
 {
     "changes":  [
-                    "Restaurado o espaço original do nome no cabeçalho, incluindo a identificação do sistema e o nome do usuário nos notebooks.",
-                    "A correção de navegação permanece: todas as abas ficam acessíveis, sem cortar Solicitações ao lado da pesquisa."
+                    "Restaurados os nomes de todas as abas do cabeçalho; eles não são mais substituídos por ícones quando falta espaço.",
+                    "Solicitações permanece inteira ao lado da pesquisa. Quando necessário, use as setas para navegar pelas demais abas com seus nomes.",
+                    "Preservado o espaço original do nome do usuário e da identificação do sistema."
                 ]
 }

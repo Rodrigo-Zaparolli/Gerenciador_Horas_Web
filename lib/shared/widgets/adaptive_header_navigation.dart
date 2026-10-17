@@ -2,18 +2,41 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Keep every navigation destination inside its allotted header space.
-class AdaptiveHeaderNavigation extends StatelessWidget {
+class AdaptiveHeaderNavigation extends StatefulWidget {
   const AdaptiveHeaderNavigation(
       {super.key, required this.labels, required this.itemBuilder});
   final List<String> labels;
   final Widget Function(int index, bool compact) itemBuilder;
 
   @override
+  State<AdaptiveHeaderNavigation> createState() =>
+      _AdaptiveHeaderNavigationState();
+}
+
+class _AdaptiveHeaderNavigationState extends State<AdaptiveHeaderNavigation> {
+  final scroll = ScrollController();
+
+  @override
+  void dispose() {
+    scroll.dispose();
+    super.dispose();
+  }
+
+  void move(double direction) {
+    if (!scroll.hasClients) return;
+    final target =
+        (scroll.offset + direction * scroll.position.viewportDimension * .8)
+            .clamp(0.0, scroll.position.maxScrollExtent);
+    scroll.animateTo(target,
+        duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+  }
+
+  @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
         var requiredWidth = 0.0;
-        for (final label in labels) {
+        for (final label in widget.labels) {
           final painter = TextPainter(
               text: TextSpan(
                   text: label,
@@ -27,14 +50,40 @@ class AdaptiveHeaderNavigation extends StatelessWidget {
           requiredWidth += math.max(20, painter.width.ceilToDouble()) + 22;
           painter.dispose();
         }
-        final compact =
-            requiredWidth > constraints.maxWidth || scaler.scale(11) > 15;
+        final overflow = requiredWidth > constraints.maxWidth;
+        if (!overflow) {
+          return Row(children: [
+            for (var i = 0; i < widget.labels.length; i++)
+              widget.itemBuilder(i, false)
+          ]);
+        }
+        // Keep Solicitações fully visible next to search; scroll the other
+        // named tabs with explicit controls instead of removing their labels.
         return Row(children: [
-          for (var i = 0; i < labels.length; i++)
-            if (compact)
-              Expanded(child: itemBuilder(i, true))
-            else
-              itemBuilder(i, false),
+          SizedBox(
+              width: 24,
+              child: IconButton(
+                  tooltip: 'Abas anteriores',
+                  padding: EdgeInsets.zero,
+                  onPressed: () => move(-1),
+                  icon: const Icon(Icons.chevron_left))),
+          Expanded(
+              child: SingleChildScrollView(
+                  controller: scroll,
+                  scrollDirection: Axis.horizontal,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    for (var i = 0; i < widget.labels.length - 1; i++)
+                      widget.itemBuilder(i, false),
+                  ]))),
+          SizedBox(
+              width: 24,
+              child: IconButton(
+                  tooltip: 'Próximas abas',
+                  padding: EdgeInsets.zero,
+                  onPressed: () => move(1),
+                  icon: const Icon(Icons.chevron_right))),
+          if (widget.labels.isNotEmpty)
+            widget.itemBuilder(widget.labels.length - 1, false),
         ]);
       });
 }
