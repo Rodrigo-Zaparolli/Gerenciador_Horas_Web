@@ -1,6 +1,7 @@
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'dart:convert';
+import 'adaptive_header_navigation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gerenciador_horas/data/services/edesk_integration.dart';
 import 'package:gerenciador_horas/features/backup/backup_dialog.dart';
@@ -1136,7 +1137,9 @@ class _CabecalhoState extends State<Cabecalho> {
   ) {
     final selecionado = widget.selectedIndex == item.index;
 
-    return Material(
+    return Tooltip(
+      message: item.label,
+      child: Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -1196,7 +1199,7 @@ class _CabecalhoState extends State<Cabecalho> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   // ============================================================
@@ -1308,7 +1311,7 @@ class _CabecalhoState extends State<Cabecalho> {
     final width = MediaQuery.of(context).size.width;
 
     final bool isVeryCompact = width < 850;
-    final bool isCompact = width < 1150;
+    final bool isCompact = width < 1400;
 
     // ============================================================
     // DIMENSÕES RESPONSIVAS
@@ -1317,14 +1320,14 @@ class _CabecalhoState extends State<Cabecalho> {
     final double logoWidth = isVeryCompact
         ? (width < 400 ? 80 : 96)
         : isCompact
-            ? 150
+            ? 135
             : 190;
 
     final double searchWidth = isCompact ? 125 : 185;
 
-    final bool mostrarNomeUsuario = width >= 980;
+    final bool mostrarNomeUsuario = !isCompact;
 
-    final double nomeUsuarioWidth = width >= 1200 ? 145 : 82;
+    final double nomeUsuarioWidth = isCompact ? 82 : 145;
 
     final userName = _getUserName();
 
@@ -1411,22 +1414,10 @@ class _CabecalhoState extends State<Cabecalho> {
                 )
               else
                 Expanded(
-                  child: ClipRect(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: _menuItems
-                            .map(
-                              (item) => _buildTopTabItem(
-                                item,
-                                isCompact,
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
+                  child: AdaptiveHeaderNavigation(
+                    labels: _menuItems.map((item) => item.label).toList(),
+                    itemBuilder: (index, compact) =>
+                        _buildTopTabItem(_menuItems[index], compact),
                   ),
                 ),
 
@@ -1599,7 +1590,7 @@ class _CabecalhoState extends State<Cabecalho> {
                         ),
                         if (mostrarNomeUsuario) ...[
                           SizedBox(
-                            width: width >= 1200 ? 9 : 6,
+                            width: isCompact ? 6 : 9,
                           ),
                           ConstrainedBox(
                             constraints: BoxConstraints(

@@ -1,8 +1,7 @@
 {
     "changes":  [
-                    "Novo recurso Revisar escrita nos campos de texto do sistema, incluindo descrições de horas, e-mails, orientações e comentários. Clique no campo e depois em Revisar escrita.",
-                    "A revisão usa um campo nativo com idioma português e corretor do Edge ou Chrome. As sugestões dependem do corretor de português estar ativado no navegador.",
-                    "Aplique as correções somente após conferir. Cancelar mantém o texto original; os comentários preservam prints e formatação.",
-                    "Senhas, endereços de e-mail, links e campos numéricos não recebem revisão de escrita. Não exige atualização da integração local."
+                    "Cabeçalho adaptável ao espaço disponível: todas as abas permanecem acessíveis, sem cortar Solicitações ao lado da pesquisa.",
+                    "Em telas menores, a navegação usa ícones com o nome ao passar o mouse quando os títulos completos não cabem.",
+                    "Logo, busca e perfil ocupam menos espaço em notebooks; o perfil permanece acessível pelo avatar."
                 ]
 }
