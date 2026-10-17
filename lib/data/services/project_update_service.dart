@@ -54,6 +54,13 @@ class ProjectUpdateService {
   static String formatDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
+  /// Capture once when E-Desk confirms publication, before persisting/retrying.
+  /// A server timestamp here would date a delayed save instead of the send.
+  static Map<String, dynamic> confirmedCommentFields(DateTime confirmedAt) => {
+        'status': 'Enviado',
+        'enviadoEm': Timestamp.fromDate(confirmedAt),
+      };
+
   static ProjectCommentUpdate? latestSent(
       Iterable<Map<String, dynamic>> comments) {
     ProjectCommentUpdate? latest;

@@ -1,8 +1,7 @@
 {
     "changes":  [
-                    "Novo botão Enviar só % na janela do comentário: escolha o trabalho, informe a porcentagem e confira antes de enviar ao E-Desk, sem publicar texto ou imagens do comentário.",
-                    "O envio da porcentagem abre o trabalho correto, salva o campo % Realizado e verifica o valor persistido antes de confirmar a operação.",
-                    "Integrações antigas são bloqueadas para esse novo envio e recebem orientação para atualizar.",
-                    "Atualização local percentage-only-16 disponível em pacote leve. Aplique na pasta existente e reinicie a integração, preservando .edesk-local. Mantém as correções de vínculos de pastas, planilhas e envios de horas."
+                    "Solicitações atualiza automaticamente a data do último comentário após a publicação confirmada no E-Desk e o salvamento no app.",
+                    "A data registrada corresponde à confirmação do envio e permanece a mesma ao repetir somente o salvamento no app, mesmo em outro dia.",
+                    "Rascunhos, testes, falhas e envios apenas de porcentagem não alteram a data do último comentário publicado."
                 ]
 }

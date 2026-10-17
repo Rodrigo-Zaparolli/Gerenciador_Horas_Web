@@ -1,4 +1,5 @@
 import 'standalone_percentage_dialog.dart';
+import '../../../data/services/project_update_service.dart';
 import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
@@ -2027,10 +2028,9 @@ class ComentarioModal {
             idComentarioEnviadoParaSalvar = idDoComentarioEnviado;
             comentarioEnviadoParaSalvar = {
               ...dadosDoEnvio,
-              'status': 'Enviado',
+              ...ProjectUpdateService.confirmedCommentFields(DateTime.now()),
               'usuarioId': firebaseUser.uid,
               'usuario': firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
-              'enviadoEm': FieldValue.serverTimestamp(),
               'tentativas': 1,
             };
             commentSaveGate.receiveResult(content: identidadeDoEnvio, sending: enviar, confirmed: resultado.confirmed);

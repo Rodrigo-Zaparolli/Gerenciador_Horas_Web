@@ -30,6 +30,25 @@ class FixtureService extends ProjectUpdateService {
 }
 
 void main() {
+  test('Solicitacoes usa o dia confirmado mesmo ao salvar rascunho antigo depois', () {
+    final confirmed = ProjectUpdateService.confirmedCommentFields(
+        DateTime(2026, 10, 16, 23, 58));
+    final saved = <String, dynamic>{
+      'id': 'publicado',
+      'dataHora': DateTime(2026, 10, 1),
+      ...confirmed,
+      'atualizadoEm': DateTime(2026, 10, 17, 0, 5),
+    };
+    final latest = ProjectUpdateService.latestSent([
+      saved,
+      {'status': 'Pendente', 'dataHora': DateTime(2026, 10, 18)},
+      {'operation': 'percentual', 'enviadoEm': DateTime(2026, 10, 19)},
+    ])!;
+    expect(latest.id, 'publicado');
+    expect(ProjectUpdateService.formatDate(latest.date), '16/10/2026');
+    expect(ProjectUpdateService.daysSince(latest.date, DateTime(2026, 10, 16)), 0);
+    expect(ProjectUpdateService.nextUpdate(latest.date), DateTime(2026, 10, 30));
+  });
   test('Dias corridos: zero no dia do comentario, aviso exatamente no dia 14',
       () {
     final date = DateTime(2026, 9, 26, 23, 59);
