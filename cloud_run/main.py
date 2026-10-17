@@ -29,6 +29,7 @@ SCRIPTS = {
     "fases": "edesk_fases.py",
     "horas": "edesk_horas.py",
     "comentarios": "edesk_comentario.py",
+    "percentual": "edesk_percentual.py",
 }
 DEFAULT_ORIGINS = {
     "https://gerenciador-horas.web.app",
@@ -140,6 +141,7 @@ def health_check():
                   'nativeFilesVersion': getattr(local_files, 'PROTOCOL_VERSION', None)}
     return jsonify({"status": "ok", "service": "gerenciador-horas-edesk",
                     "commentPercentage": True,
+                    "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),
                     "mode": "central" if LOCAL_MODE and central.enabled() else "local" if LOCAL_MODE else "cloud",
                     "browserVisible": LOCAL_MODE,
@@ -350,12 +352,20 @@ def _validate_automation_request(action: str, data: object, send: object):
     elif action == "horas":
         if not isinstance(data.get("trabalhos"), list) or not data["trabalhos"]:
             return "Informe ao menos um trabalho para registrar."
-    elif action == "comentarios":
+    elif action in {"comentarios", "percentual"}:
         from edesk_bot.comment_percentage import parse_percentage
         try:
-            parse_percentage(data.get('percentualRealizado'))
+            percentage = parse_percentage(data.get('percentualRealizado'))
         except ValueError as error:
             return str(error)
+
+        if action == 'percentual':
+            if percentage is None or not send:
+                return 'Informe a porcentagem e confirme a atualização do trabalho.'
+            if not str(data.get('solicitacao') or '').strip() or not str(data.get('idTrabalho') or '').strip():
+                return 'Informe a solicitação e o trabalho da porcentagem.'
+            if data.get('texto') or data.get('imagemBase64'):
+                return 'O envio de porcentagem não recebe conteúdo de comentário.'
 
         if not isinstance(data.get("solicitacao"), (str, int)):
             return "Informe a solicitação do comentário."
@@ -566,7 +576,7 @@ def run_edesk_automation(action: str):
                 except (OSError, ValueError):
                     pass
             uncertain = journal.finish(uid, keys, events_file) if keys else 0
-            result = _last_json_object(stdout) if action == "fases" else None
+            result = _last_json_object(stdout) if action in {"fases", "percentual"} else None
             if process.returncode != 0:
                 app.logger.warning(
                     "E-Desk automation failed: action=%s exit_code=%s",
@@ -579,13 +589,14 @@ def run_edesk_automation(action: str):
                     json.dumps(result, ensure_ascii=False) if result else "",
                 )
 
-            if action == "fases" and (
+            if action in {"fases", "percentual"} and (
                 result is None or result.get("ok") is not True
+                or (action == 'percentual' and result.get('operation') != 'percentual')
             ):
                 message = (
                     result.get("message")
                     if result and isinstance(result.get("message"), str)
-                    else "O E-Desk não confirmou a atualização das fases."
+                    else "O E-Desk não confirmou a atualização."
                 )
                 return _failure(
                     message,

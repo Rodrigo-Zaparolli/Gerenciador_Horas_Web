@@ -66,7 +66,7 @@ Future<EdeskPythonResult> _executar({
   String? historyId;
   try {
     historyId = EdeskOperationHistory.begin(historyUid,
-        '/api/edesk/${script == 'edesk_horas.py' ? 'horas' : script == 'edesk_fases.py' ? 'fases' : 'comentarios'}',
+        '/api/edesk/${script == 'edesk_horas.py' ? 'horas' : script == 'edesk_fases.py' ? 'fases' : script == 'edesk_percentual.py' ? 'percentual' : 'comentarios'}',
         {'request': jsonDecode(requestJson), 'enviar': enviar, 'operationId': operationId});
   } catch (_) { /* History cannot interfere with a send. */ }
   DialogRoute<void>? route;
@@ -105,8 +105,8 @@ Future<EdeskPythonResult> _executar({
   }
   EdeskPythonResult result;
   try {
-    final requiresPercentage = script == 'edesk_comentario.py' &&
-        (jsonDecode(requestJson) as Map)['percentualRealizado'] != null;
+    final requiresPercentage = script == 'edesk_percentual.py' || (script == 'edesk_comentario.py' &&
+        (jsonDecode(requestJson) as Map)['percentualRealizado'] != null);
     final configuredUrl = hoursApiUrl ?? await EdeskIntegrationApi.currentUrl();
     final host = Uri.parse(configuredUrl).host;
     final localIntegration = host == '127.0.0.1' || host == 'localhost';
@@ -244,6 +244,7 @@ class EdeskWebClient {
   }) async {
     const actions = {
       'edesk_comentario.py': 'comentarios',
+      'edesk_percentual.py': 'percentual',
       'edesk_fases.py': 'fases',
       'edesk_horas.py': 'horas',
     };
@@ -283,7 +284,7 @@ class EdeskWebClient {
             'Entre novamente na sua conta para utilizar o E-Desk.', 401);
       }
       final requiresPercentage =
-          action == 'comentarios' && data['percentualRealizado'] != null;
+          action == 'percentual' || (action == 'comentarios' && data['percentualRealizado'] != null);
       if (requiresPercentage ||
           base.host == '127.0.0.1' ||
           base.host == 'localhost') {
@@ -294,6 +295,9 @@ class EdeskWebClient {
             .timeout(const Duration(seconds: 12));
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
+          if (action == 'percentual' && (health is! Map || health['standalonePercentage'] != true)) {
+            return _failure('Atualize a integração local para enviar somente a porcentagem. Nenhum comentário foi enviado.', 503);
+          }
           if (requiresPercentage &&
               (health is! Map || health['commentPercentage'] != true)) {
             return _failure(

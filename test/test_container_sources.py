@@ -19,6 +19,7 @@ class ContainerSourcesTest(unittest.TestCase):
         self.assertIn('firebase-admin==', requirements)
         required = ['edesk_bot/comment_percentage.py', 'edesk_bot/send_progress.py',
                     'edesk_bot/work_selection.py',
+                    'edesk_bot/edesk_percentual.py',
                     'edesk_bot/phase_confirmation.py', 'local_edesk/__init__.py',
                     'local_edesk/central.py', 'local_edesk/journal.py']
         for source in required:
@@ -51,7 +52,7 @@ firebase_admin.initialize_app = lambda *args, **kwargs: None
 firebase_admin.auth = types.ModuleType('firebase_admin.auth')
 sys.modules['firebase_admin'] = firebase_admin
 sys.modules['firebase_admin.auth'] = firebase_admin.auth
-import edesk_horas, edesk_fases, edesk_comentario
+import edesk_horas, edesk_fases, edesk_comentario, edesk_percentual
 from cloud_run.main import app
 with app.test_client() as client:
     health = client.get('/healthz')

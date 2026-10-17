@@ -26,7 +26,7 @@ class CommentPercentageField extends StatelessWidget {
     AppAppearance.watch(context);
     return Tooltip(
         message:
-            'Percentual realizado no E-Desk. Deixe em branco para enviar somente o coment\u00e1rio.',
+            'Percentual realizado no E-Desk. Use Enviar só % para atualizar sem comentário. Deixe em branco para enviar somente o comentário.',
         child: Container(
             width: 184,
             height: 44,

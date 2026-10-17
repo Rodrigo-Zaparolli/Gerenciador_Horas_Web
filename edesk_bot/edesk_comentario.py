@@ -2151,7 +2151,7 @@ def modo_teste(
 # MAIN
 # ================================================================
 
-def main():
+def main(*, percentage_only=False):
 
     log("")
     log("============================================")
@@ -2204,6 +2204,8 @@ def main():
             False,
         )
     )
+    if percentage_only and (percentual is None or not enviar):
+        raise ValueError('Informe a porcentagem e confirme a atualização do trabalho.')
 
     # ============================================================
     # LOG DOS DADOS
@@ -2406,6 +2408,16 @@ def main():
         page = abrir_solicitacao_para_comentario(
             pagina_grid, context, linha, solicitacao, preaberta)
         url_solicitacao_comentario = page.url
+
+        if percentage_only:
+            update_percentage_after_comment(page, context, url_solicitacao_comentario,
+                                            solicitacao, id_trabalho, percentual)
+            from send_progress import completed
+            completed('percentual')
+            print(json.dumps({'ok': True, 'operation': 'percentual',
+                              'percentual': str(percentual),
+                              'message': f'Percentual {percentual}% confirmado no trabalho. Nenhum comentário foi publicado.'}, ensure_ascii=False), flush=True)
+            return 0
 
         # ========================================================
         # ABRIR COMENTÁRIO

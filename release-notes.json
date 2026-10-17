@@ -1,8 +1,8 @@
 {
-  "changes": [
-    "Corrigida a recuperação de pastas e planilhas já autorizadas neste PC: o caminho completo é reutilizado quando a identificação do vínculo muda, sem confundir pastas de projetos diferentes com o mesmo nome.",
-    "Ao abrir vínculos antigos pelo projeto ou editor, o app atualiza a referência com o caminho completo no Firebase, preservando alterações mais recentes e os demais campos do trabalho.",
-    "A preferência pela integração local permanece salva; uma demora na conexão não troca silenciosamente a seleção para o navegador.",
-    "Atualização local persistent-links-15 disponível na página da integração. Aplique a correção leve na pasta existente, preserve .edesk-local e reinicie a integração. Inclui as correções anteriores dos envios de horas."
-  ]
+    "changes":  [
+                    "Novo botão Enviar só % na janela do comentário: escolha o trabalho, informe a porcentagem e confira antes de enviar ao E-Desk, sem publicar texto ou imagens do comentário.",
+                    "O envio da porcentagem abre o trabalho correto, salva o campo % Realizado e verifica o valor persistido antes de confirmar a operação.",
+                    "Integrações antigas são bloqueadas para esse novo envio e recebem orientação para atualizar.",
+                    "Atualização local percentage-only-16 disponível em pacote leve. Aplique na pasta existente e reinicie a integração, preservando .edesk-local. Mantém as correções de vínculos de pastas, planilhas e envios de horas."
+                ]
 }

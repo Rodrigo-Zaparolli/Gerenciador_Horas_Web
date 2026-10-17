@@ -1,4 +1,4 @@
-"""Update only the work's %Realizado, after the comment has been saved."""
+"""Update only the work's %Realizado, standalone or after a saved comment."""
 from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs
 

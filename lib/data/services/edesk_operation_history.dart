@@ -131,7 +131,7 @@ class EdeskOperationHistory {
 
   static String? begin(String? uid, String path, Map<String, dynamic>? body) {
     if (uid == null ||
-        !['horas', 'comentarios', 'fases'].contains(path.split('/').last))
+        !['horas', 'comentarios', 'fases', 'percentual'].contains(path.split('/').last))
       return null;
     final request = body?['request'] as Map? ?? {};
     final works = (request['trabalhos'] as List? ?? []).whereType<Map>();

@@ -1,3 +1,4 @@
+import 'standalone_percentage_dialog.dart';
 import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
@@ -1827,6 +1828,39 @@ class ComentarioModal {
     // ===============================================================
     // TESTAR / ENVIAR PARA E-DESK
     // ===============================================================
+
+    var editorOpen = true;
+
+    Future<void> enviarSomentePercentual(BuildContext context, StateSetter setState) async {
+      if (salvando || testandoEdesk || enviandoEdesk) return;
+      final owner = FirebaseAuth.instance.currentUser?.uid;
+      if (owner == null) return;
+      setState(() => enviandoEdesk = true);
+      try {
+        final value = await showDialog<double>(context: context, barrierDismissible: false,
+          builder: (_) => StandalonePercentageDialog(
+            tasks: project.subTasks ?? [], initialValue: percentualController.text,
+            canSend: () => editorOpen && FirebaseAuth.instance.currentUser?.uid == owner,
+            onSend: (task, percentage) async {
+              final service = EdeskService();
+              try {
+                var url = task.edeskUrl?.trim() ?? '';
+                if (url.isEmpty) url = 'https://promob.e-desk.com.br';
+                if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://$url';
+                return await service.executarPercentualViaPython(pageUri: Uri.parse(url),
+                  solicitacao: project.id, idTrabalho: task.edeskIdTrabalho!,
+                  trabalhoNome: task.stage, percentualRealizado: percentage);
+              } finally { service.dispose(); }
+            }));
+        if (value != null && context.mounted && FirebaseAuth.instance.currentUser?.uid == owner) {
+          setState(() => percentualController.text = value.toString().replaceAll('.', ','));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Porcentagem confirmada no E-Desk. Nenhum comentário foi publicado.')));
+        }
+      } finally {
+        if (context.mounted) setState(() => enviandoEdesk = false);
+      }
+    }
 
     Future<void> executarEdesk({
       required BuildContext dialogContext,
@@ -4304,7 +4338,6 @@ class ComentarioModal {
 
     RecoverableDraft.clear(FirebaseAuth.instance.currentUser?.uid, 'comment.${project.id}');
 
-    var editorOpen = true;
     final stopCommentPaste = listenForCommentPaste(
       accepts: () => editorOpen && editorFocusNode.hasFocus && !enviandoEdesk && !testandoEdesk && !salvando,
       onText: (text) {
@@ -7518,6 +7551,11 @@ class ComentarioModal {
                                                       fontSize: 11),
                                                 ),
                                               ),
+                                              OutlinedButton.icon(
+                                                onPressed: salvando || testandoEdesk || enviandoEdesk ? null
+                                                  : () => enviarSomentePercentual(dialogContext, setDialogState),
+                                                icon: const Icon(Icons.percent, size: 16),
+                                                label: const Text('Enviar só %')),
                                               ElevatedButton.icon(
                                                 onPressed: (salvando ||
                                                         testandoEdesk ||

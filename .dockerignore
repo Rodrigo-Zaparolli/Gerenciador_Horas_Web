@@ -4,6 +4,7 @@
 !edesk_bot/
 !edesk_bot/config.py
 !edesk_bot/edesk_comentario.py
+!edesk_bot/edesk_percentual.py
 !edesk_bot/edesk_fases.py
 !edesk_bot/edesk_horas.py
 !edesk_bot/comment_percentage.py

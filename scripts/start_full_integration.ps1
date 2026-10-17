@@ -3,13 +3,13 @@ $ErrorActionPreference = 'Stop'
 $integrationDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $integrationPython = Join-Path $integrationDirectory 'python\python.exe'
 $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $integrationDirectory 'python\ms-playwright'
-$env:EDESK_INTEGRATION_VERSION = 'persistent-links-15'
+$env:EDESK_INTEGRATION_VERSION = 'percentage-only-16'
 $health = $null
 try { $health = Invoke-RestMethod 'http://127.0.0.1:8765/healthz' -TimeoutSec 3 } catch { }
 if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
     if ($health.busy) { throw 'Aguarde o envio atual terminar antes de iniciar este pacote.' }
     if ($health.mode -eq 'central') { throw 'Existe uma integração central ativa neste PC. Encerre-a antes de iniciar este pacote local.' }
-    if ($health.integrationPackageVersion -ne 'persistent-links-15' -or $health.mode -ne 'local') {
+    if ($health.integrationPackageVersion -ne 'percentage-only-16' -or $health.mode -ne 'local') {
         $listener = Get-NetTCPConnection -LocalPort 8765 -State Listen |
             Where-Object { $_.LocalAddress -eq '127.0.0.1' } | Select-Object -First 1
         if (-not $listener) { throw 'Não foi possível identificar a integração anterior.' }
@@ -24,7 +24,7 @@ if ($health -and $health.service -eq 'gerenciador-horas-edesk') {
             throw 'Não foi possível verificar a pasta da integração anterior.'
         }
         $children = Get-CimInstance Win32_Process -Filter "ParentProcessId=$($previousProcess.ProcessId)" |
-            Where-Object { $_.CommandLine -match 'edesk_(horas|fases|comentario)\.py' }
+            Where-Object { $_.CommandLine -match 'edesk_(horas|fases|comentario|percentual)\.py' }
         if ($children) { throw 'Aguarde o envio E-Desk terminar antes de atualizar.' }
         Stop-Process -Id $previousProcess.ProcessId
         for ($attempt = 0; $attempt -lt 20; $attempt++) {

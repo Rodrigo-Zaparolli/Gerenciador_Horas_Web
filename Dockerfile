@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt \
 COPY cloud_run /app/cloud_run
 COPY edesk_bot/config.py /app/edesk_bot/config.py
 COPY edesk_bot/edesk_comentario.py /app/edesk_bot/edesk_comentario.py
+COPY edesk_bot/edesk_percentual.py /app/edesk_bot/edesk_percentual.py
 COPY edesk_bot/edesk_fases.py /app/edesk_bot/edesk_fases.py
 COPY edesk_bot/edesk_horas.py /app/edesk_bot/edesk_horas.py
 COPY edesk_bot/comment_percentage.py /app/edesk_bot/comment_percentage.py

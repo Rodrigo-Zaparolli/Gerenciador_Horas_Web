@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:gerenciador_horas/data/services/edesk_python.dart';
 import 'package:flutter/foundation.dart';
@@ -1373,6 +1374,32 @@ class EdeskService {
   /// ==============================================================
   /// EXECUTAR COMENTÁRIO VIA PYTHON
   /// ==============================================================
+  Future<EdeskSendResult> executarPercentualViaPython({required Uri pageUri,
+      required String solicitacao, required String idTrabalho,
+      required double percentualRealizado, String? trabalhoNome}) async {
+    if (solicitacao.trim().isEmpty || idTrabalho.trim().isEmpty ||
+        !percentualRealizado.isFinite || percentualRealizado < 0 || percentualRealizado > 100) {
+      return const EdeskSendResult(confirmed: false, statusCode: 400,
+          message: 'Informe a solicitação, o trabalho e a porcentagem entre 0 e 100.', responseBody: '');
+    }
+    final owner = FirebaseAuth.instance.currentUser?.uid;
+    if (owner == null) {
+      return const EdeskSendResult(confirmed: false, statusCode: 401, message: 'Entre novamente na conta.', responseBody: '');
+    }
+    final credentials = await EdeskCredentialsService().ler();
+    if (FirebaseAuth.instance.currentUser?.uid != owner) {
+      return const EdeskSendResult(confirmed: false, statusCode: 401, message: 'A conta mudou. Abra o projeto novamente.', responseBody: '');
+    }
+    final result = await executarPythonEdesk(requestJson: jsonEncode({
+      'url': pageUri.toString(), 'solicitacao': solicitacao.trim(),
+      'idTrabalho': idTrabalho.trim(), 'trabalhoNome': trabalhoNome,
+      'percentualRealizado': percentualRealizado, 'enviar': true,
+      'edeskCredenciais': credentials,
+    }), enviar: true, script: 'edesk_percentual.py');
+    return EdeskSendResult(confirmed: result.confirmed, statusCode: result.statusCode,
+        message: result.message, responseBody: result.responseBody);
+  }
+
   Future<EdeskSendResult> executarComentarioViaPython({
     required Uri pageUri,
     required String solicitacao,

@@ -29,7 +29,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         command = archive.read(name).decode('utf-8')
         assert 'scripts\\integration_autostart.ps1' in command
         assert ('-Disable' in command) == disable
-    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
+    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
         assert archive.read(source) == (ROOT / source).read_bytes()
     with tempfile.TemporaryDirectory(prefix='complete package ', dir=VALIDATION) as temporary:
         extracted = Path(temporary).resolve()
@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='persistent-links-15',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='percentage-only-16',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -48,7 +48,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path.cwd()/'edesk_bot'))
 import flask,google.auth,cachecontrol,waitress,win32com.client,tkinter
 from PIL import Image
-import edesk_horas,edesk_comentario,edesk_fases
+import edesk_horas,edesk_comentario,edesk_percentual,edesk_fases
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,executable_path=p.chromium.executable_path)
@@ -97,12 +97,13 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'persistent-links-15'
+            assert health['integrationPackageVersion'] == 'percentage-only-16'
             assert health['nativeFilesVersion'] == 'persistent-file-links-5'
             assert health['commentPercentage'] is True
+            assert health['standalonePercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']
             for route in ['/api/edesk/horas', '/api/edesk/fases',
-                          '/api/edesk/comentarios', '/api/local-files']:
+                          '/api/edesk/comentarios', '/api/edesk/percentual', '/api/local-files']:
                 response = requests.post(base + route, json={},
                     headers={'Origin': 'https://gerenciador-horas.web.app'}, timeout=5)
                 assert response.status_code == 401, (route, response.status_code)

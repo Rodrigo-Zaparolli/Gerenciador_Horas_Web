@@ -6,6 +6,30 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('standalone percentage never posts to an old integration', () async {
+    final calls = <http.Request>[];
+    final result = await EdeskWebClient(apiUrl: 'http://127.0.0.1:8765',
+      tokenProvider: () async => 'token', client: MockClient((request) async {
+        calls.add(request);
+        return http.Response('{"commentPercentage":true}', 200);
+      })).execute(requestJson: '{"percentualRealizado":25}', enviar: true, script: 'edesk_percentual.py');
+    expect(result.confirmed, false); expect(result.statusCode, 503);
+    expect(calls.every((request) => request.method == 'GET'), true);
+  });
+  test('standalone percentage uses its own endpoint without comment content', () async {
+    final calls = <http.Request>[];
+    final result = await EdeskWebClient(apiUrl: 'http://127.0.0.1:8765',
+      tokenProvider: () async => 'token', client: MockClient((request) async {
+        calls.add(request);
+        if (request.method == 'GET') return http.Response('{"standalonePercentage":true,"commentPercentage":true}', 200);
+        expect(request.url.path, '/api/edesk/percentual');
+        final data = jsonDecode(request.body)['request'] as Map;
+        expect(data.containsKey('texto'), false); expect(data.containsKey('imagemBase64'), false);
+        return http.Response('{"confirmed":true,"message":"Porcentagem confirmada"}', 200);
+      })).execute(requestJson: '{"solicitacao":"226144","idTrabalho":"6","percentualRealizado":0}',
+          enviar: true, script: 'edesk_percentual.py');
+    expect(result.confirmed, true); expect(calls.where((request) => request.method == 'POST'), hasLength(1));
+  });
   test(
       'Old integration cannot silently ignore the percentage or save the comment',
       () async {

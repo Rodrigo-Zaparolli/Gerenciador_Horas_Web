@@ -12,7 +12,7 @@ if ($process -and $process.CommandLine -match '-m\s+local_edesk\.server' -and
         throw 'Uma operação E-Desk está em andamento. Aguarde sua conclusão antes de encerrar a integração.'
     }
     $runningAutomation = Get-CimInstance Win32_Process -Filter "ParentProcessId=$serviceProcessId" |
-        Where-Object { $_.CommandLine -match 'edesk_(horas|fases|comentario)\.py' }
+        Where-Object { $_.CommandLine -match 'edesk_(horas|fases|comentario|percentual)\.py' }
     if ($runningAutomation) {
         throw 'Uma operação E-Desk está em andamento. Aguarde sua conclusão antes de encerrar a integração.'
     }

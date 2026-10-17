@@ -191,6 +191,14 @@ List<String> edeskReviewLines(Map<String, dynamic> data, String script) {
               '${hour['tarefa'] ?? ''}\n${hour['descricao'] ?? hour['descritivo'] ?? ''}'
     ];
   }
+  if (script == 'edesk_percentual.py') {
+    return [
+      'Solicitação/trabalho: ${data['solicitacao']}/${data['idTrabalho']}',
+      if (data['trabalhoNome'] != null) 'Trabalho: ${data['trabalhoNome']}',
+      '% Realizado: ${data['percentualRealizado']}%',
+      'Atualizar somente a porcentagem. Nenhum comentário será publicado.',
+    ];
+  }
   if (script == 'edesk_fases.py') {
     return [
       'Projeto: ${data['id'] ?? data['solicitacao'] ?? ''} · ${data['cliente'] ?? ''}',
@@ -257,6 +265,9 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
         throw StateError('Integração não reconhecida.');
       if (health['mode'] == 'files-only') {
         throw StateError('A abertura de arquivos está ativa, mas o envio E-Desk não. Execute Iniciar integração E-Desk.cmd e tente novamente.');
+      }
+      if (widget.script == 'edesk_percentual.py' && health['standalonePercentage'] != true) {
+        throw StateError('Atualize a integração local para enviar somente a porcentagem.');
       }
       if (health['busy'] == true)
         throw StateError('Há outro envio em andamento. Aguarde sua conclusão.');
