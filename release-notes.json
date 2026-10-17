@@ -1,6 +1,7 @@
 {
     "changes":  [
-                    "Nova ordem das abas: Projetos, Tarefas, Métricas, Cadastro de Trabalhos, Orientações, Projetos Finalizados, Check List e Solicitações.",
-                    "Mantidos os nomes completos e a faixa de rolagem com setas quando faltar espaço."
+                    "Corrigida a inserção dos modelos de comentário: não é mais obrigatório gerar uma imagem pelo botão do Excel para usar um modelo.",
+                    "Com a imagem do Excel presente, o modelo continua entrando abaixo dela. Sem essa imagem, o texto entra na posição do cursor, preservando o conteúdo e os prints existentes.",
+                    "Corrigida a inserção quando a imagem é o último conteúdo do editor, evitando posições inválidas."
                 ]
 }

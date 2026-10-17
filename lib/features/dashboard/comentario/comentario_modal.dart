@@ -1,3 +1,4 @@
+import 'comment_template.dart';
 import 'standalone_percentage_dialog.dart';
 import '../../../shared/widgets/writing_review.dart';
 import 'comment_writing_review.dart';
@@ -983,83 +984,8 @@ class ComentarioModal {
         return;
       }
 
-      if (imagensExcelBase64.isEmpty) {
-        ScaffoldMessenger.of(dialogContext).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Adicione primeiro a imagem gerada da planilha para inserir o modelo logo abaixo dela.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      final imagemAlvo = imagensExcelBase64.last;
-      final operacoes = editorController.document.toDelta().toJson();
-      var indice = 0;
-      int? fimImagemExcel;
-
-      for (final operacao in operacoes) {
-        final dados = Map<String, dynamic>.from(operacao as Map);
-        final inserir = dados['insert'];
-        if (inserir is String) {
-          indice += inserir.length;
-          continue;
-        }
-
-        if (inserir is Map && inserir['image'] is String) {
-          final origem = inserir['image'] as String;
-          final imagem = origem.startsWith('data:') && origem.contains(',')
-              ? origem.substring(origem.indexOf(',') + 1)
-              : origem;
-          if (imagem == imagemAlvo) {
-            fimImagemExcel = indice + 1;
-          }
-          indice++;
-        }
-      }
-
-      if (fimImagemExcel == null) {
-        ScaffoldMessenger.of(dialogContext).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Não encontrei a imagem da planilha no descritivo. Adicione-a novamente para inserir o modelo.',
-            ),
-            backgroundColor: CoresApp.erro,
-          ),
-        );
-        return;
-      }
-
-      final textoDocumento = editorController.document.toPlainText();
-      var posicaoInsercao = fimImagemExcel;
-      if (posicaoInsercao < textoDocumento.length &&
-          textoDocumento[posicaoInsercao] == '\n') {
-        posicaoInsercao++;
-      }
-
-      if (textoDocumento.startsWith(conteudo, posicaoInsercao)) {
-        setDialogState(() {
-          modeloDescricaoSelecionado = nomeModelo;
-        });
-        return;
-      }
-
-      final prefixo =
-          posicaoInsercao > 0 && textoDocumento[posicaoInsercao - 1] != '\n'
-              ? '\n'
-              : '';
-      final conteudoComSeparacao =
-          '$prefixo$conteudo${conteudo.endsWith('\n') ? '' : '\n\n'}';
-
-      editorController.replaceText(
-        posicaoInsercao,
-        0,
-        conteudoComSeparacao,
-        TextSelection.collapsed(
-          offset: posicaoInsercao + conteudoComSeparacao.length,
-        ),
-      );
+      insertCommentTemplate(editorController, conteudo,
+          excelImage: imagensExcelBase64.isEmpty ? null : imagensExcelBase64.last);
       setDialogState(() {
         modeloDescricaoSelecionado = nomeModelo;
       });
