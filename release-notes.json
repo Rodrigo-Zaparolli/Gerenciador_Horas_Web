@@ -1,7 +1,8 @@
 {
     "changes":  [
-                    "Solicitações atualiza automaticamente a data do último comentário após a publicação confirmada no E-Desk e o salvamento no app.",
-                    "A data registrada corresponde à confirmação do envio e permanece a mesma ao repetir somente o salvamento no app, mesmo em outro dia.",
-                    "Rascunhos, testes, falhas e envios apenas de porcentagem não alteram a data do último comentário publicado."
+                    "Novo recurso Revisar escrita nos campos de texto do sistema, incluindo descrições de horas, e-mails, orientações e comentários. Clique no campo e depois em Revisar escrita.",
+                    "A revisão usa um campo nativo com idioma português e corretor do Edge ou Chrome. As sugestões dependem do corretor de português estar ativado no navegador.",
+                    "Aplique as correções somente após conferir. Cancelar mantém o texto original; os comentários preservam prints e formatação.",
+                    "Senhas, endereços de e-mail, links e campos numéricos não recebem revisão de escrita. Não exige atualização da integração local."
                 ]
 }

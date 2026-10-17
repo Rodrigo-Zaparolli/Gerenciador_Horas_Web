@@ -1,4 +1,6 @@
 import 'standalone_percentage_dialog.dart';
+import '../../../shared/widgets/writing_review.dart';
+import 'comment_writing_review.dart';
 import '../../../data/services/project_update_service.dart';
 import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
@@ -7221,7 +7223,11 @@ class ComentarioModal {
                                                                       },
                                                                     ),
                                                                   },
-                                                                  child: quill
+                                                                  child: WritingReviewTarget(
+                                                                    focusNode: editorFocusNode,
+                                                                    readText: () => editorController.document.toPlainText(),
+                                                                    applyText: (text) => applyCommentWritingReview(editorController, text),
+                                                                    child: quill
                                                                           .QuillEditor
                                                                       .basic(
                                                                     controller:
@@ -7242,6 +7248,7 @@ class ComentarioModal {
                                                                       embedBuilders:
                                                                           embedBuilders,
                                                                     ),
+                                                                  ),
                                                                   ),
                                                                 ),
                                                               ),

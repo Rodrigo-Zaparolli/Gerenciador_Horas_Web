@@ -7,6 +7,7 @@ import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/features/auth/screens/login_screen.dart';
 
 import 'main_navigation_screen.dart';
+import '../shared/widgets/writing_review.dart';
 import '../data/services/web_release_monitor.dart';
 import 'package:gerenciador_horas/data/services/edesk_integration.dart';
 
@@ -54,7 +55,7 @@ class GerenciadorHorasApp extends StatelessWidget {
               themeAnimationDuration: Duration.zero,
               builder: (context, child) => AppearanceScope(
                 controller: AppAppearance.instance,
-                child: child ?? const SizedBox.shrink(),
+                child: WritingReviewScope(child: child ?? const SizedBox.shrink()),
               ),
 
               // ==========================================================
