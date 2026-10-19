@@ -35,6 +35,14 @@ class TaskModel {
   // É mantido separado para futuras integrações/validações.
   String? edeskIdTrabalho;
 
+  /// The editable work number is authoritative; older records may retain a
+  /// stale E-Desk link after this number was changed in the project editor.
+  String get edeskWorkNumber {
+    final number = subId.trim();
+    if (RegExp(r'^\d+$').hasMatch(number)) return number;
+    return edeskIdTrabalho?.trim() ?? '';
+  }
+
   TaskModel({
     required this.subId,
     required this.stage,

@@ -1690,10 +1690,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
               ? work['edeskUrl'].toString().trim()
               : null;
 
-      final String? edeskIdTrabalho =
-          work['edeskIdTrabalho']?.toString().trim().isNotEmpty == true
-              ? work['edeskIdTrabalho'].toString().trim()
-              : null;
+      final String edeskIdTrabalho = subId;
 
       customSubTasks.add(
         TaskModel(
@@ -2611,6 +2608,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                                       ],
                                       onChanged: (value) {
                                         work['subId'] = value;
+                                        work['edeskIdTrabalho'] = value.trim();
                                       },
                                       decoration: InputDecoration(
                                         labelText: 'Nº',

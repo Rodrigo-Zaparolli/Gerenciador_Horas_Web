@@ -24,7 +24,7 @@ class _StandalonePercentageDialogState
   final form = GlobalKey<FormState>();
   late final value = TextEditingController(text: widget.initialValue);
   late final tasks = widget.tasks
-      .where((task) => task.edeskIdTrabalho?.trim().isNotEmpty ?? false)
+      .where((task) => task.edeskWorkNumber.isNotEmpty)
       .toList();
   TaskModel? selected;
   bool busy = false;
@@ -104,7 +104,7 @@ class _StandalonePercentageDialogState
                                     DropdownMenuItem(
                                         value: task,
                                         child: Text(
-                                            '${task.stage} · ${task.edeskIdTrabalho}',
+                                            '${task.stage} · ${task.edeskWorkNumber}',
                                             overflow: TextOverflow.ellipsis))
                                 ],
                                 onChanged: busy

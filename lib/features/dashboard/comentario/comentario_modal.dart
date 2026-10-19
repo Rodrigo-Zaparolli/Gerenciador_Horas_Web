@@ -1320,7 +1320,7 @@ class ComentarioModal {
       final tarefas = project.subTasks ?? [];
 
       for (final task in tarefas) {
-        if (task.edeskIdTrabalho?.trim().isNotEmpty ?? false) {
+        if (task.edeskWorkNumber.isNotEmpty) {
           return task;
         }
       }
@@ -1778,7 +1778,7 @@ class ComentarioModal {
                 if (url.isEmpty) url = 'https://promob.e-desk.com.br';
                 if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://$url';
                 return await service.executarPercentualViaPython(pageUri: Uri.parse(url),
-                  solicitacao: project.id, idTrabalho: task.edeskIdTrabalho!,
+                  solicitacao: project.id, idTrabalho: task.edeskWorkNumber,
                   trabalhoNome: task.stage, percentualRealizado: percentage);
               } finally { service.dispose(); }
             }));
@@ -1865,7 +1865,7 @@ class ComentarioModal {
       }
 
       var edeskUrl = task.edeskUrl?.trim() ?? '';
-      final idTrabalho = task.edeskIdTrabalho?.trim() ?? '';
+      final idTrabalho = task.edeskWorkNumber;
       final solicitacao = project.id.trim();
 
       if (edeskUrl.isEmpty) {

@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "A conferência das horas agora mostra o número da solicitação e do trabalho em cada apontamento.",
-                    "Corrigido o bloqueio de tentativa anterior sem confirmação: selecionar e confirmar novamente permite retomar os registros pendentes ou incertos selecionados. Horas já confirmadas permanecem protegidas contra reenvio.",
-                    "Correção aplicada no site, sem novo download da integração local. Atualize a página com Ctrl+F5 antes de reenviar."
+                    "A seleção da porcentagem agora utiliza o Nº atual do trabalho salvo no editor, inclusive nos projetos antigos cujo vínculo E-Desk manteve um número anterior.",
+                    "Ao editar o número do trabalho, o vínculo E-Desk é atualizado junto. A porcentagem isolada e a enviada com comentário usam o mesmo número mostrado na seleção.",
+                    "Correção no aplicativo web. Atualize com Ctrl+F5; não é necessário baixar outra integração para esta alteração."
                 ]
 }

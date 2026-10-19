@@ -21,7 +21,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final tasks = [task('1', 'Contato Inicial'), task('6', 'Implantação')];
+    final tasks = [task('1', 'Contato Inicial'), task('3', 'Implantação')..edeskIdTrabalho = '2'];
     TaskModel? sent;
     double? percent;
     await tester.pumpWidget(MaterialApp(
@@ -48,12 +48,13 @@ void main() {
     expect(sent, isNull);
     await tester.tap(find.byType(DropdownButtonFormField<TaskModel>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Implantação · 6').last);
+    await tester.tap(find.text('Implantação · 3').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), '91,5');
     await tester.tap(find.text('Conferir e enviar'));
     await tester.pumpAndSettle();
     expect(sent, same(tasks[1]));
+    expect(sent?.edeskWorkNumber, '3');
     expect(percent, 91.5);
     expect(find.text('Atualize a integração.'), findsOneWidget);
     expect(tester.takeException(), isNull);
