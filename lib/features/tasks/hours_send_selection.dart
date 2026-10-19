@@ -11,6 +11,18 @@ int selectedHoursMinutes(TimeLog log) {
   return start != null && end != null && end > start ? end - start : 0;
 }
 
+String hoursSendReference(TimeLog log) {
+  final parts = log.targetId.trim().split('_');
+  if (parts.length >= 2 &&
+      parts.first.isNotEmpty &&
+      parts.sublist(1).join('_').trim().isNotEmpty) {
+    return 'Solicitação ${parts.first} · Trabalho ${parts.sublist(1).join('_')}';
+  }
+  return log.targetId.trim().isEmpty
+      ? 'Trabalho não identificado'
+      : 'Referência do trabalho: ${log.targetId.trim()}';
+}
+
 class HoursSendSelection extends StatelessWidget {
   const HoursSendSelection(
       {super.key,
@@ -76,8 +88,13 @@ class HoursSendSelection extends StatelessWidget {
           },
           title: Text(
               '${logs[i].projectName ?? logs[i].targetId} · ${logs[i].taskName ?? ''}'),
-          subtitle: Text(
-              '${logs[i].date.day.toString().padLeft(2, '0')}/${logs[i].date.month.toString().padLeft(2, '0')}/${logs[i].date.year} · ${logs[i].startTime}–${logs[i].endTime}\n${logs[i].description ?? ''}'),
+          subtitle:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(hoursSendReference(logs[i]),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+                '${logs[i].date.day.toString().padLeft(2, '0')}/${logs[i].date.month.toString().padLeft(2, '0')}/${logs[i].date.year} · ${logs[i].startTime}–${logs[i].endTime}\n${logs[i].description ?? ''}'),
+          ]),
         ),
     ]);
   }
@@ -197,7 +214,8 @@ class _HoursReviewState extends State<_HoursReview> {
                     children: [
                   const Text(
                       'Selecione os apontamentos que deseja enviar. Edições e exclusões são salvas no app, mesmo se você cancelar o envio.'),
-                  if (busy) const Text('Conclua a edição ou exclusão para continuar.'),
+                  if (busy)
+                    const Text('Conclua a edição ou exclusão para continuar.'),
                   if (error != null)
                     Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -219,7 +237,7 @@ class _HoursReviewState extends State<_HoursReview> {
               onPressed: busy ? null : () => Navigator.pop(context),
               child: const Text('Cancelar')),
           FilledButton(
-                onPressed: busy || needsRefresh || selected.isEmpty
+              onPressed: busy || needsRefresh || selected.isEmpty
                   ? null
                   : () {
                       if (!widget.canSend()) return;

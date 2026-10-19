@@ -9,6 +9,7 @@ import 'edesk_endpoint.dart';
 import 'edesk_extension.dart';
 import 'edesk_operation_history.dart';
 import 'web_release_monitor.dart';
+import 'edesk_retry_policy.dart';
 import '../../features/edesk/edesk_result_dialog.dart';
 
 Future<EdeskPythonResult> executarPythonEdesk({
@@ -39,7 +40,8 @@ Future<EdeskPythonResult> _executar({
   required String script,
   bool speakResult = false,
 }) async {
-  EdeskReviewDecision decision = const EdeskReviewDecision(true);
+  EdeskReviewDecision decision = EdeskReviewDecision(true,
+      retryUncertain: retryUnconfirmedHours(script: script, sending: enviar));
   if (enviar) {
     try {
       final data = jsonDecode(requestJson);

@@ -5,6 +5,12 @@ import 'package:gerenciador_horas/domain/models/dashboard_models.dart';
 import 'package:gerenciador_horas/features/tasks/hours_send_selection.dart';
 
 void main() {
+  test('Referência mostra solicitação e trabalho sem confundir com o cliente', () {
+    final log = TimeLog(id: '1', targetId: '226144_6', date: DateTime(2026, 10, 19),
+      startTime: '08:00', endTime: '09:00', durationFormatted: '01:00', isRegistered: true,
+      projectName: 'Cliente');
+    expect(hoursSendReference(log), 'Solicitação 226144 · Trabalho 6');
+  });
   testWidgets('unconfirmed deletion releases modal but blocks stale sends', (tester) async {
     final pending = Completer<void>();
     final log = TimeLog(id: '1', targetId: '123_4', date: DateTime(2026, 10, 15),
@@ -16,6 +22,7 @@ void main() {
           delete: (_) => pending.future);
       }, child: const Text('Open'))))));
     await tester.tap(find.text('Open')); await tester.pumpAndSettle();
+    expect(find.text('Solicitação 123 · Trabalho 4'), findsOneWidget);
     await tester.tap(find.byTooltip('Excluir apontamento')); await tester.pumpAndSettle();
     await tester.tap(find.text('Excluir')); await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 31)); await tester.pumpAndSettle();

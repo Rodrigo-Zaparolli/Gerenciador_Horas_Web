@@ -1,8 +1,7 @@
 {
     "changes":  [
-                    "Corrigida a seleção do trabalho no primeiro envio de horas: o processo aguarda a tela e o Ajax, ignora controles ocultos ou desabilitados e usa o controle disponível para abrir o trabalho e o retroativo.",
-                    "Ao finalizar o projeto inteiro, o acompanhamento do plugin é removido assim que chega a atualização do Firebase, sem esperar o carregamento dos comentários. O histórico em Projetos Finalizados é preservado.",
-                    "Incluídas as correções pendentes da porcentagem: escolha do trabalho, confirmação separada do comentário e da %, verificação após salvar e tratamento da porcentagem pendente sem repetir o comentário.",
-                    "Atualização leve hours-startup-18 necessária no PC que executa o E-Desk. Pare a integração, extraia o pacote na mesma pasta preservando .edesk-local, reinicie e atualize o site com Ctrl+F5."
+                    "A conferência das horas agora mostra o número da solicitação e do trabalho em cada apontamento.",
+                    "Corrigido o bloqueio de tentativa anterior sem confirmação: selecionar e confirmar novamente permite retomar os registros pendentes ou incertos selecionados. Horas já confirmadas permanecem protegidas contra reenvio.",
+                    "Correção aplicada no site, sem novo download da integração local. Atualize a página com Ctrl+F5 antes de reenviar."
                 ]
 }

@@ -91,6 +91,30 @@ class JournalTests(unittest.TestCase):
             self.assertEqual(response.status_code, 409)
             process.assert_not_called()
 
+    def test_manual_retry_sends_only_unconfirmed_and_finishes_without_block(self):
+        _, keys, _ = journal.prepare('owner', self.data)
+        journal.set_state('owner', keys[:1], 'confirmed')
+        journal.set_state('owner', keys[1:2], 'pending')
+        journal.set_state('owner', keys[2:], 'uncertain')
+        def run(*args, **kwargs):
+            data = json.loads(Path(args[0][-1]).read_text(encoding='utf-8'))
+            hours = [hour for work in data['trabalhos'] for hour in work['horas']]
+            self.assertEqual([hour['_sendKey'] for hour in hours], keys[1:])
+            self.assertTrue(all(hour['_retryUnconfirmed'] for hour in hours))
+            Path(kwargs['env']['EDESK_EVENTS_FILE']).write_text('\n'.join(
+                json.dumps({'key': hour['_sendKey'], 'state': 'confirmed'}) for hour in hours))
+            return process.return_value
+        with patch('cloud_run.main.subprocess.Popen') as process:
+            process.side_effect = run
+            process.return_value.communicate.return_value = ('finished', '')
+            process.return_value.returncode = 0
+            response = self.client.post('/api/edesk/horas', headers=HEADERS,
+                json={'request': self.data, 'enviar': True, 'retryUncertain': True})
+            self.assertEqual(process.call_count, 1)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['confirmed'])
+        self.assertEqual(journal.states('owner'), dict.fromkeys(keys, 'confirmed'))
+
     def test_exit_zero_alone_does_not_confirm_hour_and_progress_belongs_to_owner(self):
         def run(*args, **kwargs):
             path = Path(args[0][-1])
