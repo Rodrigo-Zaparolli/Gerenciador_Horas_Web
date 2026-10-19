@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory(prefix='comment-close-', dir=ROOT / 'build') as
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=True, executable_path=p.chromium.executable_path)
         context = browser.new_context()
         state = {'comment_posts': 0, 'percentage_posts': 0, 'value': '0'}
         scenario = 'closed'
