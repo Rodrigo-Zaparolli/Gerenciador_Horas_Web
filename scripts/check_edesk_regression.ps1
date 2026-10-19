@@ -20,7 +20,8 @@ try {
         @{Name='work-selection'; Command=$python; Arguments=@('scripts/check_hours_work_flow.py')},
         @{Name='cold-start'; Command=$python; Arguments=@('scripts/check_hours_cold_start.py')},
         @{Name='hours-batch'; Command=$python; Arguments=@('scripts/check_hours_batch_flow.py')},
-        @{Name='percentage-browser'; Command=$python; Arguments=@('scripts/check_comment_percentage_flow.py','edesk_bot')}
+        @{Name='percentage-browser'; Command=$python; Arguments=@('scripts/check_comment_percentage_flow.py','edesk_bot')},
+        @{Name='comment-close'; Command=$python; Arguments=@('scripts/check_comment_close_flow.py')}
     )
     New-Item -ItemType Directory -Path 'build' -Force | Out-Null
     foreach ($check in $checks) {

@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "A seleção da porcentagem agora utiliza o Nº atual do trabalho salvo no editor, inclusive nos projetos antigos cujo vínculo E-Desk manteve um número anterior.",
-                    "Ao editar o número do trabalho, o vínculo E-Desk é atualizado junto. A porcentagem isolada e a enviada com comentário usam o mesmo número mostrado na seleção.",
-                    "Correção no aplicativo web. Atualize com Ctrl+F5; não é necessário baixar outra integração para esta alteração."
+                    "Corrigida a interrupção da porcentagem quando o E-Desk fecha a janela do comentário após salvar. O processo continua para a solicitação e o trabalho escolhido, sem repetir o comentário.",
+                    "A porcentagem é conferida após reabrir o trabalho. Erros HTTP ou ASP.NET do comentário continuam impedindo a sequência.",
+                    "Requer atualização leve comment-close-19 no computador que executa os envios. Pare a integração, extraia na mesma pasta sem apagar os dados existentes e reinicie."
                 ]
 }

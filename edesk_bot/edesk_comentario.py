@@ -16,6 +16,7 @@ from urllib.parse import urlparse, parse_qs
 
 from playwright.sync_api import (
     sync_playwright,
+    Error as PlaywrightError,
     TimeoutError as PlaywrightTimeoutError,
 )
 
@@ -2013,7 +2014,14 @@ def salvar_comentario(frame, pagina):
 
         inicio = time.time()
         while not respostas_salvar and time.time() - inicio < 20:
-            pagina.wait_for_timeout(250)
+            # Saving may close the comment popup. Pump browser events through
+            # a surviving page instead of waiting on the disposed popup.
+            waiting_page = pagina
+            if pagina.is_closed():
+                waiting_page = next((p for p in pagina.context.pages if not p.is_closed()), None)
+                if waiting_page is None:
+                    raise RuntimeError('A sessão do navegador fechou antes da resposta do comentário.')
+            waiting_page.wait_for_timeout(250)
 
         if not respostas_salvar:
             raise RuntimeError(
@@ -2029,7 +2037,16 @@ def salvar_comentario(frame, pagina):
                 f"{resposta.status} ao salvar o comentário."
             )
 
-        texto_resposta = resposta.text()
+        try:
+            texto_resposta = resposta.text()
+        except PlaywrightError:
+            # A successful save response can execute window.close(), disposing
+            # its body before Playwright reads it. Keep the observed exact Save
+            # response; never click Save again just to retrieve that body.
+            if not pagina.is_closed():
+                raise
+            texto_resposta = ''
+            log('A janela do comentário fechou após a resposta do Salvar. Continuando sem repetir o comentário.')
         if "|error|" in texto_resposta.lower():
             raise RuntimeError(
                 "O E-Desk retornou erro ASP.NET ao salvar o comentário: "

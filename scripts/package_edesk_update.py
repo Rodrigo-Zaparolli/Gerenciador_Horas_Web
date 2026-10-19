@@ -1,4 +1,4 @@
-"""Build the small hours-startup-18 update for an existing full installation."""
+"""Build the small comment-close-19 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -14,7 +14,7 @@ FILES = (
     'local_edesk/local_files.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO hours-startup-18 — instalação completa já existente
+README = '''ATUALIZAÇÃO comment-close-19 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -26,7 +26,11 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Correção v18: aguarda a tela inicial e o Ajax terminarem antes de selecionar
+Correção v19: a janela do comentário pode fechar após a resposta de Salvar.
+O processo reconhece esse fechamento, não repete o comentário e continua
+para a solicitação, o trabalho escolhido e a porcentagem, verificando o valor.
+
+Inclui a correção v18: aguarda a tela inicial e o Ajax terminarem antes de selecionar
 o trabalho da primeira hora. Ignora controles ocultos/desabilitados e usa
 o clique normal no controle disponível. Não repete o salvamento de horas.
 
@@ -47,7 +51,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-horas-18.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-horas-19.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:
