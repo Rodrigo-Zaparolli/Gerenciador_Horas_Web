@@ -1,4 +1,5 @@
 import 'comment_template.dart';
+import 'comment_percentage_work.dart';
 import 'standalone_percentage_dialog.dart';
 import '../../../shared/widgets/writing_review.dart';
 import 'comment_writing_review.dart';
@@ -1839,7 +1840,13 @@ class ComentarioModal {
         return;
       }
 
-      final task = obterTaskEdesk();
+      var task = obterTaskEdesk();
+      final sendingOwner = FirebaseAuth.instance.currentUser?.uid;
+      if (enviar && parseCommentPercentage(percentualController.text) != null && task != null) {
+        task = await chooseCommentPercentageWork(dialogContext, project.subTasks ?? []);
+        if (task == null || !dialogContext.mounted ||
+            FirebaseAuth.instance.currentUser?.uid != sendingOwner) return;
+      }
 
       if (task == null) {
         if (!dialogContext.mounted) return;
@@ -1951,7 +1958,7 @@ class ComentarioModal {
         );
 
         if (resultado.statusCode == 499) return;
-        if (enviar && resultado.confirmed) {
+        if (enviar && (resultado.confirmed || resultado.commentPublished)) {
           void registrarPublicacao() {
             idComentarioEnviadoParaSalvar = idDoComentarioEnviado;
             comentarioEnviadoParaSalvar = {
@@ -1960,8 +1967,9 @@ class ComentarioModal {
               'usuarioId': firebaseUser.uid,
               'usuario': firebaseUser.displayName ?? firebaseUser.email ?? 'Usuário',
               'tentativas': 1,
+              'percentualPendente': !resultado.confirmed,
             };
-            commentSaveGate.receiveResult(content: identidadeDoEnvio, sending: enviar, confirmed: resultado.confirmed);
+            commentSaveGate.receiveResult(content: identidadeDoEnvio, sending: enviar, confirmed: true);
           }
           if (dialogContext.mounted) {
             setDialogState(registrarPublicacao);
@@ -1973,6 +1981,12 @@ class ComentarioModal {
             return;
           }
           await salvarPublicacao(dialogContext, setDialogState);
+          if (!resultado.confirmed && dialogContext.mounted) {
+            ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(
+              content: Text(resultado.message),
+              duration: const Duration(seconds: 12),
+            ));
+          }
           return;
         }
 

@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='percentage-only-16',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='hours-startup-18',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -78,6 +78,10 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
         assert percentage_check.returncode == 0, percentage_check.stderr
         print(percentage_check.stdout.strip(), flush=True)
+        cold_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_hours_cold_start.py'), str(extracted / 'edesk_bot')],
+            cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
+        assert cold_check.returncode == 0, cold_check.stderr
+        print(cold_check.stdout.strip(), flush=True)
         with socket.socket() as listener:
             listener.bind(('127.0.0.1', 0))
             port = listener.getsockname()[1]
@@ -97,7 +101,8 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'percentage-only-16'
+            assert health['integrationPackageVersion'] == 'hours-startup-18'
+            assert health['commentPercentageReceipt'] is True
             assert health['nativeFilesVersion'] == 'persistent-file-links-5'
             assert health['commentPercentage'] is True
             assert health['standalonePercentage'] is True

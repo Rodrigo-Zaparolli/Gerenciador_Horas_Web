@@ -1,6 +1,7 @@
 """Update only the work's %Realizado, standalone or after a saved comment."""
 from decimal import Decimal, InvalidOperation
-from urllib.parse import parse_qs
+import re
+from urllib.parse import parse_qs, urlparse
 
 
 def parse_percentage(value):
@@ -69,30 +70,53 @@ def preflight_percentage(page, solicitation, work):
 
 
 def save_work_percentage(page, solicitation, work, value):
+    from send_progress import stage
     target = parse_percentage(value)
     if target is None:
         return
     preflight_percentage(page, solicitation, work)
     work_url = page.url
     field = percentage_field(page)
-    field.fill(format(target, '.2f').replace('.', ','))
+    formatted = format(target, '.2f')
+    if field.get_attribute('type') != 'number':
+        formatted = formatted.replace('.', ',')
+    field.fill(formatted)
     field.press('Tab')
+    button = save_button(page)
+    button_name = button.get_attribute('name') or ''
+    button_id = button.get_attribute('id') or ''
+    click_handler = button.get_attribute('onclick') or ''
+    event = re.search(r"__doPostBack\(['\"]([^'\"]+)['\"]", click_handler)
+    event_targets = {name for name in (button_name, button_id,
+        event.group(1) if event else '') if name}
+    form_url = button.evaluate('(button) => button.form?.action || location.href')
+    form_target = urlparse(form_url)
 
     def is_save_response(response):
         request = response.request
         if request.method != 'POST':
             return False
+        destination = urlparse(request.url)
+        if (destination.scheme, destination.netloc, destination.path) != (
+                form_target.scheme, form_target.netloc, form_target.path):
+            return False
         data = parse_qs(request.post_data or '', keep_blank_values=True)
-        return any('BtAtu' in key for key in data) or any(
-            'BtAtu' in value for value in data.get('__EVENTTARGET', []))
+        # Match the actual button, including ASP.NET controls whose name is
+        # different from the older BtAtu. A plain unnamed submit button does
+        # not include a button key; the form POST and GET verification suffice.
+        return (bool(button_name and button_name in data)
+            or any(value in event_targets for value in data.get('__EVENTTARGET', []))
+            or not button_name and not event)
 
+    stage('percentage_saving')
     with page.expect_response(is_save_response, timeout=30000) as pending:
-        save_button(page).click(timeout=15000)
+        button.click(timeout=15000)
     response = pending.value
     if not response.ok or '|error|' in response.text().lower():
         raise RuntimeError('O E-Desk recusou o salvamento do percentual.')
     page.wait_for_timeout(1000)
     # Navigate with GET: reloading a POST response can submit Salvar again.
+    stage('percentage_verifying')
     page.goto(work_url, wait_until='domcontentloaded', timeout=30000)
     check_target(page, solicitation, work)
     field = percentage_field(page)
@@ -115,6 +139,8 @@ def update_percentage_after_comment(page, context, request_url, solicitation, wo
     """Return to the request, explicitly select Works and save only the percentage."""
     if parse_percentage(value) is None:
         return
+    from send_progress import stage
+    stage('percentage_work')
     from edesk_horas import abrir_trabalho_na_solicitacao, eh_solicitacao
     if not eh_solicitacao(request_url):
         raise RuntimeError('URL da solicita\u00e7\u00e3o inv\u00e1lida para atualizar o percentual.')

@@ -141,6 +141,7 @@ def health_check():
                   'nativeFilesVersion': getattr(local_files, 'PROTOCOL_VERSION', None)}
     return jsonify({"status": "ok", "service": "gerenciador-horas-edesk",
                     "commentPercentage": True,
+                    "commentPercentageReceipt": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),
                     "mode": "central" if LOCAL_MODE and central.enabled() else "local" if LOCAL_MODE else "cloud",
@@ -576,7 +577,7 @@ def run_edesk_automation(action: str):
                 except (OSError, ValueError):
                     pass
             uncertain = journal.finish(uid, keys, events_file) if keys else 0
-            result = _last_json_object(stdout) if action in {"fases", "percentual"} else None
+            result = _last_json_object(stdout) if action in {"fases", "percentual", "comentarios"} else None
             if process.returncode != 0:
                 app.logger.warning(
                     "E-Desk automation failed: action=%s exit_code=%s",
@@ -588,6 +589,15 @@ def run_edesk_automation(action: str):
                     502,
                     json.dumps(result, ensure_ascii=False) if result else "",
                 )
+
+            if action == 'comentarios' and send and data.get('percentualRealizado') is not None and (
+                result is None or result.get('ok') is not True
+                or result.get('operation') != 'comentarios'
+                or result.get('commentSaved') is not True
+                or result.get('percentageConfirmed') is not True
+            ):
+                return _failure('A integração não confirmou a porcentagem. Confira o comentário no E-Desk e use Enviar só % para não duplicá-lo.',
+                    502, json.dumps(result, ensure_ascii=False) if result else '')
 
             if action in {"fases", "percentual"} and (
                 result is None or result.get("ok") is not True

@@ -109,6 +109,16 @@ class EdeskSendResult {
   final String message;
   final String responseBody;
 
+  bool get commentPublished {
+    try {
+      final receipt = jsonDecode(responseBody);
+      return receipt is Map && receipt['operation'] == 'comentarios' &&
+          receipt['commentSaved'] == true;
+    } on FormatException {
+      return false;
+    }
+  }
+
   const EdeskSendResult({
     required this.confirmed,
     required this.statusCode,

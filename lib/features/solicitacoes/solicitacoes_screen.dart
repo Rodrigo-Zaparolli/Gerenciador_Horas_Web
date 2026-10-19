@@ -2,6 +2,7 @@ import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/config/plugin_tracking_access.dart';
 import 'package:gerenciador_horas/data/services/project_update_service.dart';
 import 'dart:async';
+import 'tracking_rows.dart';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -173,6 +174,20 @@ class _SolicitacoesScreenState extends State<SolicitacoesScreen> {
     final accountId = _currentUser?.uid;
     final canTrackPlugins = _canTrackPlugins;
     if (!mounted || accountId == null) return;
+    final activeDocuments = snapshot.docs
+        .where((doc) => isActiveTrackingProject(doc.data()))
+        .map((doc) => doc.id).toSet();
+    // A completed/deleted project must disappear immediately, even when a
+    // remaining project's comment lookup is slow or offline.
+    setState(() {
+      final projects = retainActiveTrackingRows(_projetosRows, activeDocuments);
+      final plugins = retainActiveTrackingRows(_pluginsRows, activeDocuments);
+      if (projects.length != _projetosRows.length) _selectedProjetoIndex = null;
+      if (plugins.length != _pluginsRows.length) _selectedPluginIndex = null;
+      _projetosRows = projects;
+      _pluginsRows = plugins;
+      if (activeDocuments.isEmpty) _isLoading = false;
+    });
     try {
       debugPrint('========================================');
       debugPrint('SINCRONIZAÇÃO DE SOLICITAÇÕES');
@@ -181,7 +196,7 @@ class _SolicitacoesScreenState extends State<SolicitacoesScreen> {
       );
 
       final activeIds = snapshot.docs
-          .where((doc) => doc.data()['status'] != 'TRAB_FIM')
+          .where((doc) => isActiveTrackingProject(doc.data()))
           .map((doc) => doc.data()['id']?.toString().trim().isNotEmpty == true
               ? doc.data()['id'].toString().trim()
               : doc.id)
@@ -216,7 +231,7 @@ class _SolicitacoesScreenState extends State<SolicitacoesScreen> {
         // PROJETO FINALIZADO
         // ========================================================
 
-        if (status == 'TRAB_FIM') {
+        if (!isActiveTrackingProject(project)) {
           debugPrint(
             'Projeto ${doc.id} ignorado: TRAB_FIM',
           );

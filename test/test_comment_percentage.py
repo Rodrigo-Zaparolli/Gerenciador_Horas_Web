@@ -78,6 +78,34 @@ class PercentageTests(unittest.TestCase):
                 percentage_field(page)
             browser.close()
 
+    def test_alternative_save_controls_and_numeric_input(self):
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel='chrome', headless=True)
+            for button, field_type, expected in [
+                ('<button name="cph1$SalvarTrabalho" value="Salvar">Salvar</button>', 'text', '37,50'),
+                ('<button id="salvar" type="submit">Salvar</button>', 'text', '37,50'),
+                ('<button name="cph1$SalvarTrabalho" value="Salvar">Salvar</button>', 'number', '37.50'),
+            ]:
+                page = browser.new_page()
+                state = {'value': '0', 'posts': 0}
+                url = 'https://fixture.invalid/Trabalho.aspx?solicitacao=2265173&id_trabalho=4'
+                def respond(route):
+                    if route.request.method == 'POST':
+                        state['posts'] += 1
+                        data = parse_qs(route.request.post_data or '')
+                        state['value'] = data['realized'][0]
+                    route.fulfill(status=200, content_type='text/html', body=f'''
+                        <form method="post"><label for="realized">% Realizado</label>
+                        <input id="realized" name="realized" type="{field_type}" step="0.01" value="{state['value']}">
+                        {button}</form>''')
+                page.route('**/*', respond)
+                page.goto(url)
+                save_work_percentage(page, '2265173', '4', '37.50')
+                self.assertEqual(state['posts'], 1)
+                self.assertEqual(state['value'], expected)
+                page.close()
+            browser.close()
+
 
 if __name__ == '__main__':
     unittest.main()

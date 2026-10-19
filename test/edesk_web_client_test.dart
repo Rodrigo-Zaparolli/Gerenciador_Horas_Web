@@ -60,7 +60,7 @@ void main() {
               calls.add(request);
               return http.Response(
                   jsonEncode(request.method == 'GET'
-                      ? {'mode': 'local', 'commentPercentage': true}
+                      ? {'mode': 'local', 'commentPercentage': true, 'commentPercentageReceipt': true}
                       : {'confirmed': true, 'message': 'ok'}),
                   200);
             }))

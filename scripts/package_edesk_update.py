@@ -1,4 +1,4 @@
-"""Build the small percentage-only-16 update for an existing full installation."""
+"""Build the small hours-startup-18 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -14,7 +14,7 @@ FILES = (
     'local_edesk/local_files.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO percentage-only-16 — instalação completa já existente
+README = '''ATUALIZAÇÃO hours-startup-18 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -26,8 +26,14 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Novo: envio isolado da porcentagem pelo botão Enviar só %, sem abrir nem
-publicar comentário. Abre o trabalho e confirma o valor após salvar.
+Correção v18: aguarda a tela inicial e o Ajax terminarem antes de selecionar
+o trabalho da primeira hora. Ignora controles ocultos/desabilitados e usa
+o clique normal no controle disponível. Não repete o salvamento de horas.
+
+Inclui a correção v17: reconhece o botão Salvar real do trabalho, confirma o valor
+após reabrir e devolve confirmações separadas do comentário e da porcentagem.
+O app informa quando somente a porcentagem ficou pendente, sem pedir para
+repetir um comentário já publicado. Inclui Enviar só %, sem publicar comentário.
 
 Inclui a correção dos vínculos: recuperar pastas e planilhas já autorizadas pelo
 caminho completo, sem confundir projetos com pastas de mesmo nome.
@@ -41,7 +47,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-percentual-16.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-horas-18.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

@@ -935,8 +935,29 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         log("ID do trabalho não informado.")
         return None
 
+    def wait_work_ui_ready():
+        page.wait_for_load_state('domcontentloaded', timeout=15000)
+        page.wait_for_function('''() => {
+            const manager = window.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+            return document.readyState !== 'loading' && !manager?.get_isInAsyncPostBack?.();
+        }''', timeout=15000)
+
     try:
-        page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$')).click(timeout=15000)
+        wait_work_ui_ready()
+        panel = page.locator('#cph1_rpvTrabalhos')
+        if not panel.count() or not panel.first.is_visible():
+            tabs = page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$'))
+            deadline = time.monotonic() + 15
+            visible_tabs = []
+            while time.monotonic() < deadline:
+                visible_tabs = [tab for tab in tabs.all() if tab.is_visible()]
+                if visible_tabs:
+                    break
+                page.wait_for_timeout(100)
+            if len(visible_tabs) != 1:
+                raise RuntimeError('Aba Trabalhos ausente ou ambígua.')
+            visible_tabs[0].click(timeout=15000)
+        wait_work_ui_ready()
     except Exception as error:
         raise RuntimeError('EDESK_WORK_TAB_NOT_OPENED') from error
 
@@ -958,6 +979,7 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
     alvo = None
     limite = time.monotonic() + 10
     while time.monotonic() < limite:
+        wait_work_ui_ready()
         alvo = resolve_work_selection(tabela, id_trabalho)
         if alvo is not None:
             break
@@ -993,7 +1015,9 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
         pass
 
     try:
-        alvo.click(timeout=15000, force=True)
+        # Let Playwright wait for an actionable control. Forcing the click can
+        # hit a disabled/covered initial control before the Ajax page is ready.
+        alvo.click(timeout=15000)
     except Exception as erro:
         log(f"Erro no clique do btnSelTra: {erro}")
         return None

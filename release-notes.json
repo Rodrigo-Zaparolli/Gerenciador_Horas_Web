@@ -1,7 +1,8 @@
 {
     "changes":  [
-                    "Corrigida a inserção dos modelos de comentário: não é mais obrigatório gerar uma imagem pelo botão do Excel para usar um modelo.",
-                    "Com a imagem do Excel presente, o modelo continua entrando abaixo dela. Sem essa imagem, o texto entra na posição do cursor, preservando o conteúdo e os prints existentes.",
-                    "Corrigida a inserção quando a imagem é o último conteúdo do editor, evitando posições inválidas."
+                    "Corrigida a seleção do trabalho no primeiro envio de horas: o processo aguarda a tela e o Ajax, ignora controles ocultos ou desabilitados e usa o controle disponível para abrir o trabalho e o retroativo.",
+                    "Ao finalizar o projeto inteiro, o acompanhamento do plugin é removido assim que chega a atualização do Firebase, sem esperar o carregamento dos comentários. O histórico em Projetos Finalizados é preservado.",
+                    "Incluídas as correções pendentes da porcentagem: escolha do trabalho, confirmação separada do comentário e da %, verificação após salvar e tratamento da porcentagem pendente sem repetir o comentário.",
+                    "Atualização leve hours-startup-18 necessária no PC que executa o E-Desk. Pare a integração, extraia o pacote na mesma pasta preservando .edesk-local, reinicie e atualize o site com Ctrl+F5."
                 ]
 }

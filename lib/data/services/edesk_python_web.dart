@@ -295,6 +295,10 @@ class EdeskWebClient {
             .timeout(const Duration(seconds: 12));
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
+          if (action == 'comentarios' && requiresPercentage &&
+              (health is! Map || health['commentPercentageReceipt'] != true)) {
+            return _failure('Atualize e reinicie a integração no computador que executa o E-Desk. Esta versão não confirma o comentário e a porcentagem separadamente. Nenhum comentário foi enviado.', 503);
+          }
           if (action == 'percentual' && (health is! Map || health['standalonePercentage'] != true)) {
             return _failure('Atualize a integração local para enviar somente a porcentagem. Nenhum comentário foi enviado.', 503);
           }

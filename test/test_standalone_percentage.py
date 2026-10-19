@@ -13,6 +13,24 @@ from cloud_run.main import app
 HEADERS = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bearer fake-token'}
 
 class StandalonePercentageTest(unittest.TestCase):
+    def test_comment_and_percentage_require_separate_confirmations(self):
+        data = {'solicitacao': '226144', 'idTrabalho': '6', 'texto': 'Teste',
+                'percentualRealizado': 25, 'edeskCredenciais': {'email': 'test', 'senha': 'test'}}
+        cases = [({}, 0, 502),
+            ({'ok': True, 'operation': 'comentarios', 'commentSaved': True}, 0, 502),
+            ({'ok': True, 'operation': 'comentarios', 'commentSaved': True, 'percentageConfirmed': True}, 0, 200),
+            ({'ok': False, 'operation': 'comentarios', 'commentSaved': True, 'percentageConfirmed': False}, 1, 502)]
+        for receipt, exit_code, expected in cases:
+            with patch('local_edesk.authentication.verify_token', return_value={'sub': 'test'}), patch('cloud_run.main.subprocess.Popen') as process:
+                process.return_value.returncode = exit_code
+                process.return_value.communicate.return_value = (json.dumps(receipt), '')
+                response = app.test_client().post('/api/edesk/comentarios', headers=HEADERS,
+                    json={'request': data, 'enviar': True})
+                self.assertEqual(response.status_code, expected, response.json)
+                self.assertEqual(response.json['confirmed'], expected == 200)
+                if receipt.get('commentSaved'):
+                    self.assertTrue(json.loads(response.json['responseBody'])['commentSaved'])
+
     def test_invalid_or_comment_content_never_starts_an_operation(self):
         base = {'edeskCredenciais': {'email': 'test', 'senha': 'test'},
                 'solicitacao': '226144', 'idTrabalho': '6', 'percentualRealizado': 25}

@@ -67,6 +67,9 @@ class EdeskIntegrationApi {
 }
 
 String progressLabel(String? stage) => switch (stage) {
+      'percentage_work' => 'Abrindo o trabalho para cadastrar a porcentagem…',
+      'percentage_saving' => 'Salvando a porcentagem no trabalho…',
+      'percentage_verifying' => 'Reabrindo o trabalho para confirmar a porcentagem salva…',
       'opening' => 'Abrindo E-Desk…',
       'login' =>
         'Aguardando login — conclua o acesso na janela do E-Desk no computador que executa a integração.',
@@ -103,8 +106,7 @@ class _IntegrationStatusDialogState extends State<_IntegrationStatusDialog> {
   Future<void> check() async {
     setState(() => checking = true);
     try {
-      final health =
-          await EdeskIntegrationApi.call('/healthz', authenticated: false);
+      final health = await EdeskIntegrationApi.call('/healthz', authenticated: false);
       if (health['mode'] == 'central')
         await EdeskIntegrationApi.call('/api/edesk/session');
       if (!mounted) return;
@@ -257,8 +259,15 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
       error = null;
     });
     try {
-      final health =
-          await EdeskIntegrationApi.call('/healthz', authenticated: false);
+      final requiresPercentage = widget.script == 'edesk_percentual.py' ||
+          (widget.script == 'edesk_comentario.py' && widget.data['percentualRealizado'] != null);
+      final percentageBase = requiresPercentage ? await EdeskIntegrationApi.currentUrl() : null;
+      final health = await EdeskIntegrationApi.call('/healthz', authenticated: false,
+          baseUrl: percentageBase);
+      if (widget.script == 'edesk_comentario.py' && requiresPercentage &&
+          health['commentPercentageReceipt'] != true) {
+        throw StateError('Atualize e reinicie a integração no computador que executa o E-Desk antes de enviar comentário com porcentagem. Nenhum comentário foi enviado.');
+      }
       if (health['mode'] == 'central')
         await EdeskIntegrationApi.call('/api/edesk/session');
       if (health['service'] != 'gerenciador-horas-edesk')
@@ -412,6 +421,12 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
             onPressed: () =>
                 Navigator.pop(context, const EdeskReviewDecision(false)),
             child: const Text('Cancelar')),
+        if (error != null && (widget.script == 'edesk_percentual.py' ||
+            widget.data['percentualRealizado'] != null))
+          TextButton(onPressed: () => launchUrl(
+              Uri.parse('https://gerenciador-horas.web.app/integracao-completa.html'),
+              mode: LaunchMode.externalApplication),
+            child: const Text('Atualizar integração')),
         if (error != null)
           TextButton(
               onPressed: loading ? null : load,

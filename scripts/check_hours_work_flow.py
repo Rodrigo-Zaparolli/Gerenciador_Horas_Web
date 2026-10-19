@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix='hours-work-', dir=ROOT / 'build') as tm
                     page = context.new_page()
                     page.goto(request_url)
                     if not delayed:
-                        assert resolve_work_selection(page.locator('table'), '6') is not None
+                        assert resolve_work_selection(page.locator('table'), '6') is None, 'Hidden work panel is not actionable'
                     work = hours.abrir_trabalho_na_solicitacao(page, context, '226144', '6')
                     assert work is not None and work.url == work_url, (layout, delayed, page.url, logs[-18:])
                     assert len(context.pages) == (2 if popup else 1), 'A work must open only once'

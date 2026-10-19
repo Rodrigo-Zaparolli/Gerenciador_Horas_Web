@@ -12,8 +12,13 @@ def resolve_work_selection(table, work_id):
       const labels = headers ? [...headers.children].map(cell => norm(cell.innerText)) : [];
       const idColumn = labels.findIndex(text => /^(?:id|n[º°o.]?|numero)(?: (?:do )?trabalho)?$/.test(text));
       const matches = [];
+      const visible = element => element.getClientRects().length &&
+        getComputedStyle(element).visibility !== 'hidden';
       for (const row of rows) {
-        const controls = [...row.querySelectorAll(args.selector)];
+        if (!visible(row)) continue;
+        const allControls = [...row.querySelectorAll(args.selector)];
+        const controls = allControls.filter(control => visible(control) &&
+          !control.matches(':disabled') && control.getAttribute('aria-disabled') !== 'true');
         if (!controls.length) continue;
         const cells = [...row.children].filter(cell => cell.tagName === 'TD');
         if (!cells.length) continue;
@@ -27,7 +32,7 @@ def resolve_work_selection(table, work_id):
           match = !!idCell && norm(idCell.innerText) === args.id;
         }
         if (match) matches.push({row: [...table.querySelectorAll('tr')].indexOf(row),
-          control: controls.indexOf(exact[0] || controls[0])});
+          control: allControls.indexOf(exact[0] || controls[0])});
       }
       return matches;
     }''', {'selector': CONTROL, 'id': str(work_id).strip()})

@@ -2456,10 +2456,22 @@ def main(*, percentage_only=False):
                     solicitacao, id_trabalho, percentual)
                 log('Percentual confirmado depois de recarregar o trabalho.')
 
-            save_comment_then_percentage(
-                lambda: salvar_comentario(frame, pagina_comentario),
-                salvar_percentual,
-            )
+            try:
+                save_comment_then_percentage(
+                    lambda: salvar_comentario(frame, pagina_comentario),
+                    salvar_percentual,
+                )
+            except RuntimeError as error:
+                if 'EDESK_PERCENTAGE_PENDING' in str(error):
+                    print(json.dumps({'ok': False, 'operation': 'comentarios',
+                        'commentSaved': True, 'percentageConfirmed': False,
+                        'message': 'Comentário salvo; porcentagem não confirmada. Envie somente a porcentagem, sem repetir o comentário.'},
+                        ensure_ascii=False), flush=True)
+                raise
+            print(json.dumps({'ok': True, 'operation': 'comentarios',
+                'commentSaved': True, 'percentageConfirmed': percentual is not None,
+                'percentual': str(percentual) if percentual is not None else None},
+                ensure_ascii=False), flush=True)
             from send_progress import completed
             completed('comment')
 
