@@ -20,7 +20,9 @@ O serviço exige token da conta designada com identidade validada pelo Firebase 
 prévia do arquivo para o UID. A interface é liberada pela conta autenticada;
 o serviço faz uma segunda validação independente antes de acessar a planilha.
 
-Uso: Planilha → Editar no sistema. Requer Microsoft Excel instalado e integração
+Uso: Ações do projeto (•••) → Editar planilha no sistema. O único menu também
+reúne pasta, abrir no Excel, editar trabalho, checklist, comentários e e-mails.
+Requer Microsoft Excel instalado e integração
 spreadsheet-dates-22 neste computador. Somente XLSX e XLSM de até 25 MB com as
 abas e cabeçalhos esperados. Alterações ainda não salvas exigem confirmação
 antes de descartar. Falha ou resposta incerta exige recarregar para conferir.

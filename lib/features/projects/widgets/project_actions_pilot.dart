@@ -22,75 +22,84 @@ class ProjectActionsPilot extends StatelessWidget {
       onEmail;
 
   @override
-  Widget build(BuildContext context) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        TextButton.icon(
-            onPressed: hasFolder ? onFolder : null,
-            style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 6)),
-            icon: const Icon(Icons.folder_outlined, size: 17),
-            label: const Text('Pasta', style: TextStyle(fontSize: 12))),
-        PopupMenuButton<String>(
-            enabled: hasExcel,
-            tooltip: 'Planilha do projeto',
-            onSelected: (value) =>
-                value == 'open' ? onExcel() : onEditSpreadsheet(),
-            itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'open', child: Text('Abrir no Excel')),
-                  PopupMenuItem(value: 'edit', child: Text('Editar no sistema'))
-                ],
-            child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.table_chart_outlined,
-                      size: 17,
-                      color: hasExcel
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).disabledColor),
-                  const SizedBox(width: 4),
-                  Text('Planilha',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: hasExcel
-                              ? null
-                              : Theme.of(context).disabledColor)),
-                  const Icon(Icons.expand_more, size: 16)
-                ]))),
-        PopupMenuButton<String>(
-            tooltip: 'Mais ações',
-            icon: const Icon(Icons.more_horiz, size: 20),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 180),
-            onSelected: (value) => {
-                  'work': onEditWork,
-                  'check': onChecklist,
-                  'comment': onComment,
-                  'email': onEmail
-                }[value]
-                    ?.call(),
-            itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'work', child: _ActionMenuLabel(Icons.edit_outlined, 'Editar trabalho')),
-                  PopupMenuItem(value: 'check', child: _ActionMenuLabel(Icons.checklist_rounded, 'Checklist')),
-                  PopupMenuItem(value: 'comment', child: _ActionMenuLabel(Icons.chat_bubble_outline_rounded, 'Comentários')),
-                  PopupMenuItem(value: 'email', child: _ActionMenuLabel(Icons.mail_outline_rounded, 'E-mails'))
-                ]),
-      ]);
+  Widget build(BuildContext context) => PopupMenuButton<String>(
+        tooltip: 'A\u00e7\u00f5es do projeto',
+        icon: const Icon(Icons.more_horiz, size: 22),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 240, maxWidth: 320),
+        onSelected: (value) {
+          if ((value == 'folder' && !hasFolder) ||
+              (['open', 'spreadsheet'].contains(value) && !hasExcel)) return;
+          final actions = <String, VoidCallback>{
+            'folder': onFolder,
+            'open': onExcel,
+            'spreadsheet': onEditSpreadsheet,
+            'work': onEditWork,
+            'check': onChecklist,
+            'comment': onComment,
+            'email': onEmail,
+          };
+          actions[value]?.call();
+        },
+        itemBuilder: (_) => [
+          PopupMenuItem(
+              value: 'folder',
+              enabled: hasFolder,
+              child: _ActionMenuLabel(Icons.folder_outlined, 'Abrir pasta',
+                  enabled: hasFolder)),
+          PopupMenuItem(
+              value: 'open',
+              enabled: hasExcel,
+              child: _ActionMenuLabel(
+                  Icons.table_chart_outlined, 'Abrir planilha no Excel',
+                  enabled: hasExcel)),
+          PopupMenuItem(
+              value: 'spreadsheet',
+              enabled: hasExcel,
+              child: _ActionMenuLabel(
+                  Icons.edit_note_rounded, 'Editar planilha no sistema',
+                  enabled: hasExcel)),
+          const PopupMenuDivider(),
+          const PopupMenuItem(
+              value: 'work',
+              child: _ActionMenuLabel(Icons.edit_outlined, 'Editar trabalho')),
+          const PopupMenuItem(
+              value: 'check',
+              child: _ActionMenuLabel(Icons.checklist_rounded, 'Checklist')),
+          const PopupMenuItem(
+              value: 'comment',
+              child: _ActionMenuLabel(
+                  Icons.chat_bubble_outline_rounded, 'Coment\u00e1rios')),
+          const PopupMenuItem(
+              value: 'email',
+              child: _ActionMenuLabel(Icons.mail_outline_rounded, 'E-mails')),
+        ],
+      );
 }
 
 class _ActionMenuLabel extends StatelessWidget {
-  const _ActionMenuLabel(this.icon, this.label);
+  const _ActionMenuLabel(this.icon, this.label, {this.enabled = true});
+  final bool enabled;
   final IconData icon;
   final String label;
 
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-    if (icon == Icons.mail_outline_rounded)
-      CustomPaint(size: const Size.square(20), painter: _MenuEmailPainter(Theme.of(context).colorScheme.onSurface))
-    else
-      Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
-    const SizedBox(width: 12),
-    Text(label),
-  ]);
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon == Icons.mail_outline_rounded)
+          CustomPaint(
+              size: const Size.square(20),
+              painter:
+                  _MenuEmailPainter(Theme.of(context).colorScheme.onSurface))
+        else
+          Icon(icon,
+              size: 20,
+              color: enabled
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).disabledColor),
+        const SizedBox(width: 12),
+        Flexible(child: Text(label)),
+      ]);
 }
 
 class _MenuEmailPainter extends CustomPainter {
@@ -99,15 +108,25 @@ class _MenuEmailPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.round;
-    final rect = Rect.fromLTWH(size.width * .08, size.height * .2, size.width * .84, size.height * .6);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
-    canvas.drawPath(Path()..moveTo(rect.left + 1, rect.top + 1)
-      ..lineTo(rect.center.dx, rect.center.dy + 1)
-      ..lineTo(rect.right - 1, rect.top + 1), paint);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final rect = Rect.fromLTWH(
+        size.width * .08, size.height * .2, size.width * .84, size.height * .6);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+    canvas.drawPath(
+        Path()
+          ..moveTo(rect.left + 1, rect.top + 1)
+          ..lineTo(rect.center.dx, rect.center.dy + 1)
+          ..lineTo(rect.right - 1, rect.top + 1),
+        paint);
   }
 
   @override
-  bool shouldRepaint(covariant _MenuEmailPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _MenuEmailPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

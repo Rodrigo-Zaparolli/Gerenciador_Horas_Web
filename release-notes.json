@@ -1,7 +1,6 @@
 {
     "changes":  [
-                    "Novo item no menu do perfil: Pasta de projetos finalizados. Cada conta pode digitar ou selecionar e alterar o próprio destino padrão, salvo separadamente no Firebase.",
-                    "O destino configurado também é usado na conferência da movimentação. Alterar a configuração não move projetos já arquivados nem autoriza automaticamente novos caminhos no Windows.",
-                    "A integração project-destinations-24 distingue os arquivos sincronizados pelo OneDrive de atalhos e junções. A configuração é individual para todos os usuários; a movimentação continua em teste apenas para a conta autorizada."
+                    "As ações do projeto agora ficam reunidas em um único ícone de três pontos: abrir pasta, abrir planilha no Excel, editar planilha no sistema, editar trabalho, checklist, comentários e e-mails.",
+                    "Projetos sem pasta ou planilha vinculada mantêm essas opções desabilitadas. O ajuste visual continua restrito à conta de teste e não exige atualizar a integração local."
                 ]
 }
