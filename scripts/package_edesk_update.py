@@ -1,4 +1,4 @@
-"""Build the small archive-authorization-26 update for an existing full installation."""
+"""Build the small project-root-move-27 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,7 +17,7 @@ FILES = (
     'local_edesk/project_archive.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO archive-authorization-26 — instalação completa já existente
+README = '''ATUALIZAÇÃO project-root-move-27 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,6 +28,11 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v27: permite mover a pasta principal imediatamente acima de Documentos,
+mantendo o vinculo da subpasta e da planilha dentro do novo local. Exige selecao
+e autorizacao da pasta principal, conferencia e confirmacao no app. Recusa
+pastas gerais e preserva a recuperacao das movimentacoes anteriores.
 
 Novidade v26: permite autorizar os vinculos neste PC diretamente na janela
 de movimentacao. Solicita os caminhos exatos ausentes; nao abre arquivos
@@ -86,7 +91,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-vinculos-movimentacao-26.zip'
+    target = ROOT / 'web/downloads/atualizacao-pasta-inteira-27.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

@@ -99,7 +99,11 @@ def _execute(files, uid, body):
                 if not Path(plan['target']).is_dir():
                     raise ValueError('O destino da movimentação anterior não foi encontrado. Confira a pasta antes de recuperar os vínculos.')
                 return {**plan, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
-            source = _record(files, con, uid, source_ref, 'folder')
+            linked_folder = _record(files, con, uid, source_ref, 'folder')
+            root_ref = body.get('sourceReference') or source_ref
+            source = _record(files, con, uid, root_ref, 'folder')
+            if source != linked_folder and not (linked_folder.name.casefold() == 'documentos' and source == linked_folder.parent):
+                raise ValueError('Selecione a pasta vinculada ou a pasta principal imediatamente acima dela. Não selecione Clientes ou outra pasta geral.')
             parent = approved_parent
             source = files._validate(source, 'folder')
             parent = files._validate(parent, 'folder')
@@ -118,6 +122,7 @@ def _execute(files, uid, body):
             plan = {'source': str(source), 'target': str(target), 'parent': str(parent),
                     'manifest': _manifest(source), 'manifestVersion': 2, 'excelInside': excel is not None and excel.is_relative_to(source),
                     'excelPath': str(excel) if excel else '',
+                    'linkedFolderPath': str(linked_folder),
                     'oldFolderReference': source_ref, 'oldExcelReference': excel_ref}
             operation = str(uuid.uuid4())
             con.execute('INSERT INTO project_moves VALUES(?,?,?,?,?,?,?,?)',
@@ -152,7 +157,8 @@ def _execute(files, uid, body):
             raise ValueError('A pasta de origem não foi encontrada. Confira os caminhos antes de continuar.')
         if not target.is_dir() or _manifest(target, plan.get('manifestVersion', 1)) != plan['manifest']:
             raise ValueError('Não foi possível conferir o destino. Verifique a pasta antes de atualizar os vínculos.')
-        folder_ref = _reference(uid, target, 'folder')
+        linked_target = target / Path(plan.get('linkedFolderPath', plan['source'])).relative_to(source)
+        folder_ref = _reference(uid, linked_target, 'folder')
         excel_ref = plan['oldExcelReference']
         mappings = []
         # Preserve other projects' authorizations; create new identities for moved paths.
@@ -162,7 +168,7 @@ def _execute(files, uid, body):
                 new_path = target / approved.relative_to(source)
                 new_ref = _reference(uid, new_path, kind)
                 mappings.append((uid, new_ref, str(new_path), kind))
-        mappings.append((uid, folder_ref, str(target), 'folder'))
+        mappings.append((uid, folder_ref, str(linked_target), 'folder'))
         if plan['excelInside']:
             new_excel = target / Path(plan['excelPath']).relative_to(source)
             excel_ref = _reference(uid, new_excel, 'file')

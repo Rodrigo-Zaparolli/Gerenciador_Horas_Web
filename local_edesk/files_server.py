@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request
 from waitress import serve
 from local_edesk.authentication import verify_token
-from local_edesk.local_files import execute, SUPPORTED_ACTIONS, PROTOCOL_VERSION, SPREADSHEET_LAYOUTS
+from local_edesk.local_files import execute, SUPPORTED_ACTIONS, PROTOCOL_VERSION, SPREADSHEET_LAYOUTS, PROJECT_ROOT_MOVE
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 32768
@@ -37,7 +37,7 @@ def health():
     return jsonify(status='ok', service='gerenciador-horas-edesk', nativeFiles=True,
         mode='files-only', busy=False, excelMirror='preview' in SUPPORTED_ACTIONS,
         nativeActions=sorted(SUPPORTED_ACTIONS), nativeFilesVersion=PROTOCOL_VERSION,
-        nativeSpreadsheetLayouts=list(SPREADSHEET_LAYOUTS))
+        nativeSpreadsheetLayouts=list(SPREADSHEET_LAYOUTS), projectRootMove=PROJECT_ROOT_MOVE)
 
 
 @app.post('/api/local-files')

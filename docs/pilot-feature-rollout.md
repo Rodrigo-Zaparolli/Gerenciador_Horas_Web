@@ -129,6 +129,22 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+Na v27, quando o vínculo aponta para Documentos, a janela solicita a pasta
+principal. sourceReference é autorizado separadamente e só permite a própria
+pasta vinculada ou seu pai imediato quando ela se chama Documentos. Pastas
+gerais e outras árvores são recusadas. A identidade antiga do vínculo é
+preservada no plano; o novo folderReference aponta para a mesma subpasta
+relativa no destino, enquanto source/target descrevem a pasta inteira movida.
+Planos anteriores sem linkedFolderPath mantêm a interpretação original.
+
+A conferência é automática ao carregar o destino, selecionar a pasta principal,
+trocar o destino ou concluir a autorização. Não há movimentação automática:
+marcar a confirmação e clicar em Confirmar e mover continuam obrigatórios.
+A interface mostra a atividade em andamento. Escrita exige a capacidade
+projectRootMove, evitando que integrações antigas ignorem sourceReference.
+Testes cobrem arquivos irmãos de Documentos, vínculos aninhados, recuperação,
+pastas gerais recusadas, autorização, progresso, troca de conta e falha no Firebase.
+
 Na v26, a janela de movimentação permite Autorizar vínculos neste PC após
 uma falha. A ação authorize recupera a autorização existente ou solicita a
 seleção nativa do caminho exato. Não abre Excel nem movimenta arquivos.

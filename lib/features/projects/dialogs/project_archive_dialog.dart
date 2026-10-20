@@ -1,20 +1,20 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
-import '../../../data/services/firebase_service.dart';
-import '../../../data/services/native_local_files_service.dart';
 import '../../../data/services/archive_destination_store.dart';
 import 'archive_destination_dialog.dart';
+import 'project_archive_service.dart';
 
 class ProjectArchiveDialog extends StatefulWidget {
   const ProjectArchiveDialog(
       {super.key,
       required this.projectId,
       required this.folder,
-      required this.excel});
+      required this.excel,
+      this.service});
   final String projectId, folder, excel;
+  final ProjectArchiveService? service;
   static bool acceptsFolder(String folder) =>
       folder.startsWith('desktop-folder:') ||
       folder.startsWith('browser-folder:') ||
@@ -43,18 +43,23 @@ class ProjectArchiveDialog extends StatefulWidget {
 
 class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   late final String owner;
-  StreamSubscription<User?>? subscription;
-  String? destination, error, message;
+  late final ProjectArchiveService service;
+  StreamSubscription<void>? subscription;
+  String? destination, sourceReference, error, message;
+  String activity = '';
   Map<String, dynamic>? plan, moved;
   bool busy = false, confirmed = false;
-  bool get authorized =>
-      ProjectArchiveDialog.allowed &&
-      FirebaseAuth.instance.currentUser?.uid == owner;
+  bool get authorized => service.allowed && service.uid == owner;
+  bool get needsProjectRoot =>
+      sourceReference == null &&
+      label(widget.folder).split(RegExp(r'[\\/]')).last.toLowerCase() ==
+          'documentos';
   @override
   void initState() {
     super.initState();
-    owner = FirebaseAuth.instance.currentUser!.uid;
-    subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+    service = widget.service ?? ProjectArchiveService();
+    owner = service.uid!;
+    subscription = service.accountChanges.listen((_) {
       if (mounted && !authorized)
         setState(() {
           plan = null;
@@ -73,13 +78,15 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   }
 
   Future<void> loadDestination() async {
-    setState(() => busy = true);
+    setState(() {
+      busy = true;
+      activity = 'Carregando destino…';
+    });
     try {
-      final store = FirebaseArchiveDestinationStore();
-      final value = await store.load(owner);
+      final value = await service.loadDestination(owner);
       if (mounted && authorized)
         setState(() {
-          final suggestion = ArchiveDestination.suggestion(store.currentEmail);
+          final suggestion = ArchiveDestination.suggestion(service.email);
           destination =
               value?.destination ?? (suggestion.isEmpty ? null : suggestion);
         });
@@ -90,16 +97,19 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    if (mounted && authorized && destination != null && error == null)
+      await prepare();
   }
 
   Future<void> selectDestination() async {
     if (busy || !authorized || moved != null) return;
     setState(() {
       busy = true;
+      activity = 'Selecione a pasta de destino na janela do Windows.';
       error = null;
     });
     try {
-      final selected = await NativeLocalFiles.call('pick-folder');
+      final selected = await service.call('pick-folder');
       if (!mounted || !authorized || selected['cancelled'] == true) return;
       final reference = selected['reference'] as String;
       setState(() {
@@ -110,41 +120,62 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       final value =
           ArchiveDestination.fromData({'destination': reference}, owner);
       if (value == null) throw StateError('Destino inválido.');
-      await FirebaseArchiveDestinationStore().save(owner, value);
+      await service.saveDestination(owner, value);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    if (mounted && authorized && error == null) await prepare();
   }
 
   Future<void> checkCompleted() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(owner)
-        .collection('completed_projects')
-        .doc(widget.projectId)
-        .get(const GetOptions(source: Source.server))
-        .timeout(const Duration(seconds: 15));
-    if (!authorized || !doc.exists || doc.data()?['status'] != 'TRAB_FIM') {
-      throw StateError('Esta ação exige um projeto finalizado.');
+    await service.checkCompleted(owner, widget.projectId);
+    if (!authorized) throw StateError('A conta mudou. Feche esta janela.');
+  }
+
+  Future<void> selectProjectRoot() async {
+    if (busy || !authorized || moved != null) return;
+    setState(() {
+      busy = true;
+      error = null;
+      activity = 'Selecione a pasta principal do projeto na janela do Windows.';
+    });
+    try {
+      final selected = await service.call('pick-folder');
+      if (!mounted || !authorized || selected['cancelled'] == true) return;
+      setState(() {
+        sourceReference = selected['reference'] as String;
+        plan = null;
+        confirmed = false;
+      });
+    } catch (e) {
+      if (mounted && authorized) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
     }
+    if (mounted && authorized && error == null) await prepare();
   }
 
   Future<void> authorizeLinks() async {
     if (busy || !authorized || moved != null || destination == null) return;
     setState(() {
       busy = true;
+      activity = 'Autorize os caminhos solicitados na janela do Windows.';
       error = null;
       plan = null;
       confirmed = false;
       message = null;
     });
     try {
-      for (final reference in [widget.folder, widget.excel, destination!]) {
+      for (final reference in [
+        widget.folder,
+        widget.excel,
+        if (sourceReference != null) sourceReference!,
+        destination!
+      ]) {
         if (reference.isEmpty) continue;
-        final result =
-            await NativeLocalFiles.call('authorize', reference: reference);
+        final result = await service.call('authorize', reference: reference);
         if (!mounted || !authorized) return;
         if (result['cancelled'] == true) {
           setState(
@@ -161,20 +192,24 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    if (mounted && authorized && error == null) await prepare();
   }
 
   Future<void> prepare() async {
-    if (busy || !authorized || destination == null) return;
+    if (busy || !authorized || destination == null || needsProjectRoot) return;
     setState(() {
       busy = true;
+      activity = 'Conferindo pasta, planilha e destino…';
       error = null;
+      message = null;
       plan = null;
       confirmed = false;
     });
     try {
       await checkCompleted();
-      final result = await NativeLocalFiles.call('project-move-prepare',
+      final result = await service.call('project-move-prepare',
           reference: widget.folder,
+          sourceReference: sourceReference,
           destination: destination,
           excelReference: widget.excel);
       if (mounted && authorized) setState(() => plan = result);
@@ -190,19 +225,23 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       return;
     setState(() {
       busy = true;
+      activity = moved == null
+          ? 'Movendo a pasta e atualizando os vínculos…'
+          : 'Atualizando os vínculos…';
       error = null;
     });
     try {
       if (moved == null) {
         if (plan!['alreadyMoved'] != true) await checkCompleted();
-        final result = await NativeLocalFiles.call('project-move-commit',
+        final result = await service.call('project-move-commit',
             operation: plan!['operation'] as String);
         if (!mounted || !authorized) return;
         if (result['moved'] != true)
           throw StateError('A movimentação não foi confirmada.');
         moved = result;
       }
-      await FirebaseService().applyProjectFolderMove(widget.projectId, moved!);
+      if (!authorized) throw StateError('A conta mudou.');
+      await service.applyMove(widget.projectId, moved!);
       if (mounted && authorized) {
         setState(() => message = 'Pasta movida e vínculos atualizados.');
         Navigator.pop(context, moved);
@@ -237,10 +276,24 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                     if (busy) const LinearProgressIndicator(),
+                    if (busy) Text(activity),
                     const Text(
                         'A pasta selecionada será movida com suas subpastas. Os vínculos serão atualizados após a conferência. Feche o Excel antes de continuar.'),
                     const SizedBox(height: 12),
                     SelectableText('Pasta atual: ${label(widget.folder)}'),
+                    if (needsProjectRoot)
+                      const Text(
+                          'O vínculo aponta para Documentos. Selecione a pasta principal do projeto para mover todo o conteúdo.'),
+                    if (sourceReference != null)
+                      SelectableText(
+                          'Pasta inteira a mover: ${label(sourceReference!)}'),
+                    TextButton.icon(
+                        onPressed: busy || !authorized || moved != null
+                            ? null
+                            : selectProjectRoot,
+                        icon: const Icon(Icons.drive_file_move_outline),
+                        label:
+                            const Text('Selecionar pasta inteira do projeto')),
                     const SizedBox(height: 8),
                     SelectableText(
                         'Pasta de destino: ${destination == null ? "Não selecionada" : label(destination!)}'),
@@ -271,6 +324,8 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                         'Nesta versão, o destino deve estar na mesma unidade/disco da pasta atual.'),
                     if (plan != null) ...[
                       const Divider(),
+                      const Text(
+                          'Confira os caminhos abaixo e marque a confirmação para liberar o botão.'),
                       SelectableText(
                           'De: ${plan!['source']}\nPara: ${plan!['target']}'),
                       if (widget.excel.isNotEmpty)
@@ -307,7 +362,10 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                 child: const Text('Fechar')),
             if (moved == null)
               OutlinedButton(
-                  onPressed: busy || !authorized || destination == null
+                  onPressed: busy ||
+                          !authorized ||
+                          destination == null ||
+                          needsProjectRoot
                       ? null
                       : prepare,
                   child: const Text('Conferir movimentação')),

@@ -27,7 +27,7 @@
         cache:'no-store', signal:controller.signal,
         ...(health ? {} : {headers:{'Authorization':`Bearer ${args.token}`, 'Content-Type':'application/json'},
           body:JSON.stringify({action:args.action, reference:args.reference, name:args.name, range:args.range,
-            ...(['project-move-prepare','project-move-commit'].includes(args.action) ? {destination:args.destination, excelReference:args.excelReference, operation:args.operation} : {}),
+            ...(['project-move-prepare','project-move-commit'].includes(args.action) ? {destination:args.destination, sourceReference:args.sourceReference, excelReference:args.excelReference, operation:args.operation} : {}),
             ...(['excel-editor-read','excel-editor-write'].includes(args.action) ? {revision:args.revision, changes:args.changes, serviceType:args.serviceType} : {})})})
       });
       if (response.status === 404) return JSON.stringify({error:'update', message:'Atualize a integração: encerre-a e execute Iniciar abertura local.cmd novamente.'});

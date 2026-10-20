@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Movimentação de projetos finalizados: nova ação Autorizar vínculos neste PC na própria janela, quando falta a autorização local.",
-    "Os caminhos selecionados devem corresponder aos vínculos salvos. A autorização não move nem abre arquivos; confira e confirme depois.",
-    "Atualize a integração local para v26 para utilizar a recuperação de vínculos."
+    "Finalização: quando o vínculo aponta para Documentos, selecione a pasta inteira do projeto. Todos os arquivos acompanham a movimentação, mantendo os vínculos de Documentos e da planilha no novo local.",
+    "A conferência acontece automaticamente após selecionar a pasta e o destino. A janela mostra o andamento e a confirmação necessária para liberar Confirmar e mover.",
+    "Atualize a integração local para v27. Pastas gerais são recusadas, e uma tentativa de atualizar vínculos não repete a movimentação já concluída."
   ]
 }

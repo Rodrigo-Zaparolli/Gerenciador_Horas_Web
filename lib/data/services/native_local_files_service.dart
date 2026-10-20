@@ -43,6 +43,7 @@ class NativeLocalFiles {
       String? revision,
       String? serviceType,
       String? destination,
+      String? sourceReference,
       String? excelReference,
       String? operation,
       List<Map<String, dynamic>>? changes}) async {
@@ -52,6 +53,21 @@ class NativeLocalFiles {
       throw const NativeFilesException('Entre novamente na sua conta.');
     }
     final kind = serviceType?.toLowerCase() ?? '';
+    if (action == 'project-move-prepare' && sourceReference != null) {
+      final health =
+          await nativeFileRequest({'action': 'health', 'interactive': true})
+              .timeout(const Duration(seconds: 4));
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
+        throw const NativeFilesException('A conta mudou.');
+      }
+      final data = health['data'];
+      if (health['status'] != 200 ||
+          data is! Map ||
+          data['projectRootMove'] != true) {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local v27 para mover a pasta inteira do projeto. Nenhum arquivo foi movido.');
+      }
+    }
     if (action == 'excel-editor-write' &&
         (kind.contains('professional') || kind.contains('profissional'))) {
       final health =
@@ -80,6 +96,7 @@ class NativeLocalFiles {
       'range': range,
       if (serviceType != null) 'serviceType': serviceType,
       if (destination != null) 'destination': destination,
+      if (sourceReference != null) 'sourceReference': sourceReference,
       if (excelReference != null) 'excelReference': excelReference,
       if (operation != null) 'operation': operation,
       if (revision != null) 'revision': revision,

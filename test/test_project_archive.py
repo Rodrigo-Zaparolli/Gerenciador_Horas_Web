@@ -11,6 +11,37 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_move_project_parent_preserves_documents_link_and_all_siblings(self):
+        self.folder_ref = self.authorize(self.source / 'Documentos', 'folder')
+        root_ref = self.authorize(self.source, 'folder')
+        (self.source / 'Proposta.pdf').write_bytes(b'proposal')
+        plan = self.request('project-move-prepare', reference=self.folder_ref,
+            sourceReference=root_ref, destination=self.destination_ref, excelReference=self.excel_ref)
+        self.assertEqual(Path(plan['source']), self.source)
+        result = self.request('project-move-commit', operation=plan['operation'])
+        target = self.destination / self.source.name
+        self.assertEqual((target / 'Proposta.pdf').read_bytes(), b'proposal')
+        with local_files._connection() as con:
+            folder = project_archive._record(local_files, con, 'owner', result['folderReference'], 'folder')
+            excel = project_archive._record(local_files, con, 'owner', result['excelReference'], 'file')
+        self.assertEqual(folder, target / 'Documentos')
+        self.assertEqual(excel, target / 'Documentos' / 'Projeto.xlsm')
+        recovered = self.request('project-move-prepare', reference=self.folder_ref,
+            sourceReference=root_ref, destination=self.destination_ref, excelReference=self.excel_ref)
+        self.assertTrue(recovered['alreadyMoved'])
+        self.assertEqual(self.request('project-move-commit', operation=recovered['operation']), result)
+
+    def test_general_or_unrelated_root_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'imediatamente'):
+            self.request('project-move-prepare', reference=self.folder_ref,
+                sourceReference=self.authorize(self.root, 'folder'), destination=self.destination_ref)
+        self.folder_ref = self.authorize(self.source / 'Documentos', 'folder')
+        for path in [self.root, self.destination]:
+            with self.assertRaisesRegex(ValueError, 'imediatamente'):
+                self.request('project-move-prepare', reference=self.folder_ref,
+                    sourceReference=self.authorize(path, 'folder'), destination=self.destination_ref)
+        self.assertTrue(self.excel.exists())
+
     def test_missing_links_can_be_authorized_in_place_then_moved(self):
         with local_files._connection() as con:
             con.execute('DELETE FROM files WHERE uid=?', ('owner',))
