@@ -4276,7 +4276,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               content: Text(
                 folderMoved
                     ? 'Projeto ${project.id} finalizado. Pasta movida e vínculos atualizados.'
-                    : 'Projeto ${project.id} finalizado. A pasta não foi movida.',
+                    : 'Projeto ${project.id} finalizado.',
               ),
               backgroundColor: CoresApp.sucesso,
               behavior: SnackBarBehavior.floating,
