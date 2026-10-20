@@ -5,10 +5,12 @@ class EmailRecipientFields extends StatefulWidget {
   final List<EmailContact> contacts;
   final VoidCallback onChanged;
   final Future<EmailContact?> Function()? pickCompanyContact;
+  final List<EmailContact> companyContacts;
   const EmailRecipientFields(
       {super.key,
       required this.contacts,
       required this.onChanged,
+      this.companyContacts = const [],
       this.pickCompanyContact});
   @override
   State<EmailRecipientFields> createState() => EmailRecipientFieldsState();
@@ -78,6 +80,22 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
       matches.first.destination = destination;
     }
     widget.onChanged();
+  }
+
+  void _selectCompany(EmailContact contact, String destination) {
+    final matches = widget.contacts
+        .where((c) =>
+            c.email.trim().toLowerCase() == contact.email.trim().toLowerCase())
+        .toList();
+    if (matches.isEmpty) {
+      widget.contacts.add(EmailContact(
+          name: contact.name,
+          email: contact.email.trim(),
+          group: contact.group));
+    } else if (matches.first.name.trim().isEmpty) {
+      matches.first.name = contact.name;
+    }
+    _select(contact.email.trim(), destination);
   }
 
   @override
@@ -162,14 +180,9 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
                                 'Este contato já está em $opposite.');
                             return;
                           }
-                          if (!widget.contacts.any((c) =>
-                              c.email.trim().toLowerCase() ==
-                              contact.email.trim().toLowerCase())) {
-                            widget.contacts.add(contact);
-                          }
                           setState(() {
                             _errors.remove(destination);
-                            _select(contact.email, destination);
+                            _selectCompany(contact, destination);
                           });
                         } catch (e) {
                           if (mounted)
@@ -190,7 +203,8 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
                                 ])),
                             const PopupMenuDivider(),
                           ],
-                          if (!widget.contacts.any(_available))
+                          if (!widget.contacts.any(_available) &&
+                              !widget.companyContacts.any(_available))
                             const PopupMenuItem(
                                 enabled: false,
                                 child: Text(
@@ -200,10 +214,27 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
                                 value: c.email.trim(),
                                 child: Text(c.name.isEmpty
                                     ? c.email
-                                    : '${c.name} — ${c.email}'))
+                                    : '${c.name} — ${c.email}')),
+                          if (widget.companyContacts.any(_available)) ...[
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                                enabled: false,
+                                child: Text('Colaboradores cadastrados')),
+                            for (final c
+                                in widget.companyContacts.where(_available))
+                              PopupMenuItem(
+                                  value: 'company:${c.email.trim()}',
+                                  child: Text('${c.name} — ${c.email}')),
+                          ]
                         ],
                     onSelected: (email) {
-                      if (email == '__all__') {
+                      if (email.startsWith('company:')) {
+                        final address = email.substring('company:'.length);
+                        final contact = widget.companyContacts
+                            .where((c) => c.email.trim() == address);
+                        if (contact.isNotEmpty && _available(contact.first))
+                          _selectCompany(contact.first, destination);
+                      } else if (email == '__all__') {
                         final emails = widget.contacts
                             .where(_available)
                             .map((c) => c.email.trim().toLowerCase())

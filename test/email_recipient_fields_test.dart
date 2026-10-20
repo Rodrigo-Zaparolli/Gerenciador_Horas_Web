@@ -5,6 +5,32 @@ import 'package:gerenciador_horas/features/project_emails/email_recipient_fields
 
 void main() {
   testWidgets(
+      'Plus menu inserts registered collaborator name and email and excludes Cc duplicate',
+      (tester) async {
+    final contacts = <EmailContact>[];
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: StatefulBuilder(
+                builder: (context, setState) => EmailRecipientFields(
+                    contacts: contacts,
+                    companyContacts: [
+                      EmailContact(name: 'Ana', email: 'ana@empresa.com')
+                    ],
+                    onChanged: () => setState(() {}))))));
+    await tester.tap(find.byTooltip('Adicionar em Para'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ana — ana@empresa.com'));
+    await tester.pumpAndSettle();
+    expect(contacts.single.name, 'Ana');
+    expect(contacts.single.email, 'ana@empresa.com');
+    expect(contacts.single.destination, 'Para');
+    expect(find.text('Ana\nana@empresa.com'), findsOneWidget);
+    await tester.tap(find.byTooltip('Adicionar em Cc'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana — ana@empresa.com'), findsNothing);
+    expect(contacts, hasLength(1));
+  });
+  testWidgets(
       'Company selection fills name and email without duplicating Para in Cc',
       (tester) async {
     final contacts = <EmailContact>[];

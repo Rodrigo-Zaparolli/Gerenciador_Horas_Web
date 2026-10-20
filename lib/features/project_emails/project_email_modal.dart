@@ -1053,6 +1053,15 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                                     EmailRecipientFields(
                                         key: _recipientKey,
                                         contacts: _contacts,
+                                        companyContacts:
+                                            !_companyContactsAllowed
+                                                ? const []
+                                                : [
+                                                    for (final c in _directory)
+                                                      EmailContact(
+                                                          name: c.name,
+                                                          email: c.email)
+                                                  ],
                                         pickCompanyContact:
                                             !_companyContactsAllowed
                                                 ? null

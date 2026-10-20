@@ -59,5 +59,8 @@ Na planilha, selecionar um nome de contato preenche o e-mail pareado, exceto
 campos calculados. Nos três modelos de e-mail, o cadastro permite seleção nos
 campos Para/Cc e sugestões nos nomes dos contatos. Não adiciona destinatários
 automaticamente nem permite repetir um endereço entre Para e Cc.
+O botão + de cada campo também lista os colaboradores cadastrados e insere
+nome e e-mail juntos; Adicionar todos continua selecionando somente os
+contatos disponíveis do projeto, sem incluir todo o cadastro da companhia.
 Ambos os recursos permanecem restritos à conta piloto, com dados sob o UID
 e as regras existentes do Firestore. Não alteram a integração local v22.
