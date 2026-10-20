@@ -4,23 +4,55 @@ import 'package:gerenciador_horas/features/project_emails/email_document.dart';
 import 'package:gerenciador_horas/features/project_emails/email_recipient_fields.dart';
 
 void main() {
+  testWidgets(
+      'Company selection fills name and email without duplicating Para in Cc',
+      (tester) async {
+    final contacts = <EmailContact>[];
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: StatefulBuilder(
+                builder: (context, setState) => EmailRecipientFields(
+                    contacts: contacts,
+                    onChanged: () => setState(() {}),
+                    pickCompanyContact: () async => EmailContact(
+                        name: 'Ana', email: 'ana@empresa.com'))))));
+    await tester.tap(find.byTooltip('Buscar colaborador para Para'));
+    await tester.pumpAndSettle();
+    expect(contacts.single.name, 'Ana');
+    expect(contacts.single.destination, 'Para');
+    expect(find.text('Ana\nana@empresa.com'), findsOneWidget);
+    await tester.tap(find.byTooltip('Buscar colaborador para Cc'));
+    await tester.pumpAndSettle();
+    expect(contacts, hasLength(1));
+    expect(contacts.single.destination, 'Para');
+    expect(find.textContaining('Este contato já está em Para'), findsOneWidget);
+  });
   for (final width in [360.0, 1000.0]) {
-    testWidgets('all imported addresses wrap and remain reachable at width $width', (tester) async {
+    testWidgets(
+        'all imported addresses wrap and remain reachable at width $width',
+        (tester) async {
       tester.view.physicalSize = Size(width, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final contacts = List.generate(16, (i) => EmailContact(
-        name: 'Contato importado $i', email: 'contato$i@example.com',
-        destination: i < 8 ? 'Para' : 'Cc'));
-      await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12), child: EmailRecipientFields(
-          contacts: contacts, onChanged: () {})))));
+      final contacts = List.generate(
+          16,
+          (i) => EmailContact(
+              name: 'Contato importado $i',
+              email: 'contato$i@example.com',
+              destination: i < 8 ? 'Para' : 'Cc'));
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: EmailRecipientFields(
+                      contacts: contacts, onChanged: () {})))));
       await tester.pumpAndSettle();
       expect(find.byType(InputChip), findsNWidgets(16));
       final first = find.text('Contato importado 0\ncontato0@example.com');
       final eighth = find.text('Contato importado 7\ncontato7@example.com');
-      expect(tester.getRect(eighth).top, greaterThan(tester.getRect(first).top));
+      expect(
+          tester.getRect(eighth).top, greaterThan(tester.getRect(first).top));
       final last = find.text('Contato importado 15\ncontato15@example.com');
       await tester.ensureVisible(last);
       await tester.pumpAndSettle();
@@ -33,20 +65,34 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  testWidgets('Para and Cc exclude each other, including typed emails and add all', (tester) async {
-    final contacts = [EmailContact(name: 'Cliente', email: 'cliente@example.com', group: 'Cliente')];
+  testWidgets(
+      'Para and Cc exclude each other, including typed emails and add all',
+      (tester) async {
+    final contacts = [
+      EmailContact(
+          name: 'Cliente', email: 'cliente@example.com', group: 'Cliente')
+    ];
     final key = GlobalKey<EmailRecipientFieldsState>();
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: StatefulBuilder(
-        builder: (context, setState) => EmailRecipientFields(key: key,
-            contacts: contacts, onChanged: () => setState(() {}))))));
-    Finder field(String label) => find.byKey(ValueKey('recipient-input-$label'));
-    await tester.enterText(field('Para'), 'CLIENTE@example.com;novo@example.com');
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: StatefulBuilder(
+                builder: (context, setState) => EmailRecipientFields(
+                    key: key,
+                    contacts: contacts,
+                    onChanged: () => setState(() {}))))));
+    Finder field(String label) =>
+        find.byKey(ValueKey('recipient-input-$label'));
+    await tester.enterText(
+        field('Para'), 'CLIENTE@example.com;novo@example.com');
     expect(key.currentState!.commitPending(), isTrue);
     await tester.pumpAndSettle();
     expect(contacts.length, 2);
     expect(contacts.where((c) => c.destination == 'Para').length, 2);
-    expect(find.descendant(of: find.byKey(const ValueKey('recipient-container-Para')),
-        matching: find.byType(InputChip)), findsNWidgets(2));
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('recipient-container-Para')),
+            matching: find.byType(InputChip)),
+        findsNWidgets(2));
     await tester.enterText(field('Cc'), 'cliente@example.com');
     expect(key.currentState!.commitPending(), isFalse);
     await tester.pumpAndSettle();

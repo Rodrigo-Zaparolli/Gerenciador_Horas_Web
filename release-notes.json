@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "Corrigida a abertura do editor quando a planilha tem datas armazenadas como texto ou instruções do modelo, evitando o erro could not convert string to float. Os valores não são alterados automaticamente.",
-                    "A correção de leitura exige a atualização local spreadsheet-dates-22 no computador que acessa o arquivo. O acesso permanece exclusivo para rodrigozaparolli79@gmail.com.",
-                    "Concluída a correção do ícone de E-mails, desenhado como envelope sem depender da fonte de ícones."
+                    "Planilha do projeto: os dados importados agora ficam salvos no sistema e são reutilizados nas próximas aberturas, com data da última sincronização e atualização manual pelo Excel.",
+                    "Novo cadastro de colaboradores com nome, e-mail, busca, edição e exclusão, disponível na planilha do projeto e nos e-mails. Selecionar um nome preenche o e-mail correspondente.",
+                    "Para e Cc permitem buscar colaboradores cadastrados, mantendo os endereços sem duplicação entre os dois campos. Novidades liberadas inicialmente apenas para rodrigozaparolli79@gmail.com; a integração local continua na versão spreadsheet-dates-22."
                 ]
 }

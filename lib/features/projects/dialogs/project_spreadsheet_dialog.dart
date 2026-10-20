@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'spreadsheet_store.dart';
+import 'company_contacts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
@@ -6,8 +8,16 @@ import '../../../data/services/native_local_files_service.dart';
 import '../../../domain/models/project_model.dart';
 
 class ProjectSpreadsheetDialog extends StatefulWidget {
-  const ProjectSpreadsheetDialog({super.key, required this.project,
-    this.uidProvider, this.emailProvider, this.transport});
+  const ProjectSpreadsheetDialog(
+      {super.key,
+      required this.project,
+      this.uidProvider,
+      this.emailProvider,
+      this.transport,
+      this.contactsLoader,
+      this.store});
+  final Future<List<CompanyContact>> Function()? contactsLoader;
+  final SpreadsheetStore? store;
   final ProjectModel project;
   final String? Function()? uidProvider, emailProvider;
   final Future<Map<String, dynamic>> Function(Map<String, dynamic>)? transport;
@@ -31,34 +41,54 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Map<String, dynamic>? data;
   String? error, notice, owner;
   bool busy = false;
+  List<CompanyContact> contacts = [];
+  SpreadsheetStore? get store =>
+      widget.store ??
+      (widget.transport == null ? FirebaseSpreadsheetStore() : null);
   String search = '', filter = 'Todas';
   StreamSubscription<User?>? subscription;
-  String? get uid => widget.uidProvider != null ? widget.uidProvider!() : FirebaseAuth.instance.currentUser?.uid;
-  String? get email => widget.emailProvider != null ? widget.emailProvider!() : FirebaseAuth.instance.currentUser?.email;
+  String? get uid => widget.uidProvider != null
+      ? widget.uidProvider!()
+      : FirebaseAuth.instance.currentUser?.uid;
+  String? get email => widget.emailProvider != null
+      ? widget.emailProvider!()
+      : FirebaseAuth.instance.currentUser?.email;
   bool get authorized {
     return uid == owner && PilotFeatureAccess.allows(uid: uid, email: email);
   }
 
-  Future<Map<String, dynamic>> request(String action, {String? revision, List<Map<String, dynamic>>? changes}) {
-    if (widget.transport != null) return widget.transport!({'action': action,
-      'reference': widget.project.excelLink, if (revision != null) 'revision': revision, if (changes != null) 'changes': changes});
-    return NativeLocalFiles.call(action, reference: widget.project.excelLink, revision: revision, changes: changes);
+  Future<Map<String, dynamic>> request(String action,
+      {String? revision, List<Map<String, dynamic>>? changes}) {
+    if (widget.transport != null)
+      return widget.transport!({
+        'action': action,
+        'reference': widget.project.excelLink,
+        if (revision != null) 'revision': revision,
+        if (changes != null) 'changes': changes
+      });
+    return NativeLocalFiles.call(action,
+        reference: widget.project.excelLink,
+        revision: revision,
+        changes: changes);
   }
 
   @override
   void initState() {
     super.initState();
     owner = uid;
-    if (widget.uidProvider == null) subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
-      if (mounted && !authorized) {
-        setState(() {
-          data = null;
-          pending.clear();
-          error = 'A conta mudou. Feche esta janela e entre novamente.';
-        });
-      }
-    });
-    load();
+    if (widget.uidProvider == null)
+      subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+        if (mounted && !authorized) {
+          setState(() {
+            data = null;
+            pending.clear();
+            error = 'A conta mudou. Feche esta janela e entre novamente.';
+          });
+        }
+      });
+    openSaved();
+    if (widget.uidProvider == null || widget.contactsLoader != null)
+      loadContacts();
   }
 
   @override
@@ -85,6 +115,68 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                       ])) ==
           true;
 
+  Future<void> loadContacts() async {
+    try {
+      final result =
+          await (widget.contactsLoader?.call() ?? CompanyContacts.load());
+      if (mounted && authorized) setState(() => contacts = result);
+    } catch (e) {
+      if (mounted && authorized)
+        setState(
+            () => notice = 'Não foi possível carregar os colaboradores: $e');
+    }
+  }
+
+  Future<void> openSaved() async {
+    if (!authorized) return;
+    setState(() => busy = true);
+    String? warning;
+    try {
+      final saved = await store?.load(
+          owner!, widget.project.id, widget.project.excelLink ?? '');
+      if (!mounted || !authorized) return;
+      if (saved != null) {
+        setState(() {
+          data = saved;
+          busy = false;
+        });
+        return;
+      }
+    } catch (e) {
+      warning = 'Não foi possível carregar a cópia salva: $e';
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+    if (mounted && authorized) {
+      await load();
+      if (mounted && authorized && warning != null)
+        setState(() => notice = warning);
+    }
+  }
+
+  Future<void> remember(Map<String, dynamic> result) async {
+    if (!authorized || store == null) return;
+    final stamp = DateTime.now().toIso8601String();
+    try {
+      await store!.save(
+          owner!, widget.project.id, widget.project.excelLink ?? '', result);
+      if (mounted && authorized)
+        setState(() => data = {...result, 'syncedAt': stamp});
+    } catch (e) {
+      if (mounted && authorized)
+        setState(() => notice =
+            'O Excel foi lido/gravado, mas a cópia no sistema não foi atualizada. Use Salvar cópia no sistema para tentar novamente. $e');
+    }
+  }
+
+  String get synchronizationLabel {
+    final date =
+        DateTime.tryParse(data?['syncedAt']?.toString() ?? '')?.toLocal();
+    if (date == null) return 'Cópia ainda não salva no sistema';
+    return 'Última sincronização: ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}. Atualize do Excel para buscar alterações externas.';
+  }
+
   Future<void> load() async {
     if (!authorized || busy || !await discard() || !mounted) return;
     setState(() {
@@ -99,6 +191,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           pending.clear();
           notice = null;
         });
+      if (mounted && authorized) await remember(result);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
@@ -127,6 +220,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           notice =
               'Planilha atualizada e conferida. Backup: ${result['backup']}';
         });
+      if (mounted && authorized) await remember(result);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
@@ -162,6 +256,49 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Widget input(Map<String, dynamic> field) {
     final label = field['label'] as String;
     final kind = field['kind'];
+    if (label.endsWith('— Nome') &&
+        contacts.isNotEmpty &&
+        field['readOnly'] != true) {
+      return Autocomplete<CompanyContact>(
+          key: ValueKey('${data!['revision']}:${keyOf(field)}'),
+          initialValue: TextEditingValue(text: current(field).toString()),
+          displayStringForOption: (c) => c.name,
+          optionsBuilder: (text) => contacts.where((c) => '${c.name} ${c.email}'
+              .toLowerCase()
+              .contains(text.text.toLowerCase())),
+          onSelected: (c) {
+            if (busy || !authorized) return;
+            change(field, c.name);
+            final address = (data!['fields'] as List)
+                .cast<Map<String, dynamic>>()
+                .where((f) =>
+                    f['group'] == field['group'] &&
+                    f['label'] == label.replaceFirst('— Nome', '— E-mail'));
+            if (address.isNotEmpty && address.first['readOnly'] != true)
+              change(address.first, c.email);
+          },
+          optionsViewBuilder: (context, select, options) => Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                  elevation: 4,
+                  child: SizedBox(
+                      width: 340,
+                      height: 220,
+                      child: ListView(children: [
+                        for (final c in options)
+                          ListTile(
+                              title: Text(c.name),
+                              subtitle: Text(c.email),
+                              onTap: () => select(c))
+                      ])))),
+          fieldViewBuilder: (context, controller, focus, submit) =>
+              TextFormField(
+                  controller: controller,
+                  focusNode: focus,
+                  enabled: !busy && authorized,
+                  decoration: InputDecoration(labelText: label),
+                  onChanged: (v) => change(field, v)));
+    }
     if (kind == 'yesno')
       return DropdownButtonFormField<String>(
           key: ValueKey('${data!['revision']}:${keyOf(field)}'),
@@ -201,12 +338,16 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                 });
     }
     return TextFormField(
-        key: ValueKey('${data!['revision']}:${keyOf(field)}'),
+        key: ValueKey(
+            '${data!['revision']}:${keyOf(field)}:${field['label'].toString().endsWith('— E-mail') ? current(field) : ''}'),
         initialValue: current(field).toString(),
-      enabled: !busy && authorized,
-      readOnly: field['readOnly'] == true,
+        enabled: !busy && authorized,
+        readOnly: field['readOnly'] == true,
         obscureText: label.toLowerCase().contains('senha'),
-      decoration: InputDecoration(labelText: label, helperText: field['readOnly'] == true ? 'Calculado pelo Excel' : null),
+        decoration: InputDecoration(
+            labelText: label,
+            helperText:
+                field['readOnly'] == true ? 'Calculado pelo Excel' : null),
         maxLength: 10000,
         buildCounter: (_,
                 {required currentLength, required isFocused, maxLength}) =>
@@ -217,8 +358,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Widget entry() {
     final fields = (data!['fields'] as List).cast<Map<String, dynamic>>();
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const Padding(padding: EdgeInsets.only(bottom: 12), child: Text(
-        'Alterar os produtos não executa o botão “Atualizar Planilha de Implantação”. Use esse botão no Excel quando necessário.')),
+      const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+              'Alterar os produtos não executa o botão “Atualizar Planilha de Implantação”. Use esse botão no Excel quando necessário.')),
       for (final group in fields.map((f) => f['group'] as String).toSet())
         Card(
             child: Padding(
@@ -368,6 +511,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                         Padding(
                             padding: const EdgeInsets.all(12),
                             child: SelectableText(notice!)),
+                      if (data != null && authorized)
+                        Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(synchronizationLabel,
+                                style: Theme.of(context).textTheme.bodySmall)),
                       const TabBar(tabs: [
                         Tab(text: 'Informações de entrada'),
                         Tab(text: 'Checklist-Processo')
@@ -393,6 +541,35 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                     onPressed:
                                         busy || !authorized ? null : load,
                                     child: const Text('Recarregar do Excel')),
+                                if (widget.uidProvider == null)
+                                  OutlinedButton.icon(
+                                      icon: const Icon(Icons.people_outline),
+                                      label: const Text('Colaboradores'),
+                                      onPressed: busy || !authorized
+                                          ? null
+                                          : () async {
+                                              await CompanyContacts.show(
+                                                  context);
+                                              if (mounted && authorized)
+                                                await loadContacts();
+                                            }),
+                                if (data != null &&
+                                    pending.isEmpty &&
+                                    store != null)
+                                  TextButton(
+                                      onPressed: busy || !authorized
+                                          ? null
+                                          : () async {
+                                              setState(() {
+                                                busy = true;
+                                                notice = null;
+                                              });
+                                              await remember(data!);
+                                              if (mounted)
+                                                setState(() => busy = false);
+                                            },
+                                      child: const Text(
+                                          'Salvar cópia no sistema')),
                                 TextButton(
                                     onPressed: busy ? null : close,
                                     child: const Text('Cancelar')),

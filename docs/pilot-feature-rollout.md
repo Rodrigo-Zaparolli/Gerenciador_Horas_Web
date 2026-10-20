@@ -38,3 +38,26 @@ quando necessário. O arquivo enviado para análise não foi modificado pelos te
 Desde spreadsheet-dates-22, a leitura aceita datas como números do Excel,
 texto brasileiro ou ISO. Instruções do modelo são exibidas como texto sem
 alterar as células automaticamente nem impedir a abertura da planilha.
+
+## Cópia da planilha no sistema e colaboradores
+
+O editor salva os campos mapeados, tarefas, revisão e nome do arquivo em
+`users/{uid}/projects/{project}/spreadsheet/snapshot`, com referência original,
+versão do esquema e data de sincronização. O conteúdo é JSON em um campo sem
+consultas internas, limitado a 850 KB. Referência diferente invalida a cópia.
+Na reabertura, utiliza a cópia; não inicia Excel nem pede integração local.
+Recarregar do Excel busca alterações externas. Ao salvar, a integração continua
+conferindo a revisão do arquivo antes de gravar. Apenas a resposta confirmada
+substitui a cópia salva. Edições pendentes continuam locais e exigem confirmação
+para descarte. Falha no Firebase após gravação confirmada não repete a gravação
+no Excel; a ação Salvar cópia no sistema tenta apenas a persistência da cópia.
+
+O cadastro de colaboradores fica em `users/{uid}/company_contacts`, separado
+dos projetos e das contas de acesso ao app. Permite nome, e-mail, busca,
+edição e exclusão, sem cadastrar automaticamente os contatos do cliente.
+Na planilha, selecionar um nome de contato preenche o e-mail pareado, exceto
+campos calculados. Nos três modelos de e-mail, o cadastro permite seleção nos
+campos Para/Cc e sugestões nos nomes dos contatos. Não adiciona destinatários
+automaticamente nem permite repetir um endereço entre Para e Cc.
+Ambos os recursos permanecem restritos à conta piloto, com dados sob o UID
+e as regras existentes do Firestore. Não alteram a integração local v22.

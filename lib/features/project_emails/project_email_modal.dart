@@ -20,6 +20,9 @@ import 'email_draft_store.dart';
 import 'products_image_field.dart';
 import 'email_body_preview.dart';
 import 'email_recipient_fields.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/config/pilot_feature_access.dart';
+import '../projects/dialogs/company_contacts.dart';
 
 class ProjectEmailModal extends StatefulWidget {
   final ProjectModel project;
@@ -44,6 +47,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   final _subject = TextEditingController(), _body = TextEditingController();
   final _contacts = <EmailContact>[];
   final _projectContacts = <EmailContact>[];
+  List<CompanyContact> _directory = [];
+  int _directorySelection = 0;
   bool _projectContactsLoaded = false;
   final _recipientKey = GlobalKey<EmailRecipientFieldsState>();
   final _attachments = <EmailAttachment>[];
@@ -81,6 +86,11 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       _customBody = false,
       _customSubject = false;
   bool get _sameAccount => _uid != null && _store.currentUserId == _uid;
+  bool get _companyContactsAllowed =>
+      widget.store == null &&
+      _sameAccount &&
+      PilotFeatureAccess.allows(
+          uid: _uid, email: FirebaseAuth.instance.currentUser?.email);
   @override
   void initState() {
     super.initState();
@@ -90,6 +100,19 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       _fields[field] = TextEditingController();
     }
     _load();
+    if (_companyContactsAllowed) _loadCompanyDirectory();
+  }
+
+  Future<void> _loadCompanyDirectory() async {
+    try {
+      final result = await CompanyContacts.load();
+      if (mounted && _companyContactsAllowed)
+        setState(() => _directory = result);
+    } catch (e) {
+      if (mounted && _sameAccount)
+        setState(
+            () => _message = 'Não foi possível carregar os colaboradores: $e');
+    }
   }
 
   Map<String, String> get _values => {
@@ -164,7 +187,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           for (final other
               in ProjectEmailKind.values.where((kind) => kind != _kind)) {
             shared = _cache[other] ??
-                RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}') ??
+                RecoverableDraft.read(
+                    _uid, 'email.${widget.project.id}.${other.name}') ??
                 await _store.loadDraft(_uid!, widget.project.id, other);
             if (shared != null) break;
           }
@@ -182,18 +206,21 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       }
       if (!_projectContactsLoaded) {
         final sources = await Future.wait([
-          for (final other in ProjectEmailKind.values.where((kind) => kind != _kind))
+          for (final other
+              in ProjectEmailKind.values.where((kind) => kind != _kind))
             () async {
               try {
                 return [
                   _cache[other],
-                  RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}'),
+                  RecoverableDraft.read(
+                      _uid, 'email.${widget.project.id}.${other.name}'),
                   await _store.loadDraft(_uid!, widget.project.id, other),
                 ];
               } catch (_) {
                 return [
                   _cache[other],
-                  RecoverableDraft.read(_uid, 'email.${widget.project.id}.${other.name}'),
+                  RecoverableDraft.read(
+                      _uid, 'email.${widget.project.id}.${other.name}'),
                 ];
               }
             }(),
@@ -414,7 +441,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
 
   Future<void> _generate() async {
     if (!(_recipientKey.currentState?.commitPending() ?? true)) {
-      await _generationError('Revise os e-mails digitados nos campos Para e Cc.');
+      await _generationError(
+          'Revise os e-mails digitados nos campos Para e Cc.');
       return;
     }
     try {
@@ -447,7 +475,8 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           'data_finalizacao'
         ]
       ];
-      final missing = required.where((key) => _fields[key]!.text.trim().isEmpty);
+      final missing =
+          required.where((key) => _fields[key]!.text.trim().isEmpty);
       if (missing.isNotEmpty) {
         throw FormatException(
             'Preencha estes campos para gerar o e-mail:\n\n${missing.map((key) => '• ${emailFieldLabels[key]}').join('\n')}');
@@ -455,11 +484,14 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       if (RegExp(r'\{[a-z_]+\}').hasMatch('${_subject.text}\n${_body.text}')) {
         throw const FormatException('Preencha os campos pendentes do modelo.');
       }
-      final signature = await rootBundle.load('assets/images/email_signature_cyncly.jpg');
+      final signature =
+          await rootBundle.load('assets/images/email_signature_cyncly.jpg');
       final signatureIcons = <String, Uint8List>{};
       for (final key in ['mail', 'phone', 'web']) {
-        final data = await rootBundle.load('assets/images/email_signature_$key.png');
-        signatureIcons[key] = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        final data =
+            await rootBundle.load('assets/images/email_signature_$key.png');
+        signatureIcons[key] =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       }
       if (!mounted || !_sameAccount) return;
       final bytes = buildEmailDraft(
@@ -467,13 +499,16 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           body: _body.text,
           contacts: _contacts,
           attachments: _attachments,
-          signatureImage: signature.buffer.asUint8List(signature.offsetInBytes, signature.lengthInBytes),
+          signatureImage: signature.buffer
+              .asUint8List(signature.offsetInBytes, signature.lengthInBytes),
           signatureName: _fields['consultor']!.text.trim(),
           signatureEmail: _fields['email_consultor']!.text.trim(),
           signaturePhone: _fields['telefone_consultor']!.text.trim().isNotEmpty
               ? _fields['telefone_consultor']!.text.trim()
-              : _fields['email_consultor']!.text.trim().toLowerCase() == 'rodrigo.zaparolli@cyncly.com'
-                  ? '5430225800' : '',
+              : _fields['email_consultor']!.text.trim().toLowerCase() ==
+                      'rodrigo.zaparolli@cyncly.com'
+                  ? '5430225800'
+                  : '',
           signatureIcons: signatureIcons,
           productsImage:
               _kind == ProjectEmailKind.internal ? _productsImage : null);
@@ -494,11 +529,14 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                           // Start the web download directly in the user click.
                           if (kIsWeb) {
                             try {
-                              downloadBytes(fileName: name, bytes: bytes,
+                              downloadBytes(
+                                  fileName: name,
+                                  bytes: bytes,
                                   mimeType: 'message/rfc822');
                             } catch (error) {
                               Navigator.pop(context, false);
-                              _generationError('Não foi possível iniciar o download. Tente novamente e confira as permissões de download do navegador.');
+                              _generationError(
+                                  'Não foi possível iniciar o download. Tente novamente e confira as permissões de download do navegador.');
                               return;
                             }
                           }
@@ -525,31 +563,41 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
       if (mounted) {
         setState(() => _message =
             'Arquivo gerado. Abra no Outlook e confira antes de enviar. A edição do .eml depende da versão do Outlook.');
-        await showDialog<void>(context: context,
+        await showDialog<void>(
+            context: context,
             builder: (context) => AlertDialog(
-              title: Text(kIsWeb ? 'Download iniciado' : 'Arquivo salvo'),
-              content: Text('$name\n\n${kIsWeb ? 'Pressione Ctrl + J para conferir o download. O navegador pode perguntar onde salvar ou exibir um aviso de bloqueio.' : 'Abra o arquivo salvo no Outlook.'}\n\nO arquivo não abre o Outlook automaticamente e nenhum e-mail foi enviado.'),
-              actions: [TextButton(onPressed: () => Navigator.pop(context),
-                  child: const Text('Entendi'))],
-            ));
+                  title: Text(kIsWeb ? 'Download iniciado' : 'Arquivo salvo'),
+                  content: Text(
+                      '$name\n\n${kIsWeb ? 'Pressione Ctrl + J para conferir o download. O navegador pode perguntar onde salvar ou exibir um aviso de bloqueio.' : 'Abra o arquivo salvo no Outlook.'}\n\nO arquivo não abre o Outlook automaticamente e nenhum e-mail foi enviado.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Entendi'))
+                  ],
+                ));
       }
     } on FormatException catch (e) {
       await _generationError(e.message);
     } catch (error) {
-      await _generationError('Não foi possível gerar o arquivo. ${recoveryError(error, operation: 'gerar o e-mail')}');
+      await _generationError(
+          'Não foi possível gerar o arquivo. ${recoveryError(error, operation: 'gerar o e-mail')}');
     }
   }
 
   Future<void> _generationError(String message) async {
     if (!mounted) return;
     setState(() => _message = message);
-    await showDialog<void>(context: context,
+    await showDialog<void>(
+        context: context,
         builder: (context) => AlertDialog(
-          title: const Text('O e-mail ainda não foi gerado'),
-          content: Text(message),
-          actions: [TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Corrigir dados'))],
-        ));
+              title: const Text('O e-mail ainda não foi gerado'),
+              content: Text(message),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Corrigir dados'))
+              ],
+            ));
   }
 
   Future<void> _editTemplate() async {
@@ -651,11 +699,12 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                         child: const Text('Manter e fechar'))
                   ]));
       if (keep == null || !mounted) return;
-      if (keep && !(_recipientKey.currentState?.commitPending() ?? true)) return;
+      if (keep && !(_recipientKey.currentState?.commitPending() ?? true))
+        return;
       final snapshots = {..._cache, _kind: _snapshot()};
       if (keep) {
-        if (!_sameAccount || !snapshots.entries.every((entry) =>
-            RecoverableDraft.save(_uid,
+        if (!_sameAccount ||
+            !snapshots.entries.every((entry) => RecoverableDraft.save(_uid,
                 'email.${widget.project.id}.${entry.key.name}', entry.value))) {
           setState(() => _message =
               'Não foi possível manter o rascunho neste dispositivo. Salve no projeto antes de fechar.');
@@ -816,15 +865,33 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                           _render();
                         })),
                 const SizedBox(height: 8),
-                TextFormField(
-                    initialValue: c.name,
-                    decoration: const InputDecoration(labelText: 'Nome'),
-                    onChanged: (v) => setState(() {
-                          c.name = v;
+                Autocomplete<CompanyContact>(
+                    initialValue: TextEditingValue(text: c.name),
+                    displayStringForOption: (contact) => contact.name,
+                    optionsBuilder: (text) => _directory.where((contact) =>
+                        '${contact.name} ${contact.email}'
+                            .toLowerCase()
+                            .contains(text.text.toLowerCase())),
+                    onSelected: (contact) => setState(() {
+                          if (!_sameAccount) return;
+                          c.name = contact.name;
+                          c.email = contact.email;
+                          _directorySelection++;
                           _render();
-                        })),
+                        }),
+                    fieldViewBuilder: (context, controller, focus, submit) =>
+                        TextFormField(
+                            controller: controller,
+                            focusNode: focus,
+                            decoration:
+                                const InputDecoration(labelText: 'Nome'),
+                            onChanged: (v) => setState(() {
+                                  c.name = v;
+                                  _render();
+                                }))),
                 const SizedBox(height: 8),
                 TextFormField(
+                    key: ValueKey(('contact-email', c, _directorySelection)),
                     initialValue: c.email,
                     decoration: const InputDecoration(labelText: 'E-mail'),
                     onChanged: (v) => setState(() => c.email = v)),
@@ -888,14 +955,16 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           ExpansionTile(
               title: const Text('Editar mensagem'),
               maintainState: true,
-              onExpansionChanged: (expanded) => setState(() => _messageExpanded = expanded),
+              onExpansionChanged: (expanded) =>
+                  setState(() => _messageExpanded = expanded),
               children: [_messageEditor(visible: _messageExpanded)]),
         ] else
           _messageEditor(),
         const SizedBox(height: 12),
         Image.asset('assets/images/email_signature_cyncly.jpg',
             key: const ValueKey('email-signature-banner'),
-            width: 630, fit: BoxFit.contain),
+            width: 630,
+            fit: BoxFit.contain),
         const SizedBox(height: 12),
         Wrap(spacing: 8, children: [
           TextButton.icon(
@@ -916,13 +985,15 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
             'Revise texto, destinatários e anexos. O rascunho não é enviado automaticamente.',
             style: TextStyle(fontSize: 12)),
       ]));
-  Widget _messageEditor({bool visible = true}) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    TextField(
-      controller: _body,
-      minLines: 20,
-      maxLines: null,
-      decoration: const InputDecoration(labelText: 'Mensagem — editável'),
-      onChanged: (_) => setState(() => _customBody = true))]);
+  Widget _messageEditor({bool visible = true}) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextField(
+            controller: _body,
+            minLines: 20,
+            maxLines: null,
+            decoration: const InputDecoration(labelText: 'Mensagem — editável'),
+            onChanged: (_) => setState(() => _customBody = true))
+      ]);
   @override
   Widget build(BuildContext context) {
     AppAppearance.watch(context);
@@ -933,138 +1004,182 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           if (!didPop) _close();
         },
         child: Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        backgroundColor: AppPalette.surface,
-        child: SizedBox(
-            width: 1380,
-            height: MediaQuery.sizeOf(context).height * .92,
-            child: Column(children: [
-              if (_localStatus.isNotEmpty)
-                Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-                    child: Text(_localStatus,
-                        style: TextStyle(
-                            color: AppPalette.secondary, fontSize: 12))),
-              Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(children: [
-                    Icon(Icons.mail_outline, color: AppPalette.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          const Text('E-mails do projeto',
-                              style: TextStyle(
-                                  fontSize: 24, fontWeight: FontWeight.bold)),
-                          Text(
-                              '${widget.project.id} • ${widget.project.client} • Enterprise',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis)
-                        ])),
-                    IconButton(
-                        onPressed: _close,
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Fechar')
-                  ])),
-              if (_busy) const LinearProgressIndicator(),
-              const Divider(height: 1),
-              Expanded(
-                  child: AbsorbPointer(
-                      absorbing: _busy || !_ready,
-                      child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                EmailRecipientFields(
-                                    key: _recipientKey,
-                                    contacts: _contacts,
-                                    onChanged: () => setState(_render)),
-                                const Divider(),
-
-                                Wrap(spacing: 8, runSpacing: 8, children: [
-                                  for (final kind in ProjectEmailKind.values)
-                                    ChoiceChip(
-                                        label: Text(kind.label),
-                                        selected: kind == _kind,
-                                        onSelected: (_) {
-                                          if (kind == _kind) return;
-                                          if (!(_recipientKey.currentState?.commitPending() ?? true)) return;
-                                          _recoverLocally();
-                                          _cache[_kind] = _snapshot();
-                                          _attachments.clear();
-                                          _kind = kind;
-                                          _messageExpanded = false;
-                                          _load();
-                                        })
-                                ]),
-                                const SizedBox(height: 14),
-                                Wrap(spacing: 8, runSpacing: 8, children: [
-                                  FilledButton.icon(
-                                      onPressed: () => setState(() {
-                                            _customBody = false;
-                                            _customSubject = false;
-                                            _render();
-                                            _message =
-                                                'Dados carregados no modelo de e-mail. Revise a mensagem; o assunto e o texto foram atualizados conforme os campos preenchidos.';
-                                          }),
-                                      icon: const Icon(Icons.mail_outline),
-                                      label: const Text(
-                                          'Carregar dados no modelo')),
-                                  OutlinedButton.icon(
-                                      onPressed: _import,
-                                      icon: const Icon(
-                                          Icons.table_chart_outlined),
-                                      label: const Text(
-                                          'Atualizar da planilha do projeto')),
-                                  TextButton(
-                                      onPressed: () => _import(linked: false),
-                                      child: const Text('Selecionar planilha'))
-                                ]),
-                                Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                    child: Text(_message,
-                                        style: TextStyle(
-                                            color: AppPalette.secondary))),
-                                LayoutBuilder(
-                                    builder: (context, c) => c.maxWidth >= 900
-                                        ? Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                                Expanded(
-                                                    flex: 2,
-                                                    child: _dataPanel()),
-                                                const SizedBox(width: 16),
-                                                Expanded(
-                                                    flex: 3, child: _preview())
-                                              ])
-                                        : Column(children: [
-                                            _dataPanel(),
-                                            const SizedBox(height: 16),
-                                            _preview()
-                                          ])),
-                                const SizedBox(height: 16),
-                              ])))),
-              const Divider(height: 1),
-              Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Wrap(spacing: 10, runSpacing: 8, children: [
-                    OutlinedButton.icon(
-                        onPressed: _busy || !_ready ? null : _save,
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('Salvar neste projeto')),
-                    TextButton(
-                        onPressed: _busy || !_ready ? null : _editTemplate,
-                        child: const Text('Editar modelo padrão')),
-                    FilledButton.icon(
-                        onPressed: _busy || !_ready ? null : _generate,
-                        icon: const Icon(Icons.mail_outline),
-                        label: const Text('Gerar e-mail para Outlook'))
-                  ])),
-            ]))));
+            insetPadding: const EdgeInsets.all(16),
+            backgroundColor: AppPalette.surface,
+            child: SizedBox(
+                width: 1380,
+                height: MediaQuery.sizeOf(context).height * .92,
+                child: Column(children: [
+                  if (_localStatus.isNotEmpty)
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                        child: Text(_localStatus,
+                            style: TextStyle(
+                                color: AppPalette.secondary, fontSize: 12))),
+                  Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(children: [
+                        Icon(Icons.mail_outline, color: AppPalette.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              const Text('E-mails do projeto',
+                                  style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                  '${widget.project.id} • ${widget.project.client} • Enterprise',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis)
+                            ])),
+                        IconButton(
+                            onPressed: _close,
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Fechar')
+                      ])),
+                  if (_busy) const LinearProgressIndicator(),
+                  const Divider(height: 1),
+                  Expanded(
+                      child: AbsorbPointer(
+                          absorbing: _busy || !_ready,
+                          child: SingleChildScrollView(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 18),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    EmailRecipientFields(
+                                        key: _recipientKey,
+                                        contacts: _contacts,
+                                        pickCompanyContact:
+                                            !_companyContactsAllowed
+                                                ? null
+                                                : () async {
+                                                    final contact =
+                                                        await CompanyContacts
+                                                            .pick(context);
+                                                    if (!_sameAccount ||
+                                                        !_companyContactsAllowed ||
+                                                        contact == null)
+                                                      return null;
+                                                    return EmailContact(
+                                                        name: contact.name,
+                                                        email: contact.email);
+                                                  },
+                                        onChanged: () => setState(_render)),
+                                    if (_companyContactsAllowed)
+                                      Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: TextButton.icon(
+                                              icon: const Icon(
+                                                  Icons.people_outline),
+                                              label: const Text(
+                                                  'Cadastro de colaboradores'),
+                                              onPressed: () async {
+                                                try {
+                                                  await CompanyContacts.show(
+                                                      context);
+                                                  if (mounted &&
+                                                      _companyContactsAllowed)
+                                                    await _loadCompanyDirectory();
+                                                } catch (e) {
+                                                  if (mounted && _sameAccount)
+                                                    setState(() => _message =
+                                                        e.toString());
+                                                }
+                                              })),
+                                    const Divider(),
+                                    Wrap(spacing: 8, runSpacing: 8, children: [
+                                      for (final kind
+                                          in ProjectEmailKind.values)
+                                        ChoiceChip(
+                                            label: Text(kind.label),
+                                            selected: kind == _kind,
+                                            onSelected: (_) {
+                                              if (kind == _kind) return;
+                                              if (!(_recipientKey.currentState
+                                                      ?.commitPending() ??
+                                                  true)) return;
+                                              _recoverLocally();
+                                              _cache[_kind] = _snapshot();
+                                              _attachments.clear();
+                                              _kind = kind;
+                                              _messageExpanded = false;
+                                              _load();
+                                            })
+                                    ]),
+                                    const SizedBox(height: 14),
+                                    Wrap(spacing: 8, runSpacing: 8, children: [
+                                      FilledButton.icon(
+                                          onPressed: () => setState(() {
+                                                _customBody = false;
+                                                _customSubject = false;
+                                                _render();
+                                                _message =
+                                                    'Dados carregados no modelo de e-mail. Revise a mensagem; o assunto e o texto foram atualizados conforme os campos preenchidos.';
+                                              }),
+                                          icon: const Icon(Icons.mail_outline),
+                                          label: const Text(
+                                              'Carregar dados no modelo')),
+                                      OutlinedButton.icon(
+                                          onPressed: _import,
+                                          icon: const Icon(
+                                              Icons.table_chart_outlined),
+                                          label: const Text(
+                                              'Atualizar da planilha do projeto')),
+                                      TextButton(
+                                          onPressed: () =>
+                                              _import(linked: false),
+                                          child:
+                                              const Text('Selecionar planilha'))
+                                    ]),
+                                    Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                        child: Text(_message,
+                                            style: TextStyle(
+                                                color: AppPalette.secondary))),
+                                    LayoutBuilder(
+                                        builder: (context, c) => c.maxWidth >=
+                                                900
+                                            ? Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                    Expanded(
+                                                        flex: 2,
+                                                        child: _dataPanel()),
+                                                    const SizedBox(width: 16),
+                                                    Expanded(
+                                                        flex: 3,
+                                                        child: _preview())
+                                                  ])
+                                            : Column(children: [
+                                                _dataPanel(),
+                                                const SizedBox(height: 16),
+                                                _preview()
+                                              ])),
+                                    const SizedBox(height: 16),
+                                  ])))),
+                  const Divider(height: 1),
+                  Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Wrap(spacing: 10, runSpacing: 8, children: [
+                        OutlinedButton.icon(
+                            onPressed: _busy || !_ready ? null : _save,
+                            icon: const Icon(Icons.save_outlined),
+                            label: const Text('Salvar neste projeto')),
+                        TextButton(
+                            onPressed: _busy || !_ready ? null : _editTemplate,
+                            child: const Text('Editar modelo padrão')),
+                        FilledButton.icon(
+                            onPressed: _busy || !_ready ? null : _generate,
+                            icon: const Icon(Icons.mail_outline),
+                            label: const Text('Gerar e-mail para Outlook'))
+                      ])),
+                ]))));
   }
 
   @override
