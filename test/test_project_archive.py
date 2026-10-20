@@ -1,4 +1,5 @@
 import os
+import json
 os.environ['EDESK_LOCAL_MODE'] = 'true'
 import tempfile
 import unittest
@@ -10,6 +11,44 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_cloud_file_tags_are_not_confused_with_junctions_or_symlinks(self):
+        from types import SimpleNamespace
+        for variant in range(16):
+            self.assertFalse(project_archive._unsafe_reparse(SimpleNamespace(
+                st_file_attributes=0x400, st_reparse_tag=0x9000001A | variant << 12)))
+        for tag in [0xA0000003, 0xA000000C, 0, 0x9000001C]:
+            self.assertTrue(project_archive._unsafe_reparse(SimpleNamespace(
+                st_file_attributes=0x400, st_reparse_tag=tag)))
+
+    def test_cloud_metadata_keeps_the_same_tree_fingerprint(self):
+        from types import SimpleNamespace
+        original = Path.lstat
+        before = project_archive._manifest(self.source)
+        def cloud(path, *args, **kwargs):
+            info = original(path, *args, **kwargs)
+            return SimpleNamespace(st_mode=info.st_mode, st_size=info.st_size,
+                st_mtime_ns=info.st_mtime_ns, st_file_attributes=0x400, st_reparse_tag=0x9000001A)
+        with patch.object(Path, 'lstat', cloud):
+            self.assertEqual(project_archive._manifest(self.source), before)
+
+    def test_pending_v23_plan_can_still_be_recovered(self):
+        plan = self.prepare()
+        plan.pop('manifestVersion')
+        plan['manifest'] = project_archive._manifest(self.source, 1)
+        with local_files._connection() as con:
+            con.execute('UPDATE project_moves SET plan=? WHERE uid=? AND operation=?',
+                (json.dumps(plan), 'owner', plan['operation']))
+        result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(result['moved'])
+
+    def test_unreadable_subfolder_is_not_silently_ignored(self):
+        def unreadable(folder, **kwargs):
+            kwargs['onerror'](PermissionError('denied'))
+        with patch.object(project_archive.os, 'walk', side_effect=unreadable):
+            with self.assertRaisesRegex(ValueError, 'subpasta'):
+                self.prepare()
+        self.assertTrue(self.excel.exists())
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(dir=Path('build').resolve())
         self.addCleanup(self.temp.cleanup)

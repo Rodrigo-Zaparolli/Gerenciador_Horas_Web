@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gerenciador_horas/data/services/edesk_integration.dart';
 import 'package:gerenciador_horas/features/backup/backup_dialog.dart';
 import 'package:gerenciador_horas/features/edesk/edesk_history_dialog.dart';
+import 'package:gerenciador_horas/features/projects/dialogs/archive_destination_dialog.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -888,6 +889,12 @@ class _CabecalhoState extends State<Cabecalho> {
                       title: const Text('Backup e restauração'),
                       onTap: () => Navigator.of(context).pop('backup'),
                     ),
+                    ListTile(
+                      leading: const Icon(Icons.drive_file_move_outline),
+                      title: const Text('Pasta de projetos finalizados'),
+                      subtitle: const Text('Definir ou alterar o seu destino padrão'),
+                      onTap: () => Navigator.of(context).pop('archive-destination'),
+                    ),
                       ListTile(
                         leading: const Icon(Icons.history),
                         title: const Text('Histórico de envios ao E-Desk'),
@@ -1032,7 +1039,12 @@ class _CabecalhoState extends State<Cabecalho> {
 
     if (!mounted || !context.mounted) return;
 
-    if (escolha == 'backup') {
+    if (escolha == 'archive-destination') {
+      final saved = await ArchiveDestinationDialog.show(context);
+      if (saved == true && mounted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Destino dos projetos finalizados salvo para sua conta.')));
+      }
+    } else if (escolha == 'backup') {
       await showBackupDialog(context);
     } else if (escolha == 'history') {
       await showEdeskHistory(context);

@@ -84,7 +84,7 @@ class NativeLocalFiles {
       if (action.startsWith('project-move-') &&
           data['message'] == 'Ação local inválida.') {
         throw const NativeFilesException(
-            'Atualize e reinicie a integração local para a versão project-archive-23 para mover pastas de projetos finalizados.');
+            'Atualize e reinicie a integração local para a versão project-destinations-24 para mover pastas de projetos finalizados.');
       }
       if (action.startsWith('excel-editor-') &&
           data['message'] == 'Ação local inválida.') {

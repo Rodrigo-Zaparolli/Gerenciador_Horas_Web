@@ -92,3 +92,27 @@ pasta/planilha, referência da cópia salva e histórico do movimento em transa�
 no Firestore. Recusa sobrescrever vínculos editados por outra tela. Se só a
 atualização no Firebase falhar, o botão Atualizar vínculos repete apenas essa
 etapa. Nenhum arquivo real de cliente foi usado nas movimentações de teste.
+
+## Destino individual no perfil (v24)
+
+Por solicitação explícita, a configuração do destino é acessível a todas as
+contas autenticadas em Perfil → Pasta de projetos finalizados. Isso não amplia
+a liberação piloto do movimento. Cada conta mantém sua preferência em
+users/{uid}/configuracoes/project_archive. O caminho fornecido pelo proprietário
+é sugerido somente para sua conta e apenas quando não há preferência salva:
+C:\Users\rodrigo.zaparolli\OneDrive - Cyncly\Documentos\Projetos Finalizados.
+É preciso salvar para persistir a sugestão. Preferências já existentes vencem
+o valor sugerido; cada usuário pode alterar seu próprio caminho.
+
+É possível digitar o caminho sem integração. Isso não autoriza acesso local;
+Selecionar pasta no Windows concede a autorização nativa existente, e alterar
+o texto invalida o vínculo selecionado. O modal de movimentação lê a mesma
+preferência. Alterar o destino não move arquivos, nem muda projetos anteriores.
+
+A v24 aceita apenas os marcadores de armazenamento IO_REPARSE_TAG_CLOUD[0-F]
+do OneDrive entre os reparse points; symlinks, junções e tags desconhecidas
+continuam recusados. Subpastas inacessíveis interrompem a conferência.
+O manifesto v2 ignora metadados de diretórios, mantendo caminhos e metadados
+dos arquivos. Operações antigas sem versão usam o manifesto v1 ao recuperar.
+Testes simulam os marcadores Cloud Files; não houve validação de sincronização
+no OneDrive do usuário nem movimentação de uma pasta real de cliente.

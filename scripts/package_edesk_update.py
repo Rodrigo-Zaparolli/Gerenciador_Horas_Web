@@ -1,4 +1,4 @@
-"""Build the small project-archive-23 update for an existing full installation."""
+"""Build the small project-destinations-24 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,7 +17,7 @@ FILES = (
     'local_edesk/project_archive.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO project-archive-23 — instalação completa já existente
+README = '''ATUALIZAÇÃO project-destinations-24 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,6 +28,11 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v24: configuração individual da pasta padrão no menu do perfil.
+A leitura da árvore agora distingue marcadores Cloud Files do OneDrive de
+links/junções e recusa subpastas que não puderem ser conferidas. Mantém os
+registros de movimentação anteriores e a confirmação antes de mover.
 
 Novidade v23: movimentação conferida da pasta de projetos finalizados, na
 mesma unidade/disco, com atualização dos vínculos da pasta e da planilha.
@@ -73,7 +78,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-pastas-finalizados-23.zip'
+    target = ROOT / 'web/downloads/atualizacao-destino-projetos-24.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

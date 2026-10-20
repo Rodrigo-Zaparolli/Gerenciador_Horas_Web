@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "Novo fluxo ao finalizar um projeto: selecionar destino, conferir os caminhos e mover a pasta, atualizando automaticamente os vínculos da pasta e da planilha. Também disponível em Projetos Finalizados → Visualizar → Mover pasta para Finalizados.",
-                    "Movimentação com confirmação, sem sobrescrever pastas existentes, na mesma unidade/disco. Se a conexão falhar após mover, é possível recuperar os vínculos sem repetir a movimentação.",
-                    "Os recursos de Projetos Finalizados agora abrem os vínculos locais pela integração. A novidade exige a integração project-archive-23 e está liberada inicialmente apenas para rodrigozaparolli79@gmail.com."
+                    "Novo item no menu do perfil: Pasta de projetos finalizados. Cada conta pode digitar ou selecionar e alterar o próprio destino padrão, salvo separadamente no Firebase.",
+                    "O destino configurado também é usado na conferência da movimentação. Alterar a configuração não move projetos já arquivados nem autoriza automaticamente novos caminhos no Windows.",
+                    "A integração project-destinations-24 distingue os arquivos sincronizados pelo OneDrive de atalhos e junções. A configuração é individual para todos os usuários; a movimentação continua em teste apenas para a conta autorizada."
                 ]
 }

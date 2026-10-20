@@ -10,17 +10,32 @@ import uuid
 LOCK = threading.Lock()
 
 
-def _manifest(folder):
+def _unsafe_reparse(info):
+    if not getattr(info, 'st_file_attributes', 0) & 0x400:
+        return False
+    # Microsoft Cloud Files tags (OneDrive) are storage placeholders, not
+    # symlinks/junctions. Keep rejecting name-surrogate and unknown tags.
+    # https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/c8e77b37-3909-4fe6-a4ea-2b9d423b1ee4
+    tag = getattr(info, 'st_reparse_tag', 0)
+    return tag & 0xFFFF0FFF != 0x9000001A
+
+
+def _manifest(folder, version=2):
     result = []
-    for root, dirs, files in os.walk(folder, followlinks=False):
+    def unreadable(error):
+        raise ValueError('Não foi possível conferir uma subpasta. Verifique as permissões e a disponibilidade dos arquivos no OneDrive antes de mover.') from error
+    for root, dirs, files in os.walk(folder, followlinks=False, onerror=unreadable):
         for name in sorted(dirs + files):
             path = Path(root) / name
             info = path.lstat()
-            if path.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400:
+            if path.is_symlink() or _unsafe_reparse(info):
                 raise ValueError('A pasta contém um atalho de diretório/junção. Revise antes de mover.')
             if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
                 raise ValueError('A pasta contém um item especial que não pode ser movido.')
-            result.append((str(path.relative_to(folder)), stat.S_ISDIR(info.st_mode), info.st_size, info.st_mtime_ns))
+            directory = stat.S_ISDIR(info.st_mode)
+            result.append((str(path.relative_to(folder)), directory,
+                0 if directory and version >= 2 else info.st_size,
+                0 if directory and version >= 2 else info.st_mtime_ns))
     return hashlib.sha256(json.dumps(sorted(result)).encode()).hexdigest()
 
 
@@ -101,7 +116,7 @@ def _execute(files, uid, body):
             if excel is not None:
                 files._validate(excel, 'file')
             plan = {'source': str(source), 'target': str(target), 'parent': str(parent),
-                    'manifest': _manifest(source), 'excelInside': excel is not None and excel.is_relative_to(source),
+                    'manifest': _manifest(source), 'manifestVersion': 2, 'excelInside': excel is not None and excel.is_relative_to(source),
                     'excelPath': str(excel) if excel else '',
                     'oldFolderReference': source_ref, 'oldExcelReference': excel_ref}
             operation = str(uuid.uuid4())
@@ -125,7 +140,7 @@ def _execute(files, uid, body):
         if source.exists():
             if target.exists() or parent.resolve(strict=True) != parent or source.resolve(strict=True) != source:
                 raise ValueError('O destino/origem mudou ou já existe. Prepare a movimentação novamente.')
-            if _manifest(source) != plan['manifest']:
+            if _manifest(source, plan.get('manifestVersion', 1)) != plan['manifest']:
                 raise ValueError('Os arquivos mudaram após a conferência. Prepare novamente antes de mover.')
             con.execute('UPDATE project_moves SET state="moving" WHERE uid=? AND operation=?', (uid, operation))
             con.commit()  # Survives interruption between filesystem and database updates.
@@ -135,7 +150,7 @@ def _execute(files, uid, body):
                 raise ValueError('Não foi possível mover. Feche a planilha e os arquivos abertos, confira as permissões e tente novamente. A operação não exclui arquivos.') from error
         elif state != 'moving':
             raise ValueError('A pasta de origem não foi encontrada. Confira os caminhos antes de continuar.')
-        if not target.is_dir() or _manifest(target) != plan['manifest']:
+        if not target.is_dir() or _manifest(target, plan.get('manifestVersion', 1)) != plan['manifest']:
             raise ValueError('Não foi possível conferir o destino. Verifique a pasta antes de atualizar os vínculos.')
         folder_ref = _reference(uid, target, 'folder')
         excel_ref = plan['oldExcelReference']

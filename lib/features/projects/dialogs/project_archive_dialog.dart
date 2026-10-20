@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
 import '../../../data/services/firebase_service.dart';
 import '../../../data/services/native_local_files_service.dart';
+import '../../../data/services/archive_destination_store.dart';
+import 'archive_destination_dialog.dart';
 
 class ProjectArchiveDialog extends StatefulWidget {
   const ProjectArchiveDialog(
@@ -48,12 +50,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   bool get authorized =>
       ProjectArchiveDialog.allowed &&
       FirebaseAuth.instance.currentUser?.uid == owner;
-  DocumentReference<Map<String, dynamic>> get preferences =>
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(owner)
-          .collection('configuracoes')
-          .doc('project_archive');
   @override
   void initState() {
     super.initState();
@@ -79,10 +75,14 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   Future<void> loadDestination() async {
     setState(() => busy = true);
     try {
-      final value =
-          (await preferences.get().timeout(const Duration(seconds: 15))).data();
+      final store = FirebaseArchiveDestinationStore();
+      final value = await store.load(owner);
       if (mounted && authorized)
-        setState(() => destination = value?['destination'] as String?);
+        setState(() {
+          final suggestion = ArchiveDestination.suggestion(store.currentEmail);
+          destination =
+              value?.destination ?? (suggestion.isEmpty ? null : suggestion);
+        });
     } catch (e) {
       if (mounted && authorized)
         setState(() => error =
@@ -107,8 +107,10 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
         plan = null;
         confirmed = false;
       });
-      await preferences
-          .set({'destination': reference}).timeout(const Duration(seconds: 15));
+      final value =
+          ArchiveDestination.fromData({'destination': reference}, owner);
+      if (value == null) throw StateError('Destino inválido.');
+      await FirebaseArchiveDestinationStore().save(owner, value);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
@@ -216,6 +218,23 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                             : selectDestination,
                         icon: const Icon(Icons.folder_open),
                         label: const Text('Selecionar destino')),
+                    TextButton.icon(
+                        icon: const Icon(Icons.settings_outlined),
+                        label: const Text('Configurar meu destino padrão'),
+                        onPressed: busy || !authorized || moved != null
+                            ? null
+                            : () async {
+                                final saved =
+                                    await ArchiveDestinationDialog.show(
+                                        context);
+                                if (mounted && authorized && saved == true) {
+                                  setState(() {
+                                    plan = null;
+                                    confirmed = false;
+                                  });
+                                  await loadDestination();
+                                }
+                              }),
                     const Text(
                         'Nesta versão, o destino deve estar na mesma unidade/disco da pasta atual.'),
                     if (plan != null) ...[
