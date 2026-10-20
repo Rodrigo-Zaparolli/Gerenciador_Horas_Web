@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='project-destinations-24',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='professional-checklist-25',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -105,7 +105,8 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'project-destinations-24'
+            assert health['integrationPackageVersion'] == 'professional-checklist-25'
+            assert health['nativeSpreadsheetLayouts'] == ['enterprise', 'professional-maker']
             assert health['commentPercentageReceipt'] is True
             assert health['nativeFilesVersion'] == 'persistent-file-links-5'
             assert health['commentPercentage'] is True

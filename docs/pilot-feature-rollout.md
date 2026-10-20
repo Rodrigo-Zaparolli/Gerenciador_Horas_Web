@@ -126,3 +126,13 @@ O manifesto v2 ignora metadados de diretórios, mantendo caminhos e metadados
 dos arquivos. Operações antigas sem versão usam o manifesto v1 ao recuperar.
 Testes simulam os marcadores Cloud Files; não houve validação de sincronização
 no OneDrive do usuário nem movimentação de uma pasta real de cliente.
+
+## Checklist por tipo de projeto (v25)
+
+Enterprise: Checklist-Processo. Professional/Profissional: Maker CheckList-Processo.
+A tabela e localizada pelos cabecalhos, incluindo a linha 3 do modelo Maker.
+A ausencia da aba correta bloqueia a abertura; nao utiliza a aba Enterprise como fallback.
+O cache verifica checklistSheet e as abas das tarefas antes de ser reutilizado.
+Antes da escrita Professional, a integracao deve anunciar professional-maker.
+Testes em copias reais: 31 tarefas Maker lidas; alteracao salva e reaberta;
+Enterprise e VBA preservados. Teste Enterprise separado passou. Originais intactos.

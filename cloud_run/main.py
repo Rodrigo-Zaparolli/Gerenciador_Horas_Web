@@ -138,6 +138,7 @@ def health_check():
         from local_edesk import local_files
         actions = sorted(getattr(local_files, 'SUPPORTED_ACTIONS', []))
         native = {'nativeActions': actions,
+                  'nativeSpreadsheetLayouts': list(getattr(local_files, 'SPREADSHEET_LAYOUTS', [])),
                   'nativeFilesVersion': getattr(local_files, 'PROTOCOL_VERSION', None)}
     return jsonify({"status": "ok", "service": "gerenciador-horas-edesk",
                     "commentPercentage": True,

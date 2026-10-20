@@ -4,6 +4,7 @@ import 'package:gerenciador_horas/domain/models/project_model.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/project_spreadsheet_dialog.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/spreadsheet_store.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/company_contacts.dart';
+import 'package:gerenciador_horas/features/projects/dialogs/project_spreadsheet_kind.dart';
 
 class MemorySpreadsheetStore implements SpreadsheetStore {
   Map<String, dynamic>? data;
@@ -51,6 +52,97 @@ Map<String, dynamic> snapshot() => {
     };
 
 void main() {
+  test('Cached checklist must match the current service type', () {
+    expect(spreadsheetMatchesProject(snapshot(), 'Enterprise'), isTrue);
+    expect(spreadsheetMatchesProject(snapshot(), 'Professional'), isFalse);
+    expect(projectChecklistSheet('Promob Professional'),
+        'Maker CheckList-Processo');
+    expect(
+        spreadsheetMatchesProject(
+            {'checklistSheet': 'Maker Checklist-Processo'}, 'Professional'),
+        isTrue);
+    expect(
+        spreadsheetMatchesProject(
+            {'checklistSheet': 'Maker Checklist-Processo'}, 'Enterprise'),
+        isFalse);
+  });
+
+  testWidgets(
+      'Professional ignores Enterprise cache and routes reads and writes to Maker',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemorySpreadsheetStore()..data = snapshot();
+    final calls = <Map<String, dynamic>>[];
+    final maker = snapshot();
+    maker['checklistSheet'] = 'Maker Checklist-Processo';
+    maker['tasks'] = [
+      <String, dynamic>{
+        ...(maker['tasks'] as List).first,
+        'sheet': 'Maker Checklist-Processo',
+        'cell': 'E5'
+      }
+    ];
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+            project: ProjectModel.fromJson(
+                {'id': '1', 'serviceType': 'Professional'}),
+            uidProvider: () => 'owner',
+            emailProvider: () => 'rodrigozaparolli79@gmail.com',
+            store: store,
+            transport: (args) async {
+              calls.add(args);
+              if (args['action'] == 'excel-editor-write') {
+                return {
+                  ...maker,
+                  'saved': true,
+                  'revision': 'v2',
+                  'backup': 'backup',
+                  'tasks': [
+                    <String, dynamic>{
+                      ...(maker['tasks'] as List).first,
+                      'value': .25
+                    }
+                  ]
+                };
+              }
+              return maker;
+            })));
+    await tester.pumpAndSettle();
+    expect(calls.single['serviceType'], 'Professional');
+    expect(find.text('Maker CheckList-Processo'), findsOneWidget);
+    await tester.tap(find.text('Maker CheckList-Processo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Implantação'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<double>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25%').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar na planilha'));
+    await tester.pumpAndSettle();
+    expect(calls.last['serviceType'], 'Professional');
+    expect((calls.last['changes'] as List).single['sheet'],
+        'Maker Checklist-Processo');
+    expect((calls.last['changes'] as List).single['cell'], 'E5');
+    expect(store.data!['checklistSheet'], 'Maker Checklist-Processo');
+  });
+
+  testWidgets('Professional rejects an older integration returning Enterprise',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+            project: ProjectModel.fromJson(
+                {'id': '1', 'serviceType': 'Professional'}),
+            uidProvider: () => 'owner',
+            emailProvider: () => 'rodrigozaparolli79@gmail.com',
+            transport: (_) async => snapshot())));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('checklist diferente'), findsOneWidget);
+    expect(find.text('Sistema anterior'), findsNothing);
+  });
   for (final calculated in ['rodrigo@empresa.com', 'outro@empresa.com']) {
     testWidgets(
         'Calculated consultant email fills and checks Excel result $calculated',

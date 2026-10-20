@@ -7,13 +7,29 @@ from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 from types import SimpleNamespace
 from unittest.mock import patch
-from local_edesk.excel_editor import allowed, validated_changes, preserve_package, value, stored_date
+from local_edesk.excel_editor import allowed, validated_changes, preserve_package, value, stored_date, checklist_sheet, checklist_table
 from local_edesk import local_files
 
 os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
+    def test_project_kind_selects_only_the_requested_checklist(self):
+        for kind in [None, '', 'Enterprise', 'Promob Enterprise']:
+            self.assertEqual(checklist_sheet(kind), 'Checklist-Processo')
+        for kind in ['Professional', 'Promob Professional', 'PROFISSIONAL Produção Completa']:
+            self.assertEqual(checklist_sheet(kind), 'Maker Checklist-Processo')
+
+    def test_table_header_and_rows_are_detected_for_both_models(self):
+        for row, last in [(16, 223), (3, 42)]:
+            table = SimpleNamespace(Range=SimpleNamespace(Row=row, Column=3,
+                Columns=SimpleNamespace(Count=25), Rows=SimpleNamespace(Count=last-row+1)))
+            sheet = SimpleNamespace(ListObjects=[table], Cells=lambda r, c:
+                SimpleNamespace(Value2=('% Status Tarefas' if c == 5 else 'Tarefas') if r == row else ''))
+            self.assertEqual(checklist_table(sheet), (row, last))
+            sheet.ListObjects = [table, table]
+            with self.assertRaises(ValueError): checklist_table(sheet)
+
     def setUp(self):
         self.field = {'sheet': 'entry', 'cell': 'C2', 'kind': 'text', 'value': 'old'}
         self.current = {'fields': [self.field], 'tasks': []}

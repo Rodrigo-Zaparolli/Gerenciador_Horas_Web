@@ -24,6 +24,7 @@ DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
+SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'})
 
 

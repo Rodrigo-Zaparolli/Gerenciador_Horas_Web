@@ -41,6 +41,7 @@ class NativeLocalFiles {
       String? name,
       String? range,
       String? revision,
+      String? serviceType,
       String? destination,
       String? excelReference,
       String? operation,
@@ -49,6 +50,24 @@ class NativeLocalFiles {
     final token = await user?.getIdToken();
     if (token == null) {
       throw const NativeFilesException('Entre novamente na sua conta.');
+    }
+    final kind = serviceType?.toLowerCase() ?? '';
+    if (action == 'excel-editor-write' &&
+        (kind.contains('professional') || kind.contains('profissional'))) {
+      final health =
+          await nativeFileRequest({'action': 'health', 'interactive': true})
+              .timeout(const Duration(seconds: 4));
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid)
+        throw const NativeFilesException('A conta mudou.');
+      final capabilities = health['data'];
+      if (health['status'] != 200 ||
+          capabilities is! Map ||
+          capabilities['nativeSpreadsheetLayouts'] is! List ||
+          !(capabilities['nativeSpreadsheetLayouts'] as List)
+              .contains('professional-maker')) {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local v25 para editar a planilha Professional/Maker. Nenhuma alteração foi enviada.');
+      }
     }
     // The preview endpoint is authoritative. A health flag must not block a
     // supported operation or hide the actual file/Excel/permission error.
@@ -59,6 +78,7 @@ class NativeLocalFiles {
       'reference': reference,
       'name': name,
       'range': range,
+      if (serviceType != null) 'serviceType': serviceType,
       if (destination != null) 'destination': destination,
       if (excelReference != null) 'excelReference': excelReference,
       if (operation != null) 'operation': operation,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'spreadsheet_store.dart';
 import 'company_contacts.dart';
+import 'project_spreadsheet_kind.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
@@ -64,11 +65,13 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       return widget.transport!({
         'action': action,
         'reference': widget.project.excelLink,
+        'serviceType': widget.project.serviceType,
         if (revision != null) 'revision': revision,
         if (changes != null) 'changes': changes
       });
     return NativeLocalFiles.call(action,
         reference: widget.project.excelLink,
+        serviceType: widget.project.serviceType,
         revision: revision,
         changes: changes);
   }
@@ -137,7 +140,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final saved = await store?.load(
           owner!, widget.project.id, widget.project.excelLink ?? '');
       if (!mounted || !authorized) return;
-      if (saved != null) {
+      if (saved != null &&
+          spreadsheetMatchesProject(saved, widget.project.serviceType)) {
         setState(() {
           data = saved;
           busy = false;
@@ -187,6 +191,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     });
     try {
       final result = await request('excel-editor-read');
+      if (!spreadsheetMatchesProject(result, widget.project.serviceType)) {
+        throw StateError(
+            'A integração retornou um checklist diferente do tipo do projeto. Atualize e reinicie a integração v25 para usar Professional/Maker.');
+      }
       if (mounted && authorized)
         setState(() {
           data = result;
@@ -216,6 +224,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       if (result['saved'] != true)
         throw StateError(
             'A gravação não foi confirmada. Recarregue para conferir antes de tentar novamente.');
+      if (!spreadsheetMatchesProject(result, widget.project.serviceType)) {
+        throw StateError(
+            'O checklist retornado não corresponde ao projeto. Recarregue do Excel para conferir.');
+      }
       final fields = (result['fields'] as List).cast<Map<String, dynamic>>();
       final differentEmails = calculatedEmails.entries
           .where((entry) => !fields.any((f) =>
@@ -552,9 +564,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(synchronizationLabel,
                                 style: Theme.of(context).textTheme.bodySmall)),
-                      const TabBar(tabs: [
-                        Tab(text: 'Informações de entrada'),
-                        Tab(text: 'Checklist-Processo')
+                      TabBar(tabs: [
+                        const Tab(text: 'Informações de entrada'),
+                        Tab(
+                            text: projectChecklistSheet(
+                                widget.project.serviceType))
                       ]),
                       Expanded(
                           child: data == null || !authorized

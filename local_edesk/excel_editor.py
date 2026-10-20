@@ -129,13 +129,32 @@ class SheetSnapshot:
         return self.Cells(int(match[2]), column)
 
 
-def snapshot(book):
+def checklist_sheet(service_type):
+    value = str(service_type or '').strip().casefold()
+    return 'Maker Checklist-Processo' if 'professional' in value or 'profissional' in value else 'Checklist-Processo'
+
+
+def checklist_table(checklist):
+    matches = []
+    for table in checklist.ListObjects:
+        row = int(table.Range.Row)
+        if (int(table.Range.Column) == 3 and int(table.Range.Columns.Count) >= 25
+                and str(checklist.Cells(row, 5).Value2).strip() == '% Status Tarefas'
+                and str(checklist.Cells(row, 6).Value2).strip() == 'Tarefas'):
+            matches.append((row, int(table.Range.Row + table.Range.Rows.Count - 1)))
+    if len(matches) != 1 or matches[0][1] > 500:
+        raise ValueError('Não foi possível identificar a tabela de tarefas do checklist. Nenhuma célula será alterada.')
+    return matches[0]
+
+
+def snapshot(book, service_type=None):
     entry = SheetSnapshot(book.Worksheets('Informações de entrada'))
-    checklist = SheetSnapshot(book.Worksheets('Checklist-Processo'))
-    table = checklist.ListObjects('Tab_Check_List')
-    if (str(checklist.Cells(16, 5).Value2).strip() != '% Status Tarefas'
-            or str(checklist.Cells(16, 6).Value2).strip() != 'Tarefas'):
-        raise ValueError('O modelo do checklist é diferente. Nenhuma célula será alterada.')
+    name = checklist_sheet(service_type)
+    try:
+        checklist = SheetSnapshot(book.Worksheets(name))
+    except Exception as error:
+        raise ValueError(f'A planilha não contém a aba esperada para este projeto: {name}. Confira o tipo de serviço e o arquivo vinculado.') from error
+    first, last = checklist_table(checklist)
     fields, tasks = [], []
 
     def add(sheet, address, label, group, kind='text'):
@@ -192,8 +211,7 @@ def snapshot(book):
             other = str(entry.Cells(row, 7).Value2 or '').strip()
             if other:
                 add(entry, f'H{row}', other, 'Cadastro do cliente e acessos')
-    last = min(int(table.Range.Row + table.Range.Rows.Count - 1), 500)
-    for row in range(17, last + 1):
+    for row in range(first + 1, last + 1):
         description = str(checklist.Cells(row, 6).Value2 or '').strip()
         cell = checklist.Cells(row, 5)
         raw = cell.Value2
@@ -208,13 +226,14 @@ def snapshot(book):
                       'group': str(checklist.Cells(row, 4).Value2 or ''),
                       'estimated': f'{minutes // 60:02}:{minutes % 60:02}',
                       'note': str(checklist.Cells(row, 10).Value2 or '')})
-    progress = checklist.Range('T15').Value2
+    progress = checklist.Range(f'T{first - 1}').Value2
     formulas = [(sheet.Name, row, column, formula)
                 for sheet in [entry, checklist]
                 for row, values in enumerate(sheet.formulas, 1)
                 for column, formula in enumerate(values, 1)
                 if isinstance(formula, str) and formula.startswith('=')]
     return {'fields': fields, 'tasks': tasks,
+            'checklistSheet': checklist.Name,
             'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest(),
             'formulaCount': len(formulas),
             'progress': float(progress) if isinstance(progress, (int, float)) and 0 <= progress <= 1 else None}
@@ -374,7 +393,7 @@ def edit(path, body):
             raise ValueError('O arquivo mudou desde a leitura. Recarregue antes de salvar.')
         if not writing:
             with workbook(path) as (_, book):
-                data = snapshot(book)
+                data = snapshot(book, body.get('serviceType'))
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a leitura. Recarregue.')
             return {**data, 'revision': original, 'filename': path.name}
@@ -383,7 +402,7 @@ def edit(path, body):
         staged = Path(name)
         shutil.copy2(path, staged)
         with workbook(staged, writable=True) as (app, book):
-            before = snapshot(book)
+            before = snapshot(book, body.get('serviceType'))
             changes = validated_changes(before, body.get('changes'))
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
@@ -398,7 +417,7 @@ def edit(path, body):
             book.Save()
         preserve_package(path, staged, changes)
         with workbook(staged) as (_, book):
-            checked = snapshot(book)
+            checked = snapshot(book, body.get('serviceType'))
         if checked['formulaFingerprint'] != before['formulaFingerprint']:
             raise ValueError('Uma fórmula do modelo mudou. O original foi preservado.')
         mapped = {(f['sheet'], f['cell']): f['value'] for f in checked['fields'] + checked['tasks']}
