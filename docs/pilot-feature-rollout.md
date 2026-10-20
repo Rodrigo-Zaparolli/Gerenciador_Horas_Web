@@ -129,6 +129,12 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+Na v26, a janela de movimentação permite Autorizar vínculos neste PC após
+uma falha. A ação authorize recupera a autorização existente ou solicita a
+seleção nativa do caminho exato. Não abre Excel nem movimenta arquivos.
+Cancelar ou selecionar outro projeto impede a conferência. A confirmação
+permanece obrigatória; a autorização é persistida por UID no perfil do Windows.
+
 Enterprise: Checklist-Processo. Professional/Profissional: Maker CheckList-Processo.
 A tabela e localizada pelos cabecalhos, incluindo a linha 3 do modelo Maker.
 A ausencia da aba correta bloqueia a abertura; nao utiliza a aba Enterprise como fallback.

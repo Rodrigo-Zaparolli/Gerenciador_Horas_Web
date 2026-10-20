@@ -10,7 +10,7 @@
   }
   window.nativeLocalFilesRequest = async raw => {
     const args = JSON.parse(raw), health = args.action === 'health';
-    if (!['health', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'].includes(args.action))
+    if (!['health', 'authorize', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'].includes(args.action))
       return JSON.stringify({error:'invalid', message:'Ação local inválida.'});
     const permission = await permissionState();
     if (permission === 'denied') return JSON.stringify({error:'permission', message:permissionMessage});

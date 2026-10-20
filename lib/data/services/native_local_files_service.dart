@@ -101,6 +101,10 @@ class NativeLocalFiles {
           'Resposta inválida da integração local.');
     }
     if (result['status'] != 200) {
+      if (action == 'authorize' && data['message'] == 'Ação local inválida.') {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local v26 para autorizar os vínculos nesta janela.');
+      }
       if (action.startsWith('project-move-') &&
           data['message'] == 'Ação local inválida.') {
         throw const NativeFilesException(

@@ -25,7 +25,7 @@ EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
-SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'})
+SUPPORTED_ACTIONS = frozenset({'authorize', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'})
 
 
 def _absolute_windows_path(value):
@@ -182,7 +182,7 @@ def execute(uid, body, verified_user=None):
         import sys
         from local_edesk.project_archive import execute as move_project
         return move_project(sys.modules[__name__], uid, body)
-    if action in {'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'}:
+    if action in {'authorize', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'}:
         if not isinstance(reference, str):
             raise ValueError('Selecione um arquivo ou pasta no editor.')
         kind, expected_name = parse_reference(reference, uid)
@@ -217,6 +217,8 @@ def execute(uid, body, verified_user=None):
             finally:
                 picker_lock.release()
         persistent = _persistent_reference(uid, reference, path, kind)
+        if action == 'authorize':
+            return {'authorized': True, 'reference': persistent}
         if editor:
             from local_edesk.excel_editor import edit
             return {**edit(path, body), 'reference': persistent}

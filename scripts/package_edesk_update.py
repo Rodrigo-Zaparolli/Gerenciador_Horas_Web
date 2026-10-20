@@ -1,4 +1,4 @@
-"""Build the small professional-checklist-25 update for an existing full installation."""
+"""Build the small archive-authorization-26 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,7 +17,7 @@ FILES = (
     'local_edesk/project_archive.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO professional-checklist-25 — instalação completa já existente
+README = '''ATUALIZAÇÃO archive-authorization-26 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,6 +28,10 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v26: permite autorizar os vinculos neste PC diretamente na janela
+de movimentacao. Solicita os caminhos exatos ausentes; nao abre arquivos
+nem move a pasta antes da conferencia e confirmacao.
 
 Novidade v25: Enterprise usa Checklist-Processo; Professional utiliza
 Maker CheckList-Processo. Identifica a tabela de cada modelo, incluindo as
@@ -82,7 +86,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-planilha-professional-25.zip'
+    target = ROOT / 'web/downloads/atualizacao-vinculos-movimentacao-26.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

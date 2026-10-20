@@ -131,6 +131,38 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     }
   }
 
+  Future<void> authorizeLinks() async {
+    if (busy || !authorized || moved != null || destination == null) return;
+    setState(() {
+      busy = true;
+      error = null;
+      plan = null;
+      confirmed = false;
+      message = null;
+    });
+    try {
+      for (final reference in [widget.folder, widget.excel, destination!]) {
+        if (reference.isEmpty) continue;
+        final result =
+            await NativeLocalFiles.call('authorize', reference: reference);
+        if (!mounted || !authorized) return;
+        if (result['cancelled'] == true) {
+          setState(
+              () => message = 'Seleção cancelada. A pasta não foi movida.');
+          return;
+        }
+      }
+      if (mounted && authorized) {
+        setState(() =>
+            message = 'Vínculos autorizados. Clique em Conferir movimentação.');
+      }
+    } catch (e) {
+      if (mounted && authorized) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   Future<void> prepare() async {
     if (busy || !authorized || destination == null) return;
     setState(() {
@@ -260,6 +292,13 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                       SelectableText(error!,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.error)),
+                    if (error != null && moved == null)
+                      TextButton.icon(
+                          onPressed: busy || !authorized || destination == null
+                              ? null
+                              : authorizeLinks,
+                          icon: const Icon(Icons.folder_copy_outlined),
+                          label: const Text('Autorizar vínculos neste PC')),
                     if (message != null) Text(message!),
                   ]))),
           actions: [

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Enterprise: Checklist-Processo. Professional: Maker CheckList-Processo, incluindo as primeiras tarefas do modelo.",
-    "A cópia salva verifica o tipo do checklist antes de carregar os dados.",
-    "Para salvar Professional no Excel, atualize a integração local para v25. Recurso restrito à conta piloto."
+    "Movimentação de projetos finalizados: nova ação Autorizar vínculos neste PC na própria janela, quando falta a autorização local.",
+    "Os caminhos selecionados devem corresponder aos vínculos salvos. A autorização não move nem abre arquivos; confira e confirme depois.",
+    "Atualize a integração local para v26 para utilizar a recuperação de vínculos."
   ]
 }

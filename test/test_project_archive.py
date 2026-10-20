@@ -11,6 +11,36 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_missing_links_can_be_authorized_in_place_then_moved(self):
+        with local_files._connection() as con:
+            con.execute('DELETE FROM files WHERE uid=?', ('owner',))
+        with self.assertRaisesRegex(ValueError, 'Selecione novamente'):
+            self.prepare()
+        with patch.object(local_files, 'choose', side_effect=[str(self.source), str(self.excel), str(self.destination)]) as picker, patch.object(local_files.os, 'startfile') as opener:
+            for ref in [self.folder_ref, self.excel_ref, self.destination_ref]:
+                self.assertTrue(self.request('authorize', reference=ref)['authorized'])
+            self.assertEqual(picker.call_count, 3)
+            opener.assert_not_called()
+        with patch.object(local_files, 'choose') as picker:
+            self.request('authorize', reference=self.folder_ref)
+            picker.assert_not_called()
+        plan = self.prepare()
+        self.assertTrue(self.source.exists())
+        self.assertTrue(self.request('project-move-commit', operation=plan['operation'])['moved'])
+
+    def test_authorize_cancellation_and_wrong_project_never_move(self):
+        with local_files._connection() as con:
+            con.execute('DELETE FROM files WHERE uid=?', ('owner',))
+        with patch.object(local_files, 'choose', return_value=''):
+            self.assertTrue(self.request('authorize', reference=self.folder_ref)['cancelled'])
+        wrong = self.root / 'Outro projeto' / self.source.name
+        wrong.mkdir(parents=True)
+        with patch.object(local_files, 'choose', return_value=str(wrong)):
+            with self.assertRaisesRegex(ValueError, 'corresponde'):
+                self.request('authorize', reference=self.folder_ref)
+        with self.assertRaises(ValueError): self.prepare()
+        self.assertTrue(self.excel.exists())
+
     def test_cloud_file_tags_are_not_confused_with_junctions_or_symlinks(self):
         from types import SimpleNamespace
         for variant in range(16):
