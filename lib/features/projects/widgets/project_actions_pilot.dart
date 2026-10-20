@@ -69,10 +69,23 @@ class ProjectActionsPilot extends StatelessWidget {
                 }[value]
                     ?.call(),
             itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'work', child: Text('Editar trabalho')),
-                  PopupMenuItem(value: 'check', child: Text('Checklist')),
-                  PopupMenuItem(value: 'comment', child: Text('Comentários')),
-                  PopupMenuItem(value: 'email', child: Text('E-mails'))
+                  PopupMenuItem(value: 'work', child: _ActionMenuLabel(Icons.edit_outlined, 'Editar trabalho')),
+                  PopupMenuItem(value: 'check', child: _ActionMenuLabel(Icons.checklist_rounded, 'Checklist')),
+                  PopupMenuItem(value: 'comment', child: _ActionMenuLabel(Icons.chat_bubble_outline_rounded, 'Comentários')),
+                  PopupMenuItem(value: 'email', child: _ActionMenuLabel(Icons.mail_outline_rounded, 'E-mails'))
                 ]),
       ]);
+}
+
+class _ActionMenuLabel extends StatelessWidget {
+  const _ActionMenuLabel(this.icon, this.label);
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+    Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
+    const SizedBox(width: 12),
+    Text(label),
+  ]);
 }

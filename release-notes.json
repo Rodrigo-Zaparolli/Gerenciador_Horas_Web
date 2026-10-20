@@ -1,8 +1,6 @@
 {
     "changes":  [
-                    "Novo menu compacto de ações, exclusivo para rodrigozaparolli79@gmail.com: Pasta, Planilha e Mais ações. Os demais usuários continuam com a interface atual.",
-                    "Editor piloto de Informações de entrada e Checklist-Processo: campos organizados, busca de tarefas, filtros e percentuais de 0%, 25%, 50%, 75% e 100%.",
-                    "Gravação com backup, conferência dos valores, proteção das fórmulas, imagens e macros, além de bloqueio de leitura antiga. As macros de atualização do modelo não são executadas automaticamente.",
-                    "Requer Microsoft Excel e atualização local spreadsheet-pilot-20 no computador que acessa o arquivo. A liberação de escrita exige a conta autorizada com e-mail verificado."
+                    "Adicionados ícones ao lado de Editar trabalho, Checklist, Comentários e E-mails no menu Mais ações.",
+                    "A alteração permanece exclusiva para a conta piloto rodrigozaparolli79@gmail.com. Não exige atualizar a integração local."
                 ]
 }
