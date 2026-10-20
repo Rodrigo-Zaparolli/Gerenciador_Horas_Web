@@ -51,6 +51,81 @@ Map<String, dynamic> snapshot() => {
     };
 
 void main() {
+  for (final calculated in ['rodrigo@empresa.com', 'outro@empresa.com']) {
+    testWidgets(
+        'Calculated consultant email fills and checks Excel result $calculated',
+        (tester) async {
+      final value = snapshot();
+      value['fields'] = [
+        {
+          'sheet': 'Entrada',
+          'cell': 'F37',
+          'label': 'Consultor de Implantação — Nome',
+          'kind': 'text',
+          'group': 'Equipe Cyncly',
+          'value': 'Anterior'
+        },
+        {
+          'sheet': 'Entrada',
+          'cell': 'G37',
+          'label': 'Consultor de Implantação — E-mail',
+          'kind': 'text',
+          'group': 'Equipe Cyncly',
+          'value': 'anterior@empresa.com',
+          'readOnly': true
+        }
+      ];
+      final calls = <Map<String, dynamic>>[];
+      await tester.pumpWidget(MaterialApp(
+          home: ProjectSpreadsheetDialog(
+              project: ProjectModel.fromJson({'id': '1'}),
+              uidProvider: () => 'owner',
+              emailProvider: () => 'rodrigozaparolli79@gmail.com',
+              transport: (args) async {
+                calls.add(args);
+                if (args['action'] == 'excel-editor-write') {
+                  return {
+                    ...value,
+                    'saved': true,
+                    'backup': 'backup',
+                    'revision': 'v2',
+                    'fields': [
+                      <String, dynamic>{
+                        ...(value['fields'] as List).first,
+                        'value': 'Rodrigo'
+                      },
+                      <String, dynamic>{
+                        ...(value['fields'] as List).last,
+                        'value': calculated
+                      }
+                    ]
+                  };
+                }
+                return value;
+              },
+              contactsLoader: () async => [
+                    const CompanyContact('1', 'Rodrigo', 'rodrigo@empresa.com')
+                  ])));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, 'Rod');
+      await tester.pumpAndSettle();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.text('rodrigo@empresa.com'), findsOneWidget);
+      expect(find.textContaining('fórmula do Excel será conferida'),
+          findsOneWidget);
+      expect(find.text('1 alteração(ões) não salva(s)'), findsOneWidget);
+      await tester.tap(find.text('Salvar na planilha'));
+      await tester.pumpAndSettle();
+      expect((calls.last['changes'] as List).single['cell'], 'F37');
+      expect(find.text(calculated), findsOneWidget);
+      expect(
+          find.textContaining(calculated == 'rodrigo@empresa.com'
+              ? 'Planilha atualizada e conferida.'
+              : 'fórmula do Excel retornou um e-mail diferente'),
+          findsOneWidget);
+    });
+  }
   testWidgets('Reopening uses saved project data without requesting Excel',
       (tester) async {
     final store = MemorySpreadsheetStore()

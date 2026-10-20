@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "Corrigida a lista do botão + em Para/Cc: agora também mostra os colaboradores cadastrados e adiciona o nome e o e-mail juntos ao selecionar.",
-                    "Colaboradores já selecionados em Para não aparecem em Cc, evitando destinatários duplicados. A busca de colaboradores continua disponível ao lado do botão +.",
+                    "Corrigido o preenchimento do e-mail do Consultor de Implantação na planilha: ao selecionar o nome, o e-mail do cadastro aparece imediatamente, mesmo quando a célula é calculada pelo Excel.",
+                    "A fórmula do e-mail é preservada. Após salvar, o app mostra o resultado real do Excel e avisa se ele for diferente do cadastro. Seleção pelo teclado também corrigida.",
                     "A melhoria permanece restrita à conta de teste rodrigozaparolli79@gmail.com e não exige atualização da integração local."
                 ]
 }

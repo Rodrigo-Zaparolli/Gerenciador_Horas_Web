@@ -38,6 +38,7 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
 
 class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   final Map<String, Map<String, dynamic>> pending = {};
+  final Map<String, String> calculatedEmails = {};
   Map<String, dynamic>? data;
   String? error, notice, owner;
   bool busy = false;
@@ -82,6 +83,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           setState(() {
             data = null;
             pending.clear();
+            calculatedEmails.clear();
             error = 'A conta mudou. Feche esta janela e entre novamente.';
           });
         }
@@ -189,6 +191,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         setState(() {
           data = result;
           pending.clear();
+          calculatedEmails.clear();
           notice = null;
         });
       if (mounted && authorized) await remember(result);
@@ -213,12 +216,21 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       if (result['saved'] != true)
         throw StateError(
             'A gravação não foi confirmada. Recarregue para conferir antes de tentar novamente.');
+      final fields = (result['fields'] as List).cast<Map<String, dynamic>>();
+      final differentEmails = calculatedEmails.entries
+          .where((entry) => !fields.any((f) =>
+              keyOf(f) == entry.key &&
+              f['value'].toString().trim().toLowerCase() ==
+                  entry.value.trim().toLowerCase()))
+          .isNotEmpty;
       if (mounted && authorized)
         setState(() {
           data = result;
           pending.clear();
-          notice =
-              'Planilha atualizada e conferida. Backup: ${result['backup']}';
+          calculatedEmails.clear();
+          notice = differentEmails
+              ? 'Planilha salva, mas a fórmula do Excel retornou um e-mail diferente do cadastro. Confira o cadastro de consultores no Excel; o e-mail mostrado agora é o resultado real da planilha. Backup: ${result['backup']}'
+              : 'Planilha atualizada e conferida. Backup: ${result['backup']}';
         });
       if (mounted && authorized) await remember(result);
     } catch (e) {
@@ -231,9 +243,23 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   String keyOf(Map<String, dynamic> field) =>
       '${field['sheet']}!${field['cell']}';
   dynamic current(Map<String, dynamic> field) =>
-      pending[keyOf(field)]?['value'] ?? field['value'];
+      pending[keyOf(field)]?['value'] ??
+      calculatedEmails[keyOf(field)] ??
+      field['value'];
   void change(Map<String, dynamic> field, dynamic value) => setState(() {
         final key = keyOf(field);
+        if (field['label'].toString().endsWith('— Nome')) {
+          for (final f
+              in (data!['fields'] as List).cast<Map<String, dynamic>>()) {
+            if (f['group'] == field['group'] &&
+                f['label'] ==
+                    field['label']
+                        .toString()
+                        .replaceFirst('— Nome', '— E-mail')) {
+              calculatedEmails.remove(keyOf(f));
+            }
+          }
+        }
         if (value == field['value']) {
           pending.remove(key);
         } else {
@@ -274,8 +300,14 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                 .where((f) =>
                     f['group'] == field['group'] &&
                     f['label'] == label.replaceFirst('— Nome', '— E-mail'));
-            if (address.isNotEmpty && address.first['readOnly'] != true)
-              change(address.first, c.email);
+            if (address.isNotEmpty) {
+              if (address.first['readOnly'] == true) {
+                setState(
+                    () => calculatedEmails[keyOf(address.first)] = c.email);
+              } else {
+                change(address.first, c.email);
+              }
+            }
           },
           optionsViewBuilder: (context, select, options) => Align(
               alignment: Alignment.topLeft,
@@ -297,6 +329,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                   focusNode: focus,
                   enabled: !busy && authorized,
                   decoration: InputDecoration(labelText: label),
+                  onFieldSubmitted: (_) => submit(),
                   onChanged: (v) => change(field, v)));
     }
     if (kind == 'yesno')
@@ -346,8 +379,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         obscureText: label.toLowerCase().contains('senha'),
         decoration: InputDecoration(
             labelText: label,
-            helperText:
-                field['readOnly'] == true ? 'Calculado pelo Excel' : null),
+            helperText: calculatedEmails.containsKey(keyOf(field))
+                ? 'E-mail do cadastro. A fórmula do Excel será conferida ao salvar.'
+                : field['readOnly'] == true
+                    ? 'Calculado pelo Excel'
+                    : null),
         maxLength: 10000,
         buildCounter: (_,
                 {required currentLength, required isFocused, maxLength}) =>

@@ -55,8 +55,12 @@ no Excel; a ação Salvar cópia no sistema tenta apenas a persistência da cóp
 O cadastro de colaboradores fica em `users/{uid}/company_contacts`, separado
 dos projetos e das contas de acesso ao app. Permite nome, e-mail, busca,
 edição e exclusão, sem cadastrar automaticamente os contatos do cliente.
-Na planilha, selecionar um nome de contato preenche o e-mail pareado, exceto
-campos calculados. Nos três modelos de e-mail, o cadastro permite seleção nos
+Na planilha, selecionar um nome de contato preenche o e-mail pareado.
+Quando o e-mail é calculado, exibe a prévia do cadastro sem enviar uma escrita
+na célula da fórmula. Ao salvar, confere o resultado calculado pelo Excel e
+avisa se o cadastro interno de consultores da planilha produzir outro e-mail;
+mostra e persiste o valor real retornado pelo Excel. A fórmula é preservada.
+Nos três modelos de e-mail, o cadastro permite seleção nos
 campos Para/Cc e sugestões nos nomes dos contatos. Não adiciona destinatários
 automaticamente nem permite repetir um endereço entre Para e Cc.
 O botão + de cada campo também lista os colaboradores cadastrados e insere
