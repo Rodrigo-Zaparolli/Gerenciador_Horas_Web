@@ -1,6 +1,7 @@
 {
     "changes":  [
                     "Adicionados ícones ao lado de Editar trabalho, Checklist, Comentários e E-mails no menu Mais ações.",
-                    "A alteração permanece exclusiva para a conta piloto rodrigozaparolli79@gmail.com. Não exige atualizar a integração local."
+                    "Corrigido o bloqueio da conta piloto no editor da planilha: a integração agora aplica a mesma regra da interface. O token Firebase e o acesso ao arquivo continuam sendo validados.",
+                    "A correção de acesso exige atualizar a integração local para spreadsheet-access-21. Os novos recursos permanecem exclusivos para rodrigozaparolli79@gmail.com."
                 ]
 }

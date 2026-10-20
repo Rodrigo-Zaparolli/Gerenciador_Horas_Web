@@ -17,10 +17,12 @@ class ExcelEditorTests(unittest.TestCase):
     def change(self, **kwargs):
         return {'sheet': 'entry', 'cell': 'C2', 'before': 'old', 'value': 'new', **kwargs}
 
-    def test_only_verified_owner_token_can_access(self):
+    def test_only_authenticated_owner_token_can_access(self):
         owner = {'sub': 'owner', 'email': 'rodrigozaparolli79@gmail.com', 'email_verified': True}
         self.assertTrue(allowed(owner))
-        for changes in [{'email_verified': False}, {'email': 'other@example.com'}, {'sub': ''}]:
+        self.assertTrue(allowed({**owner, 'email_verified': False}))
+        self.assertTrue(allowed({'sub': 'owner', 'email': owner['email']}))
+        for changes in [{'email': 'other@example.com'}, {'sub': ''}, {'sub': ' '}, {'email': None}]:
             self.assertFalse(allowed({**owner, **changes}))
         with patch.object(local_files, '_connection') as db:
             for action in ['excel-editor-read', 'excel-editor-write']:
@@ -29,6 +31,28 @@ class ExcelEditorTests(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     local_files.execute('other', {'action': action}, verified_user=owner)
             db.assert_not_called()
+
+    def test_endpoint_uses_authenticated_claims_and_not_body_email(self):
+        from urllib.parse import quote
+        from cloud_run.main import app
+        headers = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bearer fake'}
+        owner = {'sub': 'owner', 'email': 'rodrigozaparolli79@gmail.com', 'email_verified': False}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'Project.xlsm'
+            path.write_bytes(b'fixture')
+            reference = 'desktop-file://local/owner/12345678-1234-1234-1234-123456789012/' + quote(str(path), safe='')
+            with patch.object(local_files, 'DB_PATH', Path(directory) / 'files.sqlite3'), patch('cloud_run.main.LOCAL_MODE', True):
+                local_files._save('owner', reference, path, 'file')
+                with patch('local_edesk.authentication.verify_token', return_value=owner), patch('local_edesk.excel_editor.edit', return_value={'fields': [], 'tasks': []}) as editor:
+                    response = app.test_client().post('/api/local-files', headers=headers,
+                        json={'action': 'excel-editor-read', 'reference': reference})
+                    self.assertEqual(response.status_code, 200, response.json)
+                    editor.assert_called_once()
+                with patch('local_edesk.authentication.verify_token', return_value={**owner, 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
+                    response = app.test_client().post('/api/local-files', headers=headers,
+                        json={'action': 'excel-editor-read', 'reference': reference, 'email': owner['email'], 'email_verified': True})
+                    self.assertEqual(response.status_code, 403)
+                    editor.assert_not_called()
 
     def test_unmapped_duplicate_and_stale_values_rejected(self):
         self.assertEqual(validated_changes(self.current, [self.change()])[0][1], 'new')

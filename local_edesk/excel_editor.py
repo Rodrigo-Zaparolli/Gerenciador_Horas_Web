@@ -23,7 +23,10 @@ BASE = datetime(1899, 12, 30)
 
 
 def allowed(user):
-    return (bool(user.get('sub')) and user.get('email_verified') is True
+    # Claims are supplied exclusively by the verified Firebase-token handler.
+    # Match the same account rule as the app; do not add an email-verification
+    # requirement absent from the pilot access policy.
+    return (isinstance(user.get('sub'), str) and bool(user['sub'].strip())
             and str(user.get('email', '')).strip().lower() == OWNER)
 
 

@@ -16,12 +16,12 @@ serviço usando as informações do token Firebase validado. Nunca aceitar um
 e-mail informado no corpo da requisição como autorização. Continuar exigindo
 autorização do vínculo de arquivo para o UID da conta.
 
-O serviço exige token da conta designada com e-mail verificado e autorização
+O serviço exige token da conta designada com identidade validada pelo Firebase e autorização
 prévia do arquivo para o UID. A interface é liberada pela conta autenticada;
 o serviço faz uma segunda validação independente antes de acessar a planilha.
 
 Uso: Planilha → Editar no sistema. Requer Microsoft Excel instalado e integração
-spreadsheet-pilot-20 neste computador. Somente XLSX e XLSM de até 25 MB com as
+spreadsheet-access-21 neste computador. Somente XLSX e XLSM de até 25 MB com as
 abas e cabeçalhos esperados. Alterações ainda não salvas exigem confirmação
 antes de descartar. Falha ou resposta incerta exige recarregar para conferir.
 
