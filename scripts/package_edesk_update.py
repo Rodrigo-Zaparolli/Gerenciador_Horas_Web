@@ -1,4 +1,4 @@
-"""Build the small spreadsheet-access-21 update for an existing full installation."""
+"""Build the small spreadsheet-dates-22 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -16,7 +16,7 @@ FILES = (
     'local_edesk/excel_editor.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO spreadsheet-access-21 — instalação completa já existente
+README = '''ATUALIZAÇÃO spreadsheet-dates-22 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,7 +28,11 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Correção v21: a integração usa a mesma regra de conta da interface, sem exigir
+Correção v22: abre planilhas com datas armazenadas como texto ou instruções
+do modelo sem o erro could not convert string to float. Não altera esses
+valores automaticamente. Inclui o ajuste de exibição do envelope no site.
+
+Inclui a correção v21: a integração usa a mesma regra de conta da interface, sem exigir
 a marcação adicional email_verified. O token Firebase continua sendo validado,
 e contas diferentes de rodrigozaparolli79@gmail.com continuam bloqueadas.
 
@@ -63,7 +67,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-editor-planilha-21.zip'
+    target = ROOT / 'web/downloads/atualizacao-editor-planilha-22.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

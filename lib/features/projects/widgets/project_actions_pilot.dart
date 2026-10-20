@@ -84,8 +84,30 @@ class _ActionMenuLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-    Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
+    if (icon == Icons.mail_outline_rounded)
+      CustomPaint(size: const Size.square(20), painter: _MenuEmailPainter(Theme.of(context).colorScheme.onSurface))
+    else
+      Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface),
     const SizedBox(width: 12),
     Text(label),
   ]);
+}
+
+class _MenuEmailPainter extends CustomPainter {
+  const _MenuEmailPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6..strokeJoin = StrokeJoin.round..strokeCap = StrokeCap.round;
+    final rect = Rect.fromLTWH(size.width * .08, size.height * .2, size.width * .84, size.height * .6);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+    canvas.drawPath(Path()..moveTo(rect.left + 1, rect.top + 1)
+      ..lineTo(rect.center.dx, rect.center.dy + 1)
+      ..lineTo(rect.right - 1, rect.top + 1), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MenuEmailPainter oldDelegate) => oldDelegate.color != color;
 }

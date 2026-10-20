@@ -21,7 +21,7 @@ prévia do arquivo para o UID. A interface é liberada pela conta autenticada;
 o serviço faz uma segunda validação independente antes de acessar a planilha.
 
 Uso: Planilha → Editar no sistema. Requer Microsoft Excel instalado e integração
-spreadsheet-access-21 neste computador. Somente XLSX e XLSM de até 25 MB com as
+spreadsheet-dates-22 neste computador. Somente XLSX e XLSM de até 25 MB com as
 abas e cabeçalhos esperados. Alterações ainda não salvas exigem confirmação
 antes de descartar. Falha ou resposta incerta exige recarregar para conferir.
 
@@ -34,3 +34,7 @@ Um arquivo aberto no Excel deve ser fechado antes de confirmar a gravação.
 As macros dos botões da planilha não são executadas automaticamente. Alterar
 produtos não executa Atualizar Planilha de Implantação; usar esse botão no Excel
 quando necessário. O arquivo enviado para análise não foi modificado pelos testes.
+
+Desde spreadsheet-dates-22, a leitura aceita datas como números do Excel,
+texto brasileiro ou ISO. Instruções do modelo são exibidas como texto sem
+alterar as células automaticamente nem impedir a abertura da planilha.

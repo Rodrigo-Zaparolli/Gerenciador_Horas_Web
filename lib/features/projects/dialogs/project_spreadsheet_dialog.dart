@@ -176,7 +176,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final raw = current(field) as String;
       final date = DateTime.tryParse(raw);
       final text = date == null
-          ? ''
+          ? raw
           : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
       return TextFormField(
           key: ValueKey('${data!['revision']}:${keyOf(field)}:$raw'),

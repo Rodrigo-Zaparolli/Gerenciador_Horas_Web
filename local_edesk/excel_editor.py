@@ -34,12 +34,24 @@ def revision(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+class _ExcelHandle:
+    """Detach caller-held proxies before COM is uninitialized."""
+    def __init__(self, target):
+        self.target = target
+
+    def __getattr__(self, name):
+        if self.target is None:
+            raise RuntimeError('A sessão de leitura do Excel já foi encerrada.')
+        return getattr(self.target, name)
+
+
 @contextmanager
 def workbook(path, writable=False):
     import pythoncom
     import win32com.client
     pythoncom.CoInitialize()
     app = book = None
+    handles = []
     try:
         app = win32com.client.DispatchEx('Excel.Application')
         app.Visible = False
@@ -51,19 +63,43 @@ def workbook(path, writable=False):
                                  ReadOnly=not writable, IgnoreReadOnlyRecommended=True)
         if writable and book.ReadOnly:
             raise ValueError('A cópia da planilha está bloqueada para edição.')
-        yield app, book
+        handles = [_ExcelHandle(app), _ExcelHandle(book)]
+        yield tuple(handles)
     finally:
-        if book is not None:
-            book.Close(SaveChanges=False)
-        if app is not None:
-            app.Quit()
-        pythoncom.CoUninitialize()
+        for handle in handles:
+            handle.target = None
+        try:
+            if book is not None:
+                book.Close(SaveChanges=False)
+        finally:
+            try:
+                if app is not None:
+                    app.Quit()
+            finally:
+                book = None
+                app = None
+                pythoncom.CoUninitialize()
 
 
 def value(cell, kind):
     raw = cell.Value2
     if kind == 'date':
-        return (BASE + timedelta(days=float(raw))).strftime('%Y-%m-%d') if raw else ''
+        if raw is None or raw == '' or raw == 0:
+            return ''
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            try:
+                return (BASE + timedelta(days=float(raw))).strftime('%Y-%m-%d')
+            except (ValueError, OverflowError):
+                return str(raw)
+        text = str(raw).strip()
+        for pattern in ('%Y-%m-%d', '%d/%m/%Y', '%d/%m/%y'):
+            try:
+                return datetime.strptime(text, pattern).strftime('%Y-%m-%d')
+            except ValueError:
+                pass
+        # Templates may contain instructions/placeholders instead of a date.
+        # Show the original text without rewriting it or failing the whole read.
+        return text
     if kind == 'percent':
         return float(raw or 0)
     if raw is None:
@@ -75,6 +111,7 @@ class SheetSnapshot:
     """Read cells in two COM calls instead of thousands of RPC calls."""
     def __init__(self, sheet):
         self.Name = sheet.Name
+        self.source = sheet
         self.values = sheet.Range('A1:AH500').Value2
         self.formulas = sheet.Range('A1:AH500').Formula
         self.ListObjects = sheet.ListObjects
@@ -103,9 +140,12 @@ def snapshot(book):
 
     def add(sheet, address, label, group, kind='text'):
         cell = sheet.Range(address)
-        fields.append({'sheet': sheet.Name, 'cell': address, 'label': label,
+        field = {'sheet': sheet.Name, 'cell': address, 'label': label,
                        'group': group, 'kind': kind, 'value': value(cell, kind),
-                       'readOnly': bool(cell.HasFormula)})
+                       'readOnly': bool(cell.HasFormula)}
+        if kind == 'date':
+            field['dateStorage'] = 'text' if isinstance(cell.Value2, str) or sheet.source.Range(address).NumberFormat == '@' else 'number'
+        fields.append(field)
 
     labels = {'ID da solicitação no E-Desk', 'Tipo Projeto', 'Assinatura da proposta',
               'Início do projeto pela Consultoria', 'Encerramento do projeto',
@@ -216,6 +256,13 @@ def validated_changes(current, changes):
     return result
 
 
+def stored_date(field, new):
+    if not new:
+        return '' if field.get('dateStorage') == 'text' else None
+    date = datetime.strptime(new, '%Y-%m-%d')
+    return date.strftime('%d/%m/%Y') if field.get('dateStorage') == 'text' else (date - BASE).days
+
+
 def vba(path):
     with ZipFile(path) as archive:
         return archive.read('xl/vbaProject.bin') if 'xl/vbaProject.bin' in archive.namelist() else None
@@ -290,8 +337,9 @@ def preserve_package(source, target, changes):
                         continue
                     kind = field['kind']
                     if kind == 'date':
-                        new = (datetime.strptime(new, '%Y-%m-%d') - BASE).days if new else None
-                    cell_updates[field['cell']] = ('' if kind in {'date', 'percent'} else 'inlineStr', new)
+                        new = stored_date(field, new)
+                    text = kind not in {'date', 'percent'} or kind == 'date' and field.get('dateStorage') == 'text'
+                    cell_updates[field['cell']] = ('inlineStr' if text else '', new)
                 found = set()
                 def replace(match):
                     address = match[1]
@@ -339,9 +387,13 @@ def edit(path, body):
             changes = validated_changes(before, body.get('changes'))
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
-                if cell.HasFormula:
-                    raise ValueError('Uma célula de fórmula não pode ser editada.')
-                cell.Value2 = ((datetime.strptime(new, '%Y-%m-%d') - BASE).days if new else None) if field['kind'] == 'date' else new
+                try:
+                    if cell.HasFormula:
+                        raise ValueError('Uma célula de fórmula não pode ser editada.')
+                    cell.Value2 = stored_date(field, new) if field['kind'] == 'date' else new
+                finally:
+                    # Release the Range proxy before closing/uninitializing COM.
+                    cell = None
             app.CalculateFull()
             book.Save()
         preserve_package(path, staged, changes)

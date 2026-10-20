@@ -1,12 +1,16 @@
 import copy
+import os
 import unittest
 import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
+from types import SimpleNamespace
 from unittest.mock import patch
-from local_edesk.excel_editor import allowed, validated_changes, preserve_package
+from local_edesk.excel_editor import allowed, validated_changes, preserve_package, value, stored_date
 from local_edesk import local_files
+
+os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
@@ -108,6 +112,19 @@ class ExcelEditorTests(unittest.TestCase):
             for value in invalid:
                 with self.assertRaises(ValueError):
                     validated_changes(current, [self.change(value=value)])
+
+    def test_read_accepts_excel_dates_text_dates_and_template_instructions(self):
+        for original, expected in [
+            (None, ''), ('', ''), (0, ''), (46314, '2026-10-19'),
+            ('19/10/2026', '2026-10-19'), ('19/10/26', '2026-10-19'),
+            ('2026-10-19', '2026-10-19'), ('# Data da proposta #', '# Data da proposta #')]:
+            self.assertEqual(value(SimpleNamespace(Value2=original), 'date'), expected)
+
+    def test_date_save_preserves_text_or_numeric_storage(self):
+        self.assertEqual(stored_date({'dateStorage': 'text'}, '2026-10-19'), '19/10/2026')
+        self.assertEqual(stored_date({'dateStorage': 'number'}, '2026-10-19'), 46314)
+        self.assertEqual(stored_date({'dateStorage': 'text'}, ''), '')
+        self.assertIsNone(stored_date({'dateStorage': 'number'}, ''))
 
 
 if __name__ == '__main__':
