@@ -126,7 +126,7 @@ class TabelaProjetosWidget extends StatefulWidget {
   final ValueChanged<ProjectModel> onDeleteProject;
   final ValueChanged<ProjectModel> onAddSubTask;
 
-  final void Function(ProjectModel, String) onProjectStatusChanged;
+  final Future<void> Function(ProjectModel, String) onProjectStatusChanged;
   final void Function(TaskModel, String) onSubTaskStatusChanged;
 
   final void Function(ProjectModel, TaskModel) onEditSubTask;
@@ -3259,12 +3259,8 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                 status: project.status,
                 onChanged: (newStatus) async {
                   if (newStatus != null) {
-                    project.status = newStatus;
-
                     try {
-                      await widget.firebaseService.salvarProjeto(project);
-
-                      widget.onProjectStatusChanged(
+                      await widget.onProjectStatusChanged(
                         project,
                         newStatus,
                       );

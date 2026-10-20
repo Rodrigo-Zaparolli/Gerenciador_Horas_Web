@@ -5,6 +5,8 @@ import 'package:gerenciador_horas/core/theme/app_visuals.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'package:gerenciador_horas/data/services/project_update_service.dart';
+import 'package:gerenciador_horas/data/services/project_status_update.dart';
+import '../projects/dialogs/project_archive_dialog.dart';
 import 'widgets/dashboard_alerts_modal.dart';
 import '../../domain/models/deadline_alert.dart';
 import 'comentario/comentario_modal.dart';
@@ -105,6 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   });
 
   int _updateCheckGeneration = 0;
+  final Set<String> _updatingProjectStatuses = {};
   bool _updateDialogOpen = false;
   final _alertsKey = GlobalKey();
 
@@ -4238,22 +4241,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ProjectModel project,
     String newStatus,
   ) async {
-    setState(() {
-      project.status = newStatus;
-    });
-
+    final owner = FirebaseAuth.instance.currentUser?.uid;
+    if (owner == null) return;
+    if (!mounted || !_updatingProjectStatuses.add(project.id)) return;
     try {
-      if (newStatus == 'TRAB_FIM') {
-        await widget.timeLogStore.registerProjectLogs(
-          project.id,
-        );
-      }
-
-      await _firebaseService.saveProject(
-        project,
+      final folderMoved = await updateProjectStatus(
+        project: project,
+        status: newStatus,
+        registerLogs: () => widget.timeLogStore.registerProjectLogs(project.id),
+        persist: () async {
+          if (FirebaseAuth.instance.currentUser?.uid != owner) throw StateError('A conta mudou.');
+          await _firebaseService.saveProject(project);
+        },
+        offerArchive: () async {
+          if (!mounted || !context.mounted || FirebaseAuth.instance.currentUser?.uid != owner || !ProjectArchiveDialog.allowed ||
+              !ProjectArchiveDialog.acceptsFolder(project.folderPath ?? '')) return false;
+          final result = await ProjectArchiveDialog.show(context,
+            projectId: project.id, folder: project.folderPath!, excel: project.excelLink ?? '');
+          if (result == null) return false;
+          project.folderPath = result['folderReference'] as String;
+          project.excelLink = result['excelReference'] as String;
+          return true;
+        },
       );
 
-      if (newStatus == 'TRAB_FIM') {
+      if (newStatus == 'TRAB_FIM' && mounted && context.mounted && FirebaseAuth.instance.currentUser?.uid == owner) {
         widget.onProjectCompleted?.call(
           project,
         );
@@ -4262,7 +4274,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Projeto ${project.id} finalizado e movido!',
+                folderMoved
+                    ? 'Projeto ${project.id} finalizado. Pasta movida e vínculos atualizados.'
+                    : 'Projeto ${project.id} finalizado. A pasta não foi movida.',
               ),
               backgroundColor: CoresApp.sucesso,
               behavior: SnackBarBehavior.floating,
@@ -4275,6 +4289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } catch (e) {
       if (mounted && context.mounted) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -4288,6 +4303,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       }
+    } finally {
+      _updatingProjectStatuses.remove(project.id);
     }
   }
 

@@ -7,6 +7,14 @@ Checklist-Processo estão implementados inicialmente apenas para essa
 conta autenticada. Manter a interface e os fluxos existentes para as demais
 contas. Não liberar a todos sem nova orientação do usuário.
 
+A mudança de status do projeto na tabela delega a persistência exclusivamente
+ao dashboard, sem a gravação antecipada/duplicada pela tabela. Para TRAB_FIM,
+registra os apontamentos, finaliza no Firebase uma vez e abre a conferência da
+pasta a partir do contexto do dashboard, que permanece montado quando a linha
+sai da tabela. A mensagem só declara movimentação física após o retorno
+confirmado do modal; cancelar mantém o projeto finalizado e a pasta no local.
+O editor mantém a mesma conferência no seu próprio fluxo de finalização.
+
 Usar `PilotFeatureAccess.allows` para verificar a conta ao apresentar e ao abrir
 os novos recursos. A troca de conta deve retirar o acesso imediatamente; não
 persistir um booleano global de liberação nem decidir pela máquina ou navegador.

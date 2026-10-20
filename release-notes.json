@@ -1,6 +1,7 @@
 {
     "changes":  [
-                    "As ações do projeto agora ficam reunidas em um único ícone de três pontos: abrir pasta, abrir planilha no Excel, editar planilha no sistema, editar trabalho, checklist, comentários e e-mails.",
-                    "Projetos sem pasta ou planilha vinculada mantêm essas opções desabilitadas. O ajuste visual continua restrito à conta de teste e não exige atualizar a integração local."
+                    "Corrigida a finalização pelo status da tabela: agora abre a conferência para mover a pasta, assim como a finalização pelo editor de trabalho.",
+                    "Removida uma gravação duplicada na mudança de status. A mensagem de conclusão só informa pasta movida após confirmar a movimentação e atualizar os vínculos; cancelar a conferência mantém a pasta no local atual.",
+                    "A correção não exige uma nova versão da integração: utilize a v24 já disponível. A movimentação permanece restrita à conta de teste."
                 ]
 }
