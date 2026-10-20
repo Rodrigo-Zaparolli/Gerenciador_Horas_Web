@@ -52,6 +52,67 @@ Map<String, dynamic> snapshot() => {
     };
 
 void main() {
+  testWidgets(
+      'Preview uses pending checklist edits without saving or replacing the snapshot',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final calls = <Map<String, dynamic>>[];
+    final store = MemorySpreadsheetStore();
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+            project:
+                ProjectModel.fromJson({'id': '1', 'serviceType': 'Enterprise'}),
+            uidProvider: () => 'owner',
+            emailProvider: () => 'rodrigozaparolli79@gmail.com',
+            store: store,
+            transport: (args) async {
+              calls.add(args);
+              if (args['action'] == 'excel-editor-preview')
+                return {
+                  'preview': true,
+                  'checklistSheet': 'Checklist-Processo',
+                  'statusPreview': {
+                    'total': .64,
+                    'source': 'Dados!AG5:AL11',
+                    'rows': [
+                      {'label': 'Implantação', 'percentage': .25, 'weight': .45}
+                    ]
+                  }
+                };
+              return snapshot();
+            })));
+    await tester.pumpAndSettle();
+    final writes = store.writes;
+    await tester.tap(find.text('Checklist-Processo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Implantação').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButton<double>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25%').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prévia da porcentagem'));
+    await tester.pumpAndSettle();
+    expect(find.text('Progresso total: 64.0%'), findsOneWidget);
+    expect(find.textContaining('Simulação com as alterações pendentes'),
+        findsOneWidget);
+    expect(calls.last['changes'], [
+      {
+        'sheet': 'Checklist-Processo',
+        'cell': 'E18',
+        'before': 0.0,
+        'value': .25
+      }
+    ]);
+    expect(calls.any((c) => c['action'] == 'excel-editor-write'), isFalse);
+    expect(store.writes, writes);
+    await tester.tap(find.text('Voltar ao checklist'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 alteração(ões) não salva(s)'), findsOneWidget);
+  });
   test('Cached checklist must match the current service type', () {
     expect(spreadsheetMatchesProject(snapshot(), 'Enterprise'), isTrue);
     expect(spreadsheetMatchesProject(snapshot(), 'Professional'), isFalse);

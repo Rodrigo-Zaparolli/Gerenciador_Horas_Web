@@ -118,6 +118,11 @@ class NativeLocalFiles {
           'Resposta inválida da integração local.');
     }
     if (result['status'] != 200) {
+      if (action == 'excel-editor-preview' &&
+          data['message'] == 'Ação local inválida.') {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local v28 para calcular a prévia da porcentagem.');
+      }
       if (action == 'authorize' && data['message'] == 'Ação local inválida.') {
         throw const NativeFilesException(
             'Atualize e reinicie a integração local v26 para autorizar os vínculos nesta janela.');

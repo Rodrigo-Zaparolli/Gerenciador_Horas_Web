@@ -26,7 +26,7 @@ picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 PROJECT_ROOT_MOVE = True
-SUPPORTED_ACTIONS = frozenset({'authorize', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'})
+SUPPORTED_ACTIONS = frozenset({'authorize', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'excel-editor-preview', 'project-move-prepare', 'project-move-commit'})
 
 
 def _absolute_windows_path(value):
@@ -173,7 +173,7 @@ def execute(uid, body, verified_user=None):
     if action not in SUPPORTED_ACTIONS:
         raise ValueError('Ação local inválida.')
     reference = body.get('reference')
-    editor = action in {'excel-editor-read', 'excel-editor-write'}
+    editor = action in {'excel-editor-read', 'excel-editor-write', 'excel-editor-preview'}
     moving = action in {'project-move-prepare', 'project-move-commit'}
     if editor or moving:
         from local_edesk.excel_editor import allowed
@@ -183,7 +183,7 @@ def execute(uid, body, verified_user=None):
         import sys
         from local_edesk.project_archive import execute as move_project
         return move_project(sys.modules[__name__], uid, body)
-    if action in {'authorize', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'}:
+    if action in {'authorize', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'excel-editor-preview'}:
         if not isinstance(reference, str):
             raise ValueError('Selecione um arquivo ou pasta no editor.')
         kind, expected_name = parse_reference(reference, uid)

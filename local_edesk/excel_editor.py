@@ -239,6 +239,43 @@ def snapshot(book, service_type=None):
             'progress': float(progress) if isinstance(progress, (int, float)) and 0 <= progress <= 1 else None}
 
 
+def status_preview(book, service_type):
+    sheet = SheetSnapshot(book.Worksheets(checklist_sheet(service_type)))
+    first, last = checklist_table(sheet)
+    def number(value):
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and -1e-9 <= value <= 1 + 1e-9 else None
+    total = number(sheet.Cells(first - 1, 5).Value2)
+    rows = []
+    if checklist_sheet(service_type) == 'Checklist-Processo':
+        # This is the same Status Projeto block used by the comment preview.
+        dados = book.Worksheets('Dados')
+        header = str(dados.Range('AG5').Value2 or '').strip()
+        formula = str(dados.Range('AH5').Formula or '')
+        if header == 'Status Projeto' and 'Checklist-Processo' in formula:
+            total = number(dados.Range('AH5').Value2)
+            for row in range(7, 12):
+                label = str(dados.Cells(row, 33).Value2 or '').strip()
+                if not label:
+                    continue
+                rows.append({'label': label, 'percentage': number(dados.Cells(row, 34).Value2),
+                    'start': value(dados.Cells(row, 35), 'date'),
+                    'end': value(dados.Cells(row, 36), 'date'),
+                    'weight': number(dados.Cells(row, 37).Value2),
+                    'planned': number(dados.Cells(row, 38).Value2)})
+            return {'total': total, 'rows': rows, 'source': 'Dados!AG5:AL11'}
+    # Maker has no Status Projeto block linked to its checklist in the template.
+    # Read its own calculated stage cells, never the Enterprise summary.
+    for row in range(first + 1, last + 1):
+        label = str(sheet.Cells(row, 4).Value2 or '').strip()
+        percentage = number(sheet.Cells(row, 3).Value2)
+        if label and percentage is not None and not any(r['label'] == label for r in rows):
+            weights = [sheet.Cells(r, 18).Value2 for r in range(first + 1, last + 1)
+                if str(sheet.Cells(r, 4).Value2 or '').strip() == label]
+            weight = sum(float(v) for v in weights if isinstance(v, (int, float)) and not isinstance(v, bool))
+            rows.append({'label': label, 'percentage': percentage, 'weight': number(weight)})
+    return {'total': total, 'rows': rows, 'source': sheet.Name}
+
+
 def validated_changes(current, changes):
     if not isinstance(changes, list) or not 1 <= len(changes) <= 500:
         raise ValueError('Informe de 1 a 500 alterações.')
@@ -389,9 +426,10 @@ def edit(path, body):
     try:
         original = revision(path)
         writing = body['action'] == 'excel-editor-write'
-        if writing and body.get('revision') != original:
+        previewing = body['action'] == 'excel-editor-preview'
+        if (writing or previewing) and body.get('revision') != original:
             raise ValueError('O arquivo mudou desde a leitura. Recarregue antes de salvar.')
-        if not writing:
+        if not writing and not previewing:
             with workbook(path) as (_, book):
                 data = snapshot(book, body.get('serviceType'))
             if revision(path) != original:
@@ -403,7 +441,7 @@ def edit(path, body):
         shutil.copy2(path, staged)
         with workbook(staged, writable=True) as (app, book):
             before = snapshot(book, body.get('serviceType'))
-            changes = validated_changes(before, body.get('changes'))
+            changes = [] if previewing and body.get('changes') == [] else validated_changes(before, body.get('changes'))
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
                 try:
@@ -414,7 +452,15 @@ def edit(path, body):
                     # Release the Range proxy before closing/uninitializing COM.
                     cell = None
             app.CalculateFull()
-            book.Save()
+            if previewing:
+                preview = status_preview(book, body.get('serviceType'))
+            else:
+                book.Save()
+        if previewing:
+            if revision(path) != original:
+                raise ValueError('O arquivo mudou durante a prévia. Recarregue para conferir.')
+            return {'preview': True, 'statusPreview': preview, 'revision': original,
+                    'checklistSheet': checklist_sheet(body.get('serviceType')), 'filename': path.name}
         preserve_package(path, staged, changes)
         with workbook(staged) as (_, book):
             checked = snapshot(book, body.get('serviceType'))

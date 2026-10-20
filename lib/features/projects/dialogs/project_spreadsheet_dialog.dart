@@ -2,6 +2,7 @@ import 'dart:async';
 import 'spreadsheet_store.dart';
 import 'company_contacts.dart';
 import 'project_spreadsheet_kind.dart';
+import 'checklist_status_preview.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
@@ -43,6 +44,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Map<String, dynamic>? data;
   String? error, notice, owner;
   bool busy = false;
+  DialogRoute<void>? previewRoute;
   List<CompanyContact> contacts = [];
   SpreadsheetStore? get store =>
       widget.store ??
@@ -83,6 +85,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     if (widget.uidProvider == null)
       subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
         if (mounted && !authorized) {
+          final route = previewRoute;
+          if (route != null && route.isActive) {
+            Navigator.of(context, rootNavigator: true).removeRoute(route);
+          }
           setState(() {
             data = null;
             pending.clear();
@@ -206,6 +212,39 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> previewStatus() async {
+    if (!authorized || busy || data == null) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      final result = await request('excel-editor-preview',
+          revision: data!['revision'] as String,
+          changes: pending.values.toList());
+      if (!mounted || !authorized) return;
+      if (result['preview'] != true ||
+          result['statusPreview'] is! Map ||
+          !spreadsheetMatchesProject(result, widget.project.serviceType)) {
+        throw StateError(
+            'A integração não confirmou a prévia deste checklist. Atualize para a v28.');
+      }
+      final route = DialogRoute<void>(
+          context: context,
+          builder: (_) => ChecklistStatusPreview(
+              data: Map<String, dynamic>.from(result['statusPreview'] as Map),
+              unsaved: pending.isNotEmpty));
+      setState(() => busy = false);
+      previewRoute = route;
+      await Navigator.of(context, rootNavigator: true).push(route);
+    } catch (e) {
+      if (mounted && authorized) setState(() => error = e.toString());
+    } finally {
+      previewRoute = null;
       if (mounted) setState(() => busy = false);
     }
   }
@@ -447,6 +486,15 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         .toList();
     final progress = data!['progress'];
     return Column(children: [
+      Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: OutlinedButton.icon(
+                  onPressed: busy || !authorized ? null : previewStatus,
+                  icon: const Icon(Icons.preview_outlined),
+                  label: Text(
+                      busy ? 'Calculando prévia…' : 'Prévia da porcentagem')))),
       if (progress is num)
         Padding(
             padding: const EdgeInsets.all(12),

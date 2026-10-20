@@ -45,7 +45,7 @@ class ExcelEditorTests(unittest.TestCase):
         for changes in [{'email': 'other@example.com'}, {'sub': ''}, {'sub': ' '}, {'email': None}]:
             self.assertFalse(allowed({**owner, **changes}))
         with patch.object(local_files, '_connection') as db:
-            for action in ['excel-editor-read', 'excel-editor-write']:
+            for action in ['excel-editor-read', 'excel-editor-write', 'excel-editor-preview']:
                 with self.assertRaises(PermissionError):
                     local_files.execute('other', {'action': action, 'email': owner['email']})
                 with self.assertRaises(PermissionError):

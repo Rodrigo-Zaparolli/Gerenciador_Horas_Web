@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Envios ao E-Desk: horas, comentários e fases agora mostram uma confirmação clara de cadastro e finalização com sucesso, incluindo o indicador de 100% após a confirmação do E-Desk.",
-    "Comentários com porcentagem confirmam os dois cadastros. Falhas e envios sem confirmação mantêm o aviso com os detalhes da integração.",
-    "Este ajuste é do aplicativo web e não exige outra atualização da integração local."
+    "Checklist da planilha: novo botão Prévia da porcentagem considera as alterações pendentes, calculadas pelo Excel em uma cópia temporária, sem salvar no arquivo original.",
+    "Enterprise usa o mesmo bloco Status Projeto do comentário, com etapas, realizado, datas, peso e previsão. Maker usa os resultados calculados da própria aba Maker, sem reutilizar o resumo Enterprise.",
+    "A prévia não salva nem envia ao E-Desk. Para confirmar as alterações, use Salvar na planilha. Requer integração local v28 e permanece restrita à conta piloto."
   ]
 }

@@ -129,6 +129,16 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+Na v28, excel-editor-preview valida revisão e campos permitidos, aplica os
+valores pendentes em cópia temporária e executa CalculateFull com macros
+desativadas. Retorna somente o resumo; não salva, cria backup nem substitui
+o original. O temporário é removido em finally. Rejeita revisão antiga.
+Enterprise usa Dados!AG5:AL11, o mesmo bloco do comentário. Maker não possui
+esse bloco ligado à sua aba: usa C (progresso de etapa), R (pesos calculados)
+e E acima do cabeçalho (total), todos calculados pelo Excel da aba Maker.
+A interface preserva alterações pendentes e cache; a prévia é explícita,
+sem recalcular a cada tecla. Fechar a prévia retorna ao checklist sem salvar.
+
 Na v27, quando o vínculo aponta para Documentos, a janela solicita a pasta
 principal. sourceReference é autorizado separadamente e só permite a própria
 pasta vinculada ou seu pai imediato quando ela se chama Documentos. Pastas
