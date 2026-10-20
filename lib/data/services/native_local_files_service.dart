@@ -34,7 +34,8 @@ class NativeLocalFiles {
   }
 
   static Future<Map<String, dynamic>> call(String action,
-      {String? reference, String? name, String? range}) async {
+      {String? reference, String? name, String? range,
+      String? revision, List<Map<String, dynamic>>? changes}) async {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
     if (token == null) {
@@ -49,6 +50,8 @@ class NativeLocalFiles {
       'reference': reference,
       'name': name,
       'range': range,
+      if (revision != null) 'revision': revision,
+      if (changes != null) 'changes': changes,
       'interactive': true
     });
     if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
@@ -66,6 +69,9 @@ class NativeLocalFiles {
           'Resposta inválida da integração local.');
     }
     if (result['status'] != 200) {
+      if (action.startsWith('excel-editor-') && data['message'] == 'Ação local inválida.') {
+        throw const NativeFilesException('Atualize a integração local para usar o editor da planilha.');
+      }
       if (action == 'preview' &&
           result['status'] == 400 &&
           data['message'] == 'Ação local inválida.') {

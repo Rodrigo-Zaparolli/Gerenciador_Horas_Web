@@ -191,7 +191,11 @@ def local_files_action():
         return jsonify({'message': 'Solicitação local inválida.'}), 400
     try:
         from local_edesk.local_files import execute
+        if body.get('action') in {'excel-editor-read', 'excel-editor-write'}:
+            return jsonify(execute(user['sub'], body, verified_user=user))
         return jsonify(execute(user['sub'], body))
+    except PermissionError as error:
+        return jsonify({'message': str(error)}), 403
     except (ValueError, FileNotFoundError) as error:
         message = 'O arquivo ou pasta mudou de lugar. Selecione novamente no editor.' if isinstance(error, FileNotFoundError) else str(error)
         return jsonify({'message': message}), 400

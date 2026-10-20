@@ -24,7 +24,7 @@ DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
-SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview'})
+SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'})
 
 
 def _absolute_windows_path(value):
@@ -164,18 +164,23 @@ def _persistent_reference(uid, reference, path, kind):
     return persistent
 
 
-def execute(uid, body):
+def execute(uid, body, verified_user=None):
     if os.name != 'nt':
         raise ValueError('A abertura local está disponível no Windows.')
     action = body.get('action')
     if action not in SUPPORTED_ACTIONS:
         raise ValueError('Ação local inválida.')
     reference = body.get('reference')
-    if action in {'open', 'read', 'preview'}:
+    editor = action in {'excel-editor-read', 'excel-editor-write'}
+    if editor:
+        from local_edesk.excel_editor import allowed
+        if not verified_user or verified_user.get('sub') != uid or not allowed(verified_user):
+            raise PermissionError('Recurso em teste disponível apenas para a conta autorizada.')
+    if action in {'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'}:
         if not isinstance(reference, str):
             raise ValueError('Selecione um arquivo ou pasta no editor.')
         kind, expected_name = parse_reference(reference, uid)
-        if action == 'preview' and kind != 'file':
+        if (action == 'preview' or editor) and kind != 'file':
             raise ValueError('Selecione a planilha do trabalho, não a pasta.')
         with _connection() as con:
             record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
@@ -189,7 +194,7 @@ def execute(uid, body):
             _check_expected_path(reference, path)
             if recovered:
                 _save(uid, reference, path, kind)
-        elif action == 'read':
+        elif action == 'read' or editor:
             raise ValueError('Selecione novamente o arquivo no editor deste computador.')
         else:
             if not picker_lock.acquire(blocking=False):
@@ -206,6 +211,9 @@ def execute(uid, body):
             finally:
                 picker_lock.release()
         persistent = _persistent_reference(uid, reference, path, kind)
+        if editor:
+            from local_edesk.excel_editor import edit
+            return {**edit(path, body), 'reference': persistent}
         if action == 'open':
             os.startfile(str(path))
             return {'opened': True, 'reference': persistent}

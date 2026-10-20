@@ -1,4 +1,4 @@
-"""Build the small comment-close-19 update for an existing full installation."""
+"""Build the small spreadsheet-pilot-20 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -12,9 +12,11 @@ FILES = (
     'scripts/stop_edesk_local.ps1',
     'cloud_run/main.py',
     'local_edesk/local_files.py',
+    'local_edesk/files_server.py',
+    'local_edesk/excel_editor.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO comment-close-19 — instalação completa já existente
+README = '''ATUALIZAÇÃO spreadsheet-pilot-20 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -26,7 +28,13 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Correção v19: a janela do comentário pode fechar após a resposta de Salvar.
+Versão v20: editor piloto das abas Informações de entrada e Checklist-Processo.
+Restrito à conta autenticada rodrigozaparolli79@gmail.com, com e-mail verificado.
+Exige Microsoft Excel instalado. Grava apenas campos permitidos, cria backup
+e bloqueia alterações baseadas numa leitura antiga. Preserva o VBA original.
+Não executa macros de atualização do modelo automaticamente.
+
+Inclui a correção v19: a janela do comentário pode fechar após a resposta de Salvar.
 O processo reconhece esse fechamento, não repete o comentário e continua
 para a solicitação, o trabalho escolhido e a porcentagem, verificando o valor.
 
@@ -51,7 +59,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-horas-19.zip'
+    target = ROOT / 'web/downloads/atualizacao-editor-planilha-20.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

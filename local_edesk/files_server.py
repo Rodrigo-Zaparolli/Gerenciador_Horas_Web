@@ -54,7 +54,11 @@ def open_files():
     if not isinstance(body, dict):
         return jsonify(message='Solicitação inválida.'), 400
     try:
+        if body.get('action') in {'excel-editor-read', 'excel-editor-write'}:
+            return jsonify(execute(user['sub'], body, verified_user=user))
         return jsonify(execute(user['sub'], body))
+    except PermissionError as error:
+        return jsonify(message=str(error)), 403
     except FileNotFoundError:
         return jsonify(message='Selecione novamente o original: a pasta ou arquivo mudou de lugar.'), 400
     except ValueError as error:

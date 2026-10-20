@@ -1,4 +1,9 @@
 import 'package:gerenciador_horas/core/theme/app_visuals.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart' show Firebase;
+import '../../../core/config/pilot_feature_access.dart';
+import '../../projects/widgets/project_actions_pilot.dart';
+import '../../projects/dialogs/project_spreadsheet_dialog.dart';
 import 'package:gerenciador_horas/features/project_emails/project_email_modal.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
@@ -4056,6 +4061,36 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
         project.folderPath != null && project.folderPath!.trim().isNotEmpty;
     final hasExcel =
         project.excelLink != null && project.excelLink!.trim().isNotEmpty;
+
+    final user = Firebase.apps.isEmpty ? null : FirebaseAuth.instance.currentUser;
+    if (PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
+      void run(VoidCallback action) {
+        final current = FirebaseAuth.instance.currentUser;
+        if (current?.uid != user?.uid || !PilotFeatureAccess.allows(uid: current?.uid, email: current?.email)) return;
+        onActionSelected?.call();
+        action();
+      }
+      return ProjectActionsPilot(hasFolder: hasFolder, hasExcel: hasExcel,
+        onFolder: () => run(() async {
+          try {
+            final reference = project.folderPath!;
+            if (ProjectStorageService.isStorageReference(reference)) {
+              await showProjectStorageFilesDialog(context, folderReference: reference);
+            } else {
+              await ProjectFileService.openFile(reference, projectId: project.id, field: 'folderPath');
+            }
+          } catch (e) { if (mounted && context.mounted) showLocalFileError(context, e, resource: 'a pasta'); }
+        }),
+        onExcel: () => run(() async {
+          try { await ProjectFileService.openFile(project.excelLink!, projectId: project.id, field: 'excelLink'); }
+          catch (e) { if (mounted && context.mounted) showLocalFileError(context, e, resource: 'a planilha'); }
+        }),
+        onEditSpreadsheet: () => run(() { ProjectSpreadsheetDialog.show(context, project); }),
+        onEditWork: () => run(() => _showLinksDialog(project)),
+        onChecklist: () => run(() => _showCheckListDialog(project)),
+        onComment: () => run(() { ComentarioModal.show(context, project); }),
+        onEmail: () => run(() { ProjectEmailModal.show(context, project); }));
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(
