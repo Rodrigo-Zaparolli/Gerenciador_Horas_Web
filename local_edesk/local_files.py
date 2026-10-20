@@ -24,7 +24,7 @@ DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
-SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'})
+SUPPORTED_ACTIONS = frozenset({'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'})
 
 
 def _absolute_windows_path(value):
@@ -172,10 +172,15 @@ def execute(uid, body, verified_user=None):
         raise ValueError('Ação local inválida.')
     reference = body.get('reference')
     editor = action in {'excel-editor-read', 'excel-editor-write'}
-    if editor:
+    moving = action in {'project-move-prepare', 'project-move-commit'}
+    if editor or moving:
         from local_edesk.excel_editor import allowed
         if not verified_user or verified_user.get('sub') != uid or not allowed(verified_user):
             raise PermissionError('Recurso em teste disponível apenas para a conta autorizada.')
+    if moving:
+        import sys
+        from local_edesk.project_archive import execute as move_project
+        return move_project(sys.modules[__name__], uid, body)
     if action in {'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'}:
         if not isinstance(reference, str):
             raise ValueError('Selecione um arquivo ou pasta no editor.')

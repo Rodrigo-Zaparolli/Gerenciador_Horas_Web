@@ -191,7 +191,7 @@ def local_files_action():
         return jsonify({'message': 'Solicitação local inválida.'}), 400
     try:
         from local_edesk.local_files import execute
-        if body.get('action') in {'excel-editor-read', 'excel-editor-write'}:
+        if body.get('action') in {'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'}:
             return jsonify(execute(user['sub'], body, verified_user=user))
         return jsonify(execute(user['sub'], body))
     except PermissionError as error:

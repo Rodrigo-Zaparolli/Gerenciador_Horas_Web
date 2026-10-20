@@ -11,6 +11,7 @@ import 'package:gerenciador_horas/features/projects/widgets/project_storage_file
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'project_archive_dialog.dart';
 import 'package:flutter/services.dart';
 import 'package:gerenciador_horas/data/services/edesk_service.dart';
 import 'package:gerenciador_horas/data/services/firebase_service.dart';
@@ -847,7 +848,8 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppPalette.accent,
-                                  foregroundColor: AppPalette.foregroundOn(AppPalette.accent),
+                                  foregroundColor: AppPalette.foregroundOn(
+                                      AppPalette.accent),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                     vertical: 11,
@@ -1549,8 +1551,10 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
             projectId: widget.projectToEdit?.id,
             field: isFolder ? 'folderPath' : 'excelLink');
         if (resolved != null && mounted) {
-          final controller = isFolder ? _folderPathController : _excelLinkController;
-          if (controller.text.trim() == path) setState(() => controller.text = resolved);
+          final controller =
+              isFolder ? _folderPathController : _excelLinkController;
+          if (controller.text.trim() == path)
+            setState(() => controller.text = resolved);
         }
       }
     } catch (e) {
@@ -1770,6 +1774,20 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         return;
       }
 
+      if (savedProject.status == 'TRAB_FIM' &&
+          widget.projectToEdit?.status != 'TRAB_FIM' &&
+          ProjectArchiveDialog.acceptsFolder(savedProject.folderPath ?? '') &&
+          ProjectArchiveDialog.allowed) {
+        final result = await ProjectArchiveDialog.show(context,
+            projectId: savedProject.id,
+            folder: savedProject.folderPath!,
+            excel: savedProject.excelLink ?? '');
+        if (result != null) {
+          savedProject.folderPath = result['folderReference'] as String;
+          savedProject.excelLink = result['excelReference'] as String;
+        }
+        if (!mounted || !context.mounted) return;
+      }
       Navigator.of(context).pop(
         savedProject,
       );
@@ -2375,7 +2393,8 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                                         ? const Color(
                                             0xFF00FFCC,
                                           ).withValues(alpha: 0.25)
-                                        : AppPalette.text.withValues(alpha: 0.08),
+                                        : AppPalette.text
+                                            .withValues(alpha: 0.08),
                                   ),
                                 ),
                                 child: Row(

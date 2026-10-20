@@ -1,5 +1,7 @@
 import 'package:gerenciador_horas/domain/models/work_duration.dart';
 import 'completed_project_summary.dart';
+import '../projects/dialogs/project_archive_dialog.dart';
+import '../../data/services/project_file_service.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +11,6 @@ import 'package:gerenciador_horas/data/services/time_log_store.dart';
 import 'package:gerenciador_horas/domain/models/dashboard_models.dart';
 import 'package:gerenciador_horas/shared/widgets/cabecalho.dart';
 import 'package:gerenciador_horas/core/theme/cores_app.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class CompletedProjectsScreen extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -888,37 +889,9 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
               icon: Icons.link_rounded,
               color: CoresApp.destaqueVerde,
               tooltip: 'Abrir arquivo/link',
-              onPressed: () async {
-                if (hasExcel) {
-                  final uri = Uri.tryParse(excelLink);
-
-                  if (uri != null && await canLaunchUrl(uri)) {
-                    await launchUrl(
-                      uri,
-                      mode: LaunchMode.externalApplication,
-                    );
-                    return;
-                  }
-                }
-
-                if (hasFolder) {
-                  Uri? uri;
-
-                  if (folderPath.startsWith('http://') ||
-                      folderPath.startsWith('https://')) {
-                    uri = Uri.tryParse(folderPath);
-                  } else {
-                    uri = Uri.file(folderPath);
-                  }
-
-                  if (uri != null && await canLaunchUrl(uri)) {
-                    await launchUrl(
-                      uri,
-                      mode: LaunchMode.externalApplication,
-                    );
-                  }
-                }
-              },
+              onPressed: () => _openProjectResource(
+                  hasExcel ? excelLink : folderPath, project['id'].toString(),
+                  field: hasExcel ? 'excelLink' : 'folderPath'),
             ),
           _buildActionButton(
             icon: Icons.undo_rounded,
@@ -2217,6 +2190,18 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
     );
   }
 
+  Future<void> _openProjectResource(String reference, String projectId,
+      {required String field}) async {
+    try {
+      await ProjectFileService.openFile(reference,
+          projectId: projectId, field: field);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   // ============================================================
   // VISUALIZAR PROJETO
   // ============================================================
@@ -2453,7 +2438,8 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
 
                           final logs = snapshot.data ?? <TimeLog>[];
 
-                          final registeredCount = logs.where((log) => log.isRegistered).length;
+                          final registeredCount =
+                              logs.where((log) => log.isRegistered).length;
 
                           return ListView(
                             padding: const EdgeInsets.all(20),
@@ -2595,10 +2581,12 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: CoresApp.sucesso.withValues(alpha: 0.06),
+                                  color:
+                                      CoresApp.sucesso.withValues(alpha: 0.06),
                                   borderRadius: BorderRadius.circular(11),
                                   border: Border.all(
-                                    color: CoresApp.sucesso.withValues(alpha: 0.18),
+                                    color: CoresApp.sucesso
+                                        .withValues(alpha: 0.18),
                                   ),
                                 ),
                                 child: Row(
@@ -2651,10 +2639,12 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                               Container(
                                 width: double.infinity,
                                 decoration: BoxDecoration(
-                                  color: CoresApp.destaque.withValues(alpha: 0.025),
+                                  color: CoresApp.destaque
+                                      .withValues(alpha: 0.025),
                                   borderRadius: BorderRadius.circular(13),
                                   border: Border.all(
-                                    color: CoresApp.destaque.withValues(alpha: 0.14),
+                                    color: CoresApp.destaque
+                                        .withValues(alpha: 0.14),
                                   ),
                                 ),
                                 child: Padding(
@@ -2737,7 +2727,9 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                       const SizedBox(height: 12),
                                       Text(
                                         '${logs.length} apontamentos | $registeredCount registrados',
-                                        style: TextStyle(color: CoresApp.textoSecundario, fontSize: 11),
+                                        style: TextStyle(
+                                            color: CoresApp.textoSecundario,
+                                            fontSize: 11),
                                       ),
                                       const SizedBox(height: 12),
                                       if (logs.isEmpty)
@@ -2824,8 +2816,8 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color:
-                                            CoresApp.destaque.withValues(alpha: 0.08),
+                                        color: CoresApp.destaque
+                                            .withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -2944,6 +2936,24 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                               if (excelLink.trim().isNotEmpty ||
                                   folderPath.trim().isNotEmpty) ...[
                                 const SizedBox(height: 18),
+                                if (ProjectArchiveDialog.acceptsFolder(
+                                        folderPath) &&
+                                    ProjectArchiveDialog.allowed)
+                                  OutlinedButton.icon(
+                                      icon: const Icon(
+                                          Icons.drive_file_move_outline),
+                                      label: const Text(
+                                          'Mover pasta para Finalizados'),
+                                      onPressed: () async {
+                                        final result =
+                                            await ProjectArchiveDialog.show(
+                                                context,
+                                                projectId: id,
+                                                folder: folderPath,
+                                                excel: excelLink);
+                                        if (result != null && context.mounted)
+                                          Navigator.pop(context);
+                                      }),
                                 Row(
                                   children: [
                                     Icon(
@@ -2978,22 +2988,10 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                               icon: Icons.table_view_rounded,
                                               title: 'Arquivo Excel',
                                               subtitle: 'Abrir arquivo/link',
-                                              onPressed: () async {
-                                                final uri = Uri.tryParse(
-                                                  excelLink,
-                                                );
-
-                                                if (uri != null &&
-                                                    await canLaunchUrl(
-                                                      uri,
-                                                    )) {
-                                                  await launchUrl(
-                                                    uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication,
-                                                  );
-                                                }
-                                              },
+                                              onPressed: () =>
+                                                  _openProjectResource(
+                                                      excelLink, id,
+                                                      field: 'excelLink'),
                                             ),
                                           if (excelLink.trim().isNotEmpty &&
                                               folderPath.trim().isNotEmpty)
@@ -3003,34 +3001,10 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                               icon: Icons.folder_rounded,
                                               title: 'Pasta do projeto',
                                               subtitle: 'Abrir pasta',
-                                              onPressed: () async {
-                                                final Uri uri;
-
-                                                if (folderPath.startsWith(
-                                                      'http://',
-                                                    ) ||
-                                                    folderPath.startsWith(
-                                                      'https://',
-                                                    )) {
-                                                  uri = Uri.parse(
-                                                    folderPath,
-                                                  );
-                                                } else {
-                                                  uri = Uri.file(
-                                                    folderPath,
-                                                  );
-                                                }
-
-                                                if (await canLaunchUrl(
-                                                  uri,
-                                                )) {
-                                                  await launchUrl(
-                                                    uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication,
-                                                  );
-                                                }
-                                              },
+                                              onPressed: () =>
+                                                  _openProjectResource(
+                                                      folderPath, id,
+                                                      field: 'folderPath'),
                                             ),
                                         ],
                                       );
@@ -3044,22 +3018,10 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                               icon: Icons.table_view_rounded,
                                               title: 'Arquivo Excel',
                                               subtitle: 'Abrir arquivo/link',
-                                              onPressed: () async {
-                                                final uri = Uri.tryParse(
-                                                  excelLink,
-                                                );
-
-                                                if (uri != null &&
-                                                    await canLaunchUrl(
-                                                      uri,
-                                                    )) {
-                                                  await launchUrl(
-                                                    uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication,
-                                                  );
-                                                }
-                                              },
+                                              onPressed: () =>
+                                                  _openProjectResource(
+                                                      excelLink, id,
+                                                      field: 'excelLink'),
                                             ),
                                           ),
                                         if (excelLink.trim().isNotEmpty &&
@@ -3071,34 +3033,10 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                               icon: Icons.folder_rounded,
                                               title: 'Pasta do projeto',
                                               subtitle: 'Abrir pasta',
-                                              onPressed: () async {
-                                                final Uri uri;
-
-                                                if (folderPath.startsWith(
-                                                      'http://',
-                                                    ) ||
-                                                    folderPath.startsWith(
-                                                      'https://',
-                                                    )) {
-                                                  uri = Uri.parse(
-                                                    folderPath,
-                                                  );
-                                                } else {
-                                                  uri = Uri.file(
-                                                    folderPath,
-                                                  );
-                                                }
-
-                                                if (await canLaunchUrl(
-                                                  uri,
-                                                )) {
-                                                  await launchUrl(
-                                                    uri,
-                                                    mode: LaunchMode
-                                                        .externalApplication,
-                                                  );
-                                                }
-                                              },
+                                              onPressed: () =>
+                                                  _openProjectResource(
+                                                      folderPath, id,
+                                                      field: 'folderPath'),
                                             ),
                                           ),
                                       ],
@@ -3378,7 +3316,8 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.destaqueVerde,
-                foregroundColor: AppPalette.foregroundOn(CoresApp.destaqueVerde),
+                foregroundColor:
+                    AppPalette.foregroundOn(CoresApp.destaqueVerde),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),

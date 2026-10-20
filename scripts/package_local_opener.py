@@ -44,7 +44,7 @@ def package(complete=False):
             source = Path(distribution.locate_file(item)).resolve()
             if source.is_relative_to(SITE.resolve()):
                 add(source, 'python/Lib/site-packages/' + source.relative_to(SITE.resolve()).as_posix())
-    for name in ['local_edesk/files_server.py', 'local_edesk/local_files.py', 'local_edesk/authentication.py', 'local_edesk/excel_mirror.py', 'local_edesk/excel_editor.py', 'edesk_bot/excel_preview.py',
+    for name in ['local_edesk/files_server.py', 'local_edesk/local_files.py', 'local_edesk/authentication.py', 'local_edesk/excel_mirror.py', 'local_edesk/excel_editor.py', 'local_edesk/project_archive.py', 'edesk_bot/excel_preview.py',
                  'scripts/start_local_files.ps1', 'scripts/stop_local_files.ps1', 'scripts/migrate_integration_data.py']:
         add(ROOT / name, name)
     if complete:

@@ -1,4 +1,4 @@
-"""Build the small spreadsheet-dates-22 update for an existing full installation."""
+"""Build the small project-archive-23 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -14,9 +14,10 @@ FILES = (
     'local_edesk/local_files.py',
     'local_edesk/files_server.py',
     'local_edesk/excel_editor.py',
+    'local_edesk/project_archive.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO spreadsheet-dates-22 — instalação completa já existente
+README = '''ATUALIZAÇÃO project-archive-23 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -27,6 +28,11 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v23: movimentação conferida da pasta de projetos finalizados, na
+mesma unidade/disco, com atualização dos vínculos da pasta e da planilha.
+Possui recuperação após interrupção; não move novamente uma operação já
+concluída. A ação é confirmada no app e exclusiva para a conta piloto.
 
 Correção v22: abre planilhas com datas armazenadas como texto ou instruções
 do modelo sem o erro could not convert string to float. Não altera esses
@@ -67,7 +73,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-editor-planilha-22.zip'
+    target = ROOT / 'web/downloads/atualizacao-pastas-finalizados-23.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

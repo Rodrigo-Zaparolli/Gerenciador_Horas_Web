@@ -16,8 +16,11 @@ class NativeFilesException implements Exception {
 }
 
 class NativeLocalFiles {
-  static bool get preferred => Firebase.apps.isNotEmpty &&
-      LocalUserState.read(FirebaseAuth.instance.currentUser?.uid, 'native-local-files')?['preferred'] == true;
+  static bool get preferred =>
+      Firebase.apps.isNotEmpty &&
+      LocalUserState.read(FirebaseAuth.instance.currentUser?.uid,
+              'native-local-files')?['preferred'] ==
+          true;
   static Future<bool> available() async {
     try {
       final result =
@@ -34,8 +37,14 @@ class NativeLocalFiles {
   }
 
   static Future<Map<String, dynamic>> call(String action,
-      {String? reference, String? name, String? range,
-      String? revision, List<Map<String, dynamic>>? changes}) async {
+      {String? reference,
+      String? name,
+      String? range,
+      String? revision,
+      String? destination,
+      String? excelReference,
+      String? operation,
+      List<Map<String, dynamic>>? changes}) async {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
     if (token == null) {
@@ -50,6 +59,9 @@ class NativeLocalFiles {
       'reference': reference,
       'name': name,
       'range': range,
+      if (destination != null) 'destination': destination,
+      if (excelReference != null) 'excelReference': excelReference,
+      if (operation != null) 'operation': operation,
       if (revision != null) 'revision': revision,
       if (changes != null) 'changes': changes,
       'interactive': true
@@ -69,8 +81,15 @@ class NativeLocalFiles {
           'Resposta inválida da integração local.');
     }
     if (result['status'] != 200) {
-      if (action.startsWith('excel-editor-') && data['message'] == 'Ação local inválida.') {
-        throw const NativeFilesException('Atualize a integração local para usar o editor da planilha.');
+      if (action.startsWith('project-move-') &&
+          data['message'] == 'Ação local inválida.') {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local para a versão project-archive-23 para mover pastas de projetos finalizados.');
+      }
+      if (action.startsWith('excel-editor-') &&
+          data['message'] == 'Ação local inválida.') {
+        throw const NativeFilesException(
+            'Atualize a integração local para usar o editor da planilha.');
       }
       if (action == 'preview' &&
           result['status'] == 400 &&

@@ -1,7 +1,7 @@
 {
     "changes":  [
-                    "Corrigido o preenchimento do e-mail do Consultor de Implantação na planilha: ao selecionar o nome, o e-mail do cadastro aparece imediatamente, mesmo quando a célula é calculada pelo Excel.",
-                    "A fórmula do e-mail é preservada. Após salvar, o app mostra o resultado real do Excel e avisa se ele for diferente do cadastro. Seleção pelo teclado também corrigida.",
-                    "A melhoria permanece restrita à conta de teste rodrigozaparolli79@gmail.com e não exige atualização da integração local."
+                    "Novo fluxo ao finalizar um projeto: selecionar destino, conferir os caminhos e mover a pasta, atualizando automaticamente os vínculos da pasta e da planilha. Também disponível em Projetos Finalizados → Visualizar → Mover pasta para Finalizados.",
+                    "Movimentação com confirmação, sem sobrescrever pastas existentes, na mesma unidade/disco. Se a conexão falhar após mover, é possível recuperar os vínculos sem repetir a movimentação.",
+                    "Os recursos de Projetos Finalizados agora abrem os vínculos locais pela integração. A novidade exige a integração project-archive-23 e está liberada inicialmente apenas para rodrigozaparolli79@gmail.com."
                 ]
 }

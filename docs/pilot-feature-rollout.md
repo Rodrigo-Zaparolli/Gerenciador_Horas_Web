@@ -68,3 +68,27 @@ nome e e-mail juntos; Adicionar todos continua selecionando somente os
 contatos disponíveis do projeto, sem incluir todo o cadastro da companhia.
 Ambos os recursos permanecem restritos à conta piloto, com dados sob o UID
 e as regras existentes do Firestore. Não alteram a integração local v22.
+
+## Movimentação de pastas de projetos finalizados (v23)
+
+Ao salvar um projeto que passa para TRAB_FIM, o app abre uma conferência
+opcional. Também disponível em Projetos Finalizados → Visualizar. Selecionar
+o diretório pai de destino uma vez; a preferência fica no UID. O app apresenta
+origem/destino e exige confirmação. Não inicia a movimentação ao abrir o modal.
+Uma planilha dentro da pasta acompanha o movimento, preservando seu caminho
+relativo; uma planilha fora dela permanece no mesmo local.
+
+A integração project-archive-23 aceita somente referências autorizadas para
+o UID autenticado da conta piloto. O plano e o registro durável ficam no SQLite
+estável da integração. Não aceita caminhos arbitrários no commit. Usa rename
+na mesma unidade/disco, recusa colisão, destino dentro da origem, raízes,
+pastas de sistema/integração e junções/links dentro da árvore. Não há cópia
+com exclusão entre unidades nesta versão. A árvore é conferida antes/depois;
+o lock do editor impede corrida com leituras/gravações feitas pelo app.
+
+Uma operação confirmada retorna os mesmos vínculos ao repetir o commit;
+interrupção após rename é recuperada pelo registro moving. O app atualiza
+pasta/planilha, referência da cópia salva e histórico do movimento em transação
+no Firestore. Recusa sobrescrever vínculos editados por outra tela. Se só a
+atualização no Firebase falhar, o botão Atualizar vínculos repete apenas essa
+etapa. Nenhum arquivo real de cliente foi usado nas movimentações de teste.

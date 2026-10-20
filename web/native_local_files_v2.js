@@ -1,5 +1,5 @@
 (() => {
-  window.nativeLocalFilesBridgeVersion = 'spreadsheet-editor-3';
+  window.nativeLocalFilesBridgeVersion = 'project-move-4';
   const permissionMessage = 'O navegador bloqueou o acesso a este computador. Clique no ícone ao lado do endereço do site, abra as permissões e permita o acesso à rede local ou a este dispositivo. Depois clique novamente na pasta ou planilha.';
   async function permissionState() {
     for (const name of ['loopback-network', 'local-network-access']) {
@@ -10,7 +10,7 @@
   }
   window.nativeLocalFilesRequest = async raw => {
     const args = JSON.parse(raw), health = args.action === 'health';
-    if (!['health', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write'].includes(args.action))
+    if (!['health', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'].includes(args.action))
       return JSON.stringify({error:'invalid', message:'Ação local inválida.'});
     const permission = await permissionState();
     if (permission === 'denied') return JSON.stringify({error:'permission', message:permissionMessage});
@@ -27,6 +27,7 @@
         cache:'no-store', signal:controller.signal,
         ...(health ? {} : {headers:{'Authorization':`Bearer ${args.token}`, 'Content-Type':'application/json'},
           body:JSON.stringify({action:args.action, reference:args.reference, name:args.name, range:args.range,
+            ...(['project-move-prepare','project-move-commit'].includes(args.action) ? {destination:args.destination, excelReference:args.excelReference, operation:args.operation} : {}),
             ...(['excel-editor-read','excel-editor-write'].includes(args.action) ? {revision:args.revision, changes:args.changes} : {})})})
       });
       if (response.status === 404) return JSON.stringify({error:'update', message:'Atualize a integração: encerre-a e execute Iniciar abertura local.cmd novamente.'});
