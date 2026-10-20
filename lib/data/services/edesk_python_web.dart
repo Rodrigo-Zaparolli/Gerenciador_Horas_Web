@@ -11,6 +11,7 @@ import 'edesk_operation_history.dart';
 import 'web_release_monitor.dart';
 import 'edesk_retry_policy.dart';
 import '../../features/edesk/edesk_result_dialog.dart';
+import '../../features/edesk/edesk_completion.dart';
 
 Future<EdeskPythonResult> executarPythonEdesk({
   required String requestJson,
@@ -162,6 +163,8 @@ Future<EdeskPythonResult> _executar({
         context: context,
         builder: (context) => EdeskResultDialog(
           confirmed: result.confirmed, message: result.message,
+          operation: EdeskOperation.fromScript(script),
+          includesPercentage: script == 'edesk_comentario.py' && deliveryData['percentualRealizado'] != null,
           completeProgress: edeskProgressCounts.value.total > 0 &&
               edeskProgressCounts.value.completed == edeskProgressCounts.value.total,
           spokenHoursResult: speakResult && script == 'edesk_horas.py',

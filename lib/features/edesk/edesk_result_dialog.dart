@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/platform/speech.dart';
+import 'edesk_completion.dart';
 
 String hoursCompletionReply(bool confirmed) => confirmed
     ? 'As horas estão confirmadas no E-Desk. O processamento foi concluído.'
@@ -13,11 +14,15 @@ class EdeskResultDialog extends StatefulWidget {
       required this.confirmed,
       required this.message,
       this.completeProgress = false,
+      this.operation,
+      this.includesPercentage = false,
       this.spokenHoursResult = false,
       this.canSpeak,
       this.speechFactory});
   final bool confirmed, completeProgress, spokenHoursResult;
   final String message;
+  final EdeskOperation? operation;
+  final bool includesPercentage;
   final bool Function()? canSpeak;
   final SpeechClientFactory? speechFactory;
   @override
@@ -60,8 +65,11 @@ class _EdeskResultDialogState extends State<EdeskResultDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-          title: Text(
-              widget.confirmed ? 'Envio concluído' : 'Envio não confirmado'),
+          title: Text(widget.confirmed
+              ? widget.operation == null
+                  ? 'Envio concluído'
+                  : 'Cadastro concluído com sucesso'
+              : 'Envio não confirmado'),
           content: SizedBox(
               width: 480,
               child: SingleChildScrollView(
@@ -69,7 +77,20 @@ class _EdeskResultDialogState extends State<EdeskResultDialog> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    if (widget.confirmed && widget.completeProgress) ...[
+                    if (widget.confirmed && widget.operation != null) ...[
+                      Icon(Icons.check_circle_outline,
+                          size: 40,
+                          color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(height: 12),
+                      Text(
+                          widget.operation!.successMessage(
+                              includesPercentage: widget.includesPercentage),
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 16),
+                    ],
+                    if (widget.confirmed &&
+                        (widget.completeProgress ||
+                            widget.operation != null)) ...[
                       const LinearProgressIndicator(value: 1),
                       const SizedBox(height: 8),
                       const Text('100% — envio confirmado'),

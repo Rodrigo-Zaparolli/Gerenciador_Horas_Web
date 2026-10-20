@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Finalização: quando o vínculo aponta para Documentos, selecione a pasta inteira do projeto. Todos os arquivos acompanham a movimentação, mantendo os vínculos de Documentos e da planilha no novo local.",
-    "A conferência acontece automaticamente após selecionar a pasta e o destino. A janela mostra o andamento e a confirmação necessária para liberar Confirmar e mover.",
-    "Atualize a integração local para v27. Pastas gerais são recusadas, e uma tentativa de atualizar vínculos não repete a movimentação já concluída."
+    "Envios ao E-Desk: horas, comentários e fases agora mostram uma confirmação clara de cadastro e finalização com sucesso, incluindo o indicador de 100% após a confirmação do E-Desk.",
+    "Comentários com porcentagem confirmam os dois cadastros. Falhas e envios sem confirmação mantêm o aviso com os detalhes da integração.",
+    "Este ajuste é do aplicativo web e não exige outra atualização da integração local."
   ]
 }
