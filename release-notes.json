@@ -1,8 +1,7 @@
 {
   "changes": [
-    "Movimentação de projetos: mostra a quantidade de arquivos, subpastas e exemplos do conteúdo antes de confirmar.",
-    "Confere o conteúdo no destino, a identidade da pasta original e a retirada da origem. Bloqueia pasta vazia e não atualiza vínculos nem exclui backups quando a verificação falha.",
-    "Permite substituir uma pasta de mesmo nome já existente no destino somente se estiver vazia e após confirmação. Não copia nem mescla pastas.",
-    "Requer atualizar e reiniciar a integração local v32. Inclui os ajustes da v31."
+    "Login: opção Manter conectado, marcada por padrão, para preservar a sessão neste navegador ao fechar e reiniciar o computador.",
+    "Com a opção desmarcada, o acesso fica limitado à sessão do navegador. O botão Sair continua encerrando o acesso.",
+    "Não requer atualizar a integração local E-Desk."
   ]
 }

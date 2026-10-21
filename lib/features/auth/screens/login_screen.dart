@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gerenciador_horas/core/theme/cores_app.dart';
 import 'package:gerenciador_horas/features/auth/screens/register_screen.dart';
+import '../login_session.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -28,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _keepConnected = true;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -84,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen>
   // ============================================================
 
   Future<void> _handleLogin() async {
+    if (_isLoading) return;
     FocusScope.of(context).unfocus();
 
     final String email = _emailController.text.trim();
@@ -110,9 +113,11 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await LoginSession.signIn(
+        auth: FirebaseAuth.instance,
         email: email,
         password: password,
+        keepConnected: _keepConnected,
       );
 
       if (!mounted) {
@@ -535,6 +540,28 @@ class _LoginScreenState extends State<LoginScreen>
 
           SizedBox(height: smallHeight ? 3 : 10),
 
+          Material(
+            type: MaterialType.transparency,
+            child: CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              activeColor: CoresApp.primaria,
+              title: Text('Manter conectado',
+                  style:
+                      TextStyle(color: CoresApp.textoPrincipal, fontSize: 13)),
+              subtitle: Text('Continuar conectado ao reabrir este navegador.',
+                  style:
+                      TextStyle(color: CoresApp.textoSecundario, fontSize: 11)),
+              value: _keepConnected,
+              onChanged: _isLoading
+                  ? null
+                  : (value) {
+                      setState(() => _keepConnected = value ?? false);
+                    },
+            ),
+          ),
+
           // ====================================================
           // ESQUECI A SENHA
           // ====================================================
@@ -573,7 +600,8 @@ class _LoginScreenState extends State<LoginScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: CoresApp.primaria,
                 foregroundColor: AppPalette.foregroundOn(CoresApp.primaria),
-                disabledBackgroundColor: CoresApp.primaria.withValues(alpha: 0.45),
+                disabledBackgroundColor:
+                    CoresApp.primaria.withValues(alpha: 0.45),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
