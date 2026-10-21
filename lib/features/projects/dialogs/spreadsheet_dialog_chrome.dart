@@ -8,10 +8,12 @@ class SpreadsheetDialogHeader extends StatelessWidget {
       required this.filename,
       required this.serviceType,
       required this.onClose,
-      this.moreActions});
+      this.moreActions,
+      this.sheetAction});
   final String projectId, client, filename, serviceType;
   final VoidCallback? onClose;
   final Widget? moreActions;
+  final Widget? sheetAction;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -33,6 +35,8 @@ class SpreadsheetDialogHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text('Planilha do projeto',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
@@ -64,6 +68,7 @@ class SpreadsheetDialogHeader extends StatelessWidget {
                         color: colors.primary,
                         fontSize: 12,
                         fontWeight: FontWeight.w600))),
+          if (sheetAction != null) sheetAction!,
           if (moreActions != null) moreActions!,
           IconButton(
               tooltip: 'Fechar planilha',

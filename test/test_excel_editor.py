@@ -14,6 +14,32 @@ os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
+    def test_custom_sheet_names_override_only_named_tabs_and_reject_invalid_names(self):
+        self.assertEqual(checklist_sheet('Professional', {'checklist': 'Professional CheckList-Processo'}), 'Professional CheckList-Processo')
+        self.assertEqual(checklist_sheet('Enterprise', {'entry': 'Entrada'}), 'Checklist-Processo')
+        for names in [{'checklist': ''}, {'entry': 'bad/name'}, {'checklist': 'x' * 32}, {'other': 'Sheet'}, ['Sheet'], {'entry': 'Sheet', 'checklist': 'sheet'}]:
+            with self.subTest(names=names), self.assertRaises(ValueError):
+                checklist_sheet('Enterprise', names)
+
+    def test_listing_sheets_is_pilot_only_and_keeps_verified_identity(self):
+        from urllib.parse import quote
+        from cloud_run.main import app
+        from local_edesk.files_server import app as files_app
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'Project.xlsm'
+            path.write_bytes(b'fixture')
+            ref = 'desktop-file://local/owner/12345678-1234-1234-1234-123456789012/' + quote(str(path), safe='')
+            headers = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bearer fake'}
+            with patch.object(local_files, 'DB_PATH', Path(directory) / 'files.sqlite3'), patch('cloud_run.main.LOCAL_MODE', True):
+                local_files._save('owner', ref, path, 'file')
+                for server, verifier in [(app, 'local_edesk.authentication.verify_token'), (files_app, 'local_edesk.files_server.verify_token')]:
+                    for email, status in [('rodrigozaparolli79@gmail.com', 200), ('other@example.com', 403)]:
+                        with patch(verifier, return_value={'sub': 'owner', 'email': email}), patch('local_edesk.excel_editor.edit', return_value={'sheetNames': ['Entrada', 'Professional']}) as editor:
+                            response = server.test_client().post('/api/local-files', headers=headers,
+                                json={'action': 'excel-editor-sheets', 'reference': ref, 'email': 'rodrigozaparolli79@gmail.com'})
+                            self.assertEqual(response.status_code, status, response.json)
+                            self.assertEqual(editor.call_count, int(status == 200))
+
     def test_preview_receives_verified_claims_in_both_http_servers(self):
         from urllib.parse import quote
         from cloud_run.main import app

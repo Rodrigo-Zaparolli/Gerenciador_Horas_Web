@@ -129,7 +129,17 @@ class SheetSnapshot:
         return self.Cells(int(match[2]), column)
 
 
-def checklist_sheet(service_type):
+def checklist_sheet(service_type, sheet_names=None):
+    if sheet_names is not None:
+        if not isinstance(sheet_names, dict):
+            raise ValueError('Configuração de abas inválida.')
+        for key, name in sheet_names.items():
+            if key not in {'entry', 'checklist'} or not isinstance(name, str) or not name.strip() or len(name) > 31 or re.search(r'[\\/*?:\[\]\r\n]', name):
+                raise ValueError('Informe um nome de aba válido, com até 31 caracteres.')
+        if sheet_names.get('entry', '').casefold() == (sheet_names.get('checklist') or checklist_sheet(service_type)).casefold():
+            raise ValueError('Selecione abas diferentes para informações de entrada e checklist.')
+        if sheet_names.get('checklist'):
+            return sheet_names['checklist']
     value = str(service_type or '').strip().casefold()
     return 'Maker Checklist-Processo' if 'professional' in value or 'profissional' in value else 'Checklist-Processo'
 
@@ -147,13 +157,14 @@ def checklist_table(checklist):
     return matches[0]
 
 
-def snapshot(book, service_type=None):
-    entry = SheetSnapshot(book.Worksheets('Informações de entrada'))
-    name = checklist_sheet(service_type)
+def snapshot(book, service_type=None, sheet_names=None):
+    name = checklist_sheet(service_type, sheet_names)
+    entry_name = (sheet_names or {}).get('entry', 'Informações de entrada')
     try:
+        entry = SheetSnapshot(book.Worksheets(entry_name))
         checklist = SheetSnapshot(book.Worksheets(name))
     except Exception as error:
-        raise ValueError(f'A planilha não contém a aba esperada para este projeto: {name}. Confira o tipo de serviço e o arquivo vinculado.') from error
+        raise ValueError(f'Confira as abas {entry_name} e {name}. Use Configurar abas no editor para selecionar os nomes existentes neste arquivo.') from error
     first, last = checklist_table(checklist)
     fields, tasks = [], []
 
@@ -233,25 +244,28 @@ def snapshot(book, service_type=None):
                 for column, formula in enumerate(values, 1)
                 if isinstance(formula, str) and formula.startswith('=')]
     return {'fields': fields, 'tasks': tasks,
+            'entrySheet': entry.Name,
             'checklistSheet': checklist.Name,
             'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest(),
             'formulaCount': len(formulas),
             'progress': float(progress) if isinstance(progress, (int, float)) and 0 <= progress <= 1 else None}
 
 
-def status_preview(book, service_type):
-    sheet = SheetSnapshot(book.Worksheets(checklist_sheet(service_type)))
+def status_preview(book, service_type, sheet_names=None):
+    name = checklist_sheet(service_type, sheet_names)
+    sheet = SheetSnapshot(book.Worksheets(name))
     first, last = checklist_table(sheet)
     def number(value):
         return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and -1e-9 <= value <= 1 + 1e-9 else None
     total = number(sheet.Cells(first - 1, 5).Value2)
     rows = []
-    if checklist_sheet(service_type) == 'Checklist-Processo':
+    if first >= 16:
         # This is the same Status Projeto block used by the comment preview.
         dados = book.Worksheets('Dados')
         header = str(dados.Range('AG5').Value2 or '').strip()
         formula = str(dados.Range('AH5').Formula or '')
-        if header == 'Status Projeto' and 'Checklist-Processo' in formula:
+        reference = "'" + name.replace("'", "''") + "'!"
+        if header == 'Status Projeto' and (reference.casefold() in formula.casefold() or re.search(r"(?<![\w '\-])" + re.escape(name) + r'!', formula, re.I)):
             total = number(dados.Range('AH5').Value2)
             for row in range(7, 12):
                 label = str(dados.Cells(row, 33).Value2 or '').strip()
@@ -425,13 +439,17 @@ def edit(path, body):
     staged = None
     try:
         original = revision(path)
+        if body['action'] == 'excel-editor-sheets':
+            with workbook(path) as (_, book):
+                names = [str(book.Worksheets(i).Name) for i in range(1, int(book.Worksheets.Count) + 1)]
+            return {'sheetNames': names, 'revision': original, 'filename': path.name}
         writing = body['action'] == 'excel-editor-write'
         previewing = body['action'] == 'excel-editor-preview'
         if (writing or previewing) and body.get('revision') != original:
             raise ValueError('O arquivo mudou desde a leitura. Recarregue antes de salvar.')
         if not writing and not previewing:
             with workbook(path) as (_, book):
-                data = snapshot(book, body.get('serviceType'))
+                data = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a leitura. Recarregue.')
             return {**data, 'revision': original, 'filename': path.name}
@@ -440,7 +458,7 @@ def edit(path, body):
         staged = Path(name)
         shutil.copy2(path, staged)
         with workbook(staged, writable=True) as (app, book):
-            before = snapshot(book, body.get('serviceType'))
+            before = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
             changes = [] if previewing and body.get('changes') == [] else validated_changes(before, body.get('changes'))
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
@@ -453,17 +471,17 @@ def edit(path, body):
                     cell = None
             app.CalculateFull()
             if previewing:
-                preview = status_preview(book, body.get('serviceType'))
+                preview = status_preview(book, body.get('serviceType'), body.get('sheetNames'))
             else:
                 book.Save()
         if previewing:
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a prévia. Recarregue para conferir.')
             return {'preview': True, 'statusPreview': preview, 'revision': original,
-                    'checklistSheet': checklist_sheet(body.get('serviceType')), 'filename': path.name}
+                    'entrySheet': (body.get('sheetNames') or {}).get('entry', 'Informa\u00e7\u00f5es de entrada'), 'checklistSheet': checklist_sheet(body.get('serviceType'), body.get('sheetNames')), 'filename': path.name}
         preserve_package(path, staged, changes)
         with workbook(staged) as (_, book):
-            checked = snapshot(book, body.get('serviceType'))
+            checked = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
         if checked['formulaFingerprint'] != before['formulaFingerprint']:
             raise ValueError('Uma fórmula do modelo mudou. O original foi preservado.')
         mapped = {(f['sheet'], f['cell']): f['value'] for f in checked['fields'] + checked['tasks']}

@@ -139,6 +139,7 @@ def health_check():
         actions = sorted(getattr(local_files, 'SUPPORTED_ACTIONS', []))
         native = {'nativeActions': actions,
                   'nativeSpreadsheetLayouts': list(getattr(local_files, 'SPREADSHEET_LAYOUTS', [])),
+                  'nativeSpreadsheetSheetNames': getattr(local_files, 'SPREADSHEET_SHEET_NAMES', False),
                   'projectRootMove': getattr(local_files, 'PROJECT_ROOT_MOVE', False),
                   'verifiedProjectMove': getattr(local_files, 'VERIFIED_PROJECT_MOVE', False),
                   'nativeFilesVersion': getattr(local_files, 'PROTOCOL_VERSION', None)}

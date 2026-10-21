@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Pasta e planilha: alterações de etapa, status e finalização preservam os vínculos mais recentes. Campos não alterados no editor deixam de sobrescrever caminhos atualizados em outra tela.",
-    "Integração: recupera novas autorizações das instalações anteriores após a primeira migração e mantém cópia local de recuperação dos vínculos já autorizados.",
-    "Requer atualizar e reiniciar a integração local v33 para aplicar a recuperação. A cópia permanece no perfil do Windows, fora da pasta extraída."
+    "Planilha do projeto: novo botão Abas para escolher as abas de informações de entrada e checklist existentes no arquivo Excel, inclusive Maker, Professional ou nomes alterados.",
+    "A escolha fica salva por projeto e é usada ao carregar, calcular a prévia e salvar na planilha. Não renomeia o arquivo nem as abas originais.",
+    "Requer atualizar e reiniciar a integração local v34 para utilizar a configuração de abas."
   ]
 }

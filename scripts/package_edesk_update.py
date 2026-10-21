@@ -1,4 +1,4 @@
-"""Build the small persistent-file-links-33 update for an existing full installation."""
+"""Build the small spreadsheet-sheet-names-34 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -18,7 +18,7 @@ FILES = (
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO persistent-file-links-33 — instalação completa já existente
+README = '''ATUALIZAÇÃO spreadsheet-sheet-names-34 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -29,6 +29,12 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v34: lista os nomes de abas existentes no Excel e permite que
+o editor utilize as abas de entrada e checklist escolhidas por projeto.
+Valida a estrutura, a revisao e as celulas permitidas antes de gravar.
+A configuracao nao renomeia abas nem executa macros. Mantem os backups
+e a previa com as abas selecionadas. Use o botao Abas no editor web.
 
 Correcao v33: reimporta novas autorizacoes de instalacoes anteriores, mesmo
 quando a migracao inicial ja havia ocorrido. Guarda copia local dos vinculos
@@ -125,7 +131,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-vinculos-persistentes-33.zip'
+    target = ROOT / 'web/downloads/atualizacao-abas-planilha-34.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

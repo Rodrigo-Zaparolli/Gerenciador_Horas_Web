@@ -3,11 +3,11 @@
 body{background:#0b0f19;color:#e2e8f0;font:16px/1.6 system-ui;margin:0;padding:24px}main{max-width:680px;margin:5vh auto;background:#131d2b;border:1px solid #334155;border-radius:20px;padding:28px}h1{font-size:25px;line-height:1.3}a{color:#00d9ed}.button,button{display:inline-block;background:#00d9ed;color:#06111b;border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}li{margin-bottom:12px}#status{background:#1e293b;border-radius:10px;padding:16px}button:disabled{opacity:.6}
 </style></head><body><main>
 <h1>Conectar o E-Desk neste computador</h1>
-<p><strong>v33: persistência dos vínculos de pasta e planilha.</strong> Recupera novas autorizações de instalações anteriores mesmo após a primeira migração. Mantém uma cópia local dos vínculos autorizados no perfil do Windows para recuperação se o banco principal for perdido. Preserva os ajustes anteriores de movimentação, backups e comentários.</p>
+<p><strong>v34: configuração das abas da planilha.</strong> No editor web, use Abas para selecionar os nomes existentes no Excel para informações de entrada e checklist. A escolha fica salva por projeto e é usada na leitura, prévia e gravação. Não renomeia o arquivo nem as abas do Excel. Preserva os ajustes anteriores.</p>
 <p>Este pacote completo permite enviar horas, comentários e fases pelo app web. Também abre pastas e planilhas originais neste PC.</p>
-<p><a class="button" href="/downloads/atualizacao-vinculos-persistentes-33.zip" download>Já tenho a integração: baixar correção leve</a></p>
+<p><a class="button" href="/downloads/atualizacao-abas-planilha-34.zip" download>Já tenho a integração: baixar correção leve</a></p>
 <p>Para uma instalação completa já existente: aguarde os envios terminarem, execute <strong>Parar integração E-Desk.cmd</strong>, extraia a correção na mesma pasta substituindo os arquivos e execute <strong>Iniciar integração E-Desk.cmd</strong>. Preserve a pasta <strong>.edesk-local</strong> e os demais arquivos. A correção leve não funciona sozinha em uma pasta nova.</p>
-<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=persistent-file-links-33" download>Baixar integração completa para Windows</a></p>
+<p><a class="button" href="/downloads/integracao-edesk-completa-windows-v2.zip?v=spreadsheet-sheet-names-34" download>Baixar integração completa para Windows</a></p>
 <p><strong>Vínculos preservados nas atualizações:</strong> nesta primeira atualização, aguarde qualquer envio terminar e execute <strong>Parar integração E-Desk.cmd</strong> na pasta atual. Extraia o novo ZIP nessa mesma pasta, substituindo os arquivos e mantendo a pasta <strong>.edesk-local</strong>. Execute <strong>Iniciar integração E-Desk.cmd</strong>. Os vínculos existentes serão migrados automaticamente, preservando os originais.</p>
 <p>A partir desta versão, os vínculos ficam no perfil do Windows, separados da pasta extraída. Atualizações futuras da integração não exigem selecionar novamente as pastas e planilhas já autorizadas nesse computador e usuário. Atualizar apenas o app web não exige reinstalar a integração.</p>
 <ol><li>Baixe o ZIP e use <strong>Extrair tudo</strong> para colocá-lo em uma pasta permanente.</li>
@@ -25,7 +25,7 @@ button.onclick=async()=>{button.disabled=true;status.textContent='Verificando a 
 const result=JSON.parse(await nativeLocalFilesRequest(JSON.stringify({action:'health',interactive:true})));
 if(result.error){status.textContent=result.message;return;}
 const health=result.data;
-status.textContent=result.status===200&&health?.service==='gerenciador-horas-edesk'&&health.mode==='local'&&health.integrationPackageVersion==='persistent-file-links-33'
+status.textContent=result.status===200&&health?.service==='gerenciador-horas-edesk'&&health.mode==='local'&&health.integrationPackageVersion==='spreadsheet-sheet-names-34'
 ?'Integração completa conectada. Abra o app e atualize com Ctrl + F5.'
 :health?.mode==='files-only'?'Está ativa apenas a abertura de arquivos. Execute Iniciar integração E-Desk.cmd na pasta do pacote completo.'
 :'Execute Iniciar integração E-Desk.cmd na pasta extraída e verifique novamente.';

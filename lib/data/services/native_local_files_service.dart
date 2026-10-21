@@ -42,6 +42,7 @@ class NativeLocalFiles {
       String? range,
       String? revision,
       String? serviceType,
+      Map<String, String>? sheetNames,
       String? destination,
       String? sourceReference,
       String? excelReference,
@@ -53,6 +54,20 @@ class NativeLocalFiles {
       throw const NativeFilesException('Entre novamente na sua conta.');
     }
     final kind = serviceType?.toLowerCase() ?? '';
+    if (action == 'excel-editor-sheets' || sheetNames != null) {
+      final health =
+          await nativeFileRequest({'action': 'health', 'interactive': true})
+              .timeout(const Duration(seconds: 4));
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
+        throw const NativeFilesException('A conta mudou.');
+      }
+      if (health['status'] != 200 ||
+          health['data'] is! Map ||
+          (health['data'] as Map)['nativeSpreadsheetSheetNames'] != true) {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração local v34 para configurar os nomes das abas.');
+      }
+    }
     if (action == 'project-move-prepare') {
       final health =
           await nativeFileRequest({'action': 'health', 'interactive': true})
@@ -96,6 +111,7 @@ class NativeLocalFiles {
       'name': name,
       'range': range,
       if (serviceType != null) 'serviceType': serviceType,
+      if (sheetNames != null) 'sheetNames': sheetNames,
       if (destination != null) 'destination': destination,
       if (sourceReference != null) 'sourceReference': sourceReference,
       if (excelReference != null) 'excelReference': excelReference,

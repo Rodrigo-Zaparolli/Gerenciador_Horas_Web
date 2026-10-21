@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'spreadsheet_store.dart';
+import 'spreadsheet_sheet_settings.dart';
 import 'company_contacts.dart';
 import 'project_spreadsheet_kind.dart';
 import 'checklist_status_preview.dart';
@@ -19,9 +20,11 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
       this.emailProvider,
       this.transport,
       this.contactsLoader,
-      this.store});
+      this.store,
+      this.sheetSettingsStore});
   final Future<List<CompanyContact>> Function()? contactsLoader;
   final SpreadsheetStore? store;
+  final SpreadsheetSheetSettingsStore? sheetSettingsStore;
   final ProjectModel project;
   final String? Function()? uidProvider, emailProvider;
   final Future<Map<String, dynamic>> Function(Map<String, dynamic>)? transport;
@@ -44,8 +47,20 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   final Map<String, Map<String, dynamic>> pending = {};
   final Map<String, String> calculatedEmails = {};
   Map<String, dynamic>? data;
+  Map<String, String> sheetNames = {};
+  SpreadsheetSheetSettingsStore? get settingsStore =>
+      widget.sheetSettingsStore ??
+      (widget.transport == null
+          ? FirebaseSpreadsheetSheetSettingsStore()
+          : null);
+  bool matches(Map<String, dynamic> result, {Map<String, String>? names}) {
+    final selected = names ?? sheetNames;
+    return spreadsheetMatchesProject(result, widget.project.serviceType,
+        checklistSheet: selected['checklist'], entrySheet: selected['entry']);
+  }
+
   String? error, notice, owner;
-  bool busy = false;
+  bool busy = false, settingsReady = false;
   late final ChecklistLivePreview livePreview;
   List<CompanyContact> contacts = [];
   SpreadsheetStore? get store =>
@@ -64,18 +79,23 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   }
 
   Future<Map<String, dynamic>> request(String action,
-      {String? revision, List<Map<String, dynamic>>? changes}) {
+      {String? revision,
+      List<Map<String, dynamic>>? changes,
+      Map<String, String>? selectedSheets}) {
+    final selected = selectedSheets ?? sheetNames;
     if (widget.transport != null)
       return widget.transport!({
         'action': action,
         'reference': widget.project.excelLink,
         'serviceType': widget.project.serviceType,
+        if (selected.isNotEmpty) 'sheetNames': selected,
         if (revision != null) 'revision': revision,
         if (changes != null) 'changes': changes
       });
     return NativeLocalFiles.call(action,
         reference: widget.project.excelLink,
         serviceType: widget.project.serviceType,
+        sheetNames: selected.isEmpty ? null : selected,
         revision: revision,
         changes: changes);
   }
@@ -97,9 +117,80 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           });
         }
       });
-    openSaved();
+    openConfigured();
     if (widget.uidProvider == null || widget.contactsLoader != null)
       loadContacts();
+  }
+
+  Future<void> openConfigured() async {
+    if (!authorized) return;
+    setState(() => busy = true);
+    try {
+      final names = await settingsStore?.load(
+              owner!, widget.project.id, widget.project.excelLink ?? '') ??
+          <String, String>{};
+      if (!mounted || !authorized) return;
+      setState(() {
+        sheetNames = names;
+        settingsReady = true;
+        busy = false;
+      });
+      await openSaved();
+    } catch (e) {
+      if (mounted && authorized)
+        setState(() {
+          busy = false;
+          error =
+              'Não foi possível carregar a configuração de abas. Use Abas para conferir antes de editar. $e';
+        });
+    }
+  }
+
+  Future<void> configureSheets() async {
+    if (!authorized || busy || !await discard() || !mounted) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await livePreview.pauseAndWait();
+      if (!mounted || !authorized) return;
+      final listed = await request('excel-editor-sheets');
+      if (!mounted || !authorized) return;
+      final names = (listed['sheetNames'] as List).cast<String>();
+      setState(() => busy = false);
+      final selected = await selectSpreadsheetSheets(context, names, {
+        'entry': sheetNames['entry'] ?? 'Informações de entrada',
+        'checklist': sheetNames['checklist'] ??
+            projectChecklistSheet(widget.project.serviceType),
+      });
+      if (selected == null || !mounted || !authorized) return;
+      setState(() => busy = true);
+      final result =
+          await request('excel-editor-read', selectedSheets: selected);
+      if (!mounted || !authorized) return;
+      if (!matches(result, names: selected))
+        throw StateError('A integração não confirmou as abas selecionadas.');
+      await settingsStore?.save(
+          owner!, widget.project.id, widget.project.excelLink ?? '', selected);
+      if (!mounted || !authorized) return;
+      setState(() {
+        sheetNames = selected;
+        settingsReady = true;
+        data = result;
+        pending.clear();
+        calculatedEmails.clear();
+        notice = 'Abas configuradas para este projeto.';
+      });
+      await remember(result);
+    } catch (e) {
+      if (mounted && authorized) setState(() => error = e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => busy = false);
+        if (authorized && data != null) livePreview.resume(clear: true);
+      }
+    }
   }
 
   @override
@@ -147,8 +238,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final saved = await store?.load(
           owner!, widget.project.id, widget.project.excelLink ?? '');
       if (!mounted || !authorized) return;
-      if (saved != null &&
-          spreadsheetMatchesProject(saved, widget.project.serviceType)) {
+      if (saved != null && matches(saved)) {
         setState(() {
           data = saved;
           busy = false;
@@ -191,6 +281,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   }
 
   Future<void> load() async {
+    if (!settingsReady) {
+      await openConfigured();
+      return;
+    }
     if (!authorized || busy || !await discard() || !mounted) return;
     setState(() {
       busy = true;
@@ -200,7 +294,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       await livePreview.pauseAndWait();
       if (!mounted || !authorized) return;
       final result = await request('excel-editor-read');
-      if (!spreadsheetMatchesProject(result, widget.project.serviceType)) {
+      if (!matches(result)) {
         throw StateError(
             'A integração retornou um checklist diferente do tipo do projeto. Atualize e reinicie a integração v25 para usar Professional/Maker.');
       }
@@ -231,7 +325,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     if (!mounted || !authorized) throw StateError('A conta mudou.');
     if (result['preview'] != true ||
         result['statusPreview'] is! Map ||
-        !spreadsheetMatchesProject(result, widget.project.serviceType)) {
+        !matches(result)) {
       throw StateError(
           'A integra\u00e7\u00e3o n\u00e3o confirmou a pr\u00e9via. Atualize e reinicie a integra\u00e7\u00e3o v29.');
     }
@@ -254,7 +348,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       if (result['saved'] != true)
         throw StateError(
             'A gravação não foi confirmada. Recarregue para conferir antes de tentar novamente.');
-      if (!spreadsheetMatchesProject(result, widget.project.serviceType)) {
+      if (!matches(result)) {
         throw StateError(
             'O checklist retornado não corresponde ao projeto. Recarregue do Excel para conferir.');
       }
@@ -673,6 +767,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                         filename: data?['filename']?.toString() ?? '',
                         serviceType: widget.project.serviceType,
                         onClose: busy ? null : close,
+                        sheetAction: TextButton.icon(
+                            onPressed:
+                                busy || !authorized ? null : configureSheets,
+                            icon: const Icon(Icons.tune, size: 18),
+                            label: const Text('Abas')),
                         moreActions: menus.isEmpty || !authorized
                             ? null
                             : PopupMenuButton<String>(
@@ -717,7 +816,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                           const Tab(text: 'Informa\u00e7\u00f5es de entrada'),
                           Tab(
                               text: projectChecklistSheet(
-                                  widget.project.serviceType))
+                                  widget.project.serviceType,
+                                  override: sheetNames['checklist']))
                         ]),
                     Expanded(
                         child: data == null || !authorized
