@@ -35,26 +35,25 @@ class _ChecklistStatusPanelState extends State<ChecklistStatusPanel> {
     return Semantics(
         value: percent(value),
         child: SizedBox(
-            width: 104,
-            height: 22,
-            child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Stack(children: [
-                  Positioned.fill(
-                      child: ColoredBox(
-                          color: colors.primary.withValues(alpha: .06))),
-                  Positioned.fill(
-                      child: FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: value.toDouble().clamp(0.0, 1.0),
-                          child: ColoredBox(
-                              color: colors.primary.withValues(alpha: .22)))),
-                  Center(
-                      child: Text(percent(value),
-                          style: TextStyle(
-                              color: colors.onSurface,
-                              fontWeight: FontWeight.w600))),
-                ]))));
+            width: 144,
+            child: Row(children: [
+              Expanded(
+                  child: LinearProgressIndicator(
+                      value: value.toDouble().clamp(0.0, 1.0),
+                      minHeight: 8,
+                      borderRadius: BorderRadius.circular(6),
+                      color: colors.primary,
+                      backgroundColor: colors.primary.withValues(alpha: .12))),
+              const SizedBox(width: 8),
+              SizedBox(
+                  width: 48,
+                  child: Text(percent(value),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w600))),
+            ])));
   }
 
   @override
@@ -63,101 +62,167 @@ class _ChecklistStatusPanelState extends State<ChecklistStatusPanel> {
       builder: (context, _) {
         final preview = widget.controller;
         final data = preview.data;
+        final colors = Theme.of(context).colorScheme;
         final rows = (data?['rows'] as List? ?? []).whereType<Map>().toList();
         final dates = rows.any((r) => r.containsKey('start'));
         final planned = rows.any((r) => r.containsKey('planned'));
         return Card(
-            margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            elevation: 0,
+            margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: colors.outlineVariant)),
+            clipBehavior: Clip.antiAlias,
             child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(14),
                 child: SingleChildScrollView(
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text('Status Projeto',
-                                style:
-                                    Theme.of(context).textTheme.titleMedium)),
-                        if (data != null)
-                          Flexible(
-                              child: Text('Total: ${percent(data['total'])}',
-                                  key:
-                                      const ValueKey('checklist-preview-total'),
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium)),
-                        IconButton(
-                            tooltip: 'Atualizar prévia',
-                            visualDensity: VisualDensity.compact,
-                            onPressed:
-                                preview.updating ? null : preview.refresh,
-                            icon: const Icon(Icons.refresh, size: 18)),
-                      ]),
-                      Text(
-                          preview.error != null
-                              ? 'Prévia desatualizada. Tente atualizar novamente.'
-                              : preview.stale || preview.updating
-                                  ? 'Atualizando porcentagens… Os valores anteriores ainda não incluem os últimos ajustes.'
-                                  : widget.unsaved
-                                      ? 'Prévia das alterações pendentes. Use Salvar na planilha para gravar.'
-                                      : 'Porcentagens calculadas pelo Excel.',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      if (preview.updating)
-                        const LinearProgressIndicator(minHeight: 2),
-                      Column(
+                      Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (preview.error != null)
-                              SelectableText(preview.error!,
-                                  style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.error)),
+                            Expanded(
+                                child: Wrap(
+                                    spacing: 10,
+                                    runSpacing: 4,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                  Text('Status Projeto',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w700)),
+                                  Text('Pr\u00e9via autom\u00e1tica',
+                                      style: TextStyle(
+                                          color: colors.onSurfaceVariant,
+                                          fontSize: 11)),
+                                  IconButton(
+                                      tooltip: 'Atualizar pr\u00e9via',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: preview.updating
+                                          ? null
+                                          : preview.refresh,
+                                      icon:
+                                          const Icon(Icons.refresh, size: 17)),
+                                ])),
+                            const SizedBox(width: 12),
                             if (data != null)
-                              SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                      headingRowHeight: 30,
-                                      dataRowMinHeight: 30,
-                                      dataRowMaxHeight: 32,
-                                      horizontalMargin: 8,
-                                      columnSpacing: 22,
-                                      columns: [
-                                        const DataColumn(
-                                            label: Text('Trabalho')),
-                                        const DataColumn(
-                                            label: Text('Realizado')),
-                                        if (dates) ...[
-                                          const DataColumn(
-                                              label: Text('Início')),
-                                          const DataColumn(label: Text('Fim'))
-                                        ],
-                                        const DataColumn(label: Text('Peso')),
-                                        if (planned)
-                                          const DataColumn(
-                                              label: Text('Prev. p/data'))
-                                      ],
-                                      rows: [
-                                        for (final row in rows)
-                                          DataRow(cells: [
-                                            DataCell(Text(
-                                                row['label']?.toString() ??
-                                                    '')),
-                                            DataCell(progress(
-                                                context, row['percentage'])),
-                                            if (dates) ...[
-                                              DataCell(
-                                                  Text(date(row['start']))),
-                                              DataCell(Text(date(row['end'])))
-                                            ],
-                                            DataCell(
-                                                Text(percent(row['weight']))),
-                                            if (planned)
-                                              DataCell(Text(
-                                                  percent(row['planned']))),
-                                          ])
+                              SizedBox(
+                                  width: MediaQuery.sizeOf(context).width < 600
+                                      ? 120
+                                      : 190,
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(percent(data['total']),
+                                            key: const ValueKey(
+                                                'checklist-preview-total'),
+                                            style: TextStyle(
+                                                fontSize: 28,
+                                                height: 1,
+                                                fontWeight: FontWeight.w700,
+                                                color: colors.onSurface)),
+                                        Text('Progresso total',
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                color:
+                                                    colors.onSurfaceVariant)),
+                                        const SizedBox(height: 7),
+                                        if (data['total'] is num)
+                                          LinearProgressIndicator(
+                                              value: (data['total'] as num)
+                                                  .toDouble()
+                                                  .clamp(0.0, 1.0),
+                                              minHeight: 6,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              backgroundColor: colors.primary
+                                                  .withValues(alpha: .12)),
                                       ])),
                           ]),
+                      const SizedBox(height: 10),
+                      if (preview.updating)
+                        const LinearProgressIndicator(minHeight: 2),
+                      if (preview.error != null)
+                        Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: SelectableText(preview.error!,
+                                style: TextStyle(color: colors.error))),
+                      if (data != null)
+                        LayoutBuilder(
+                            builder: (context, constraints) =>
+                                SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                            minWidth: constraints.maxWidth),
+                                        child: DataTable(
+                                            headingRowHeight: 28,
+                                            dataRowMinHeight: 28,
+                                            dataRowMaxHeight: 30,
+                                            headingTextStyle: TextStyle(
+                                                color: colors.onSurfaceVariant,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 12),
+                                            dataTextStyle: TextStyle(
+                                                color: colors.onSurface,
+                                                fontSize: 12),
+                                            horizontalMargin: 4,
+                                            columnSpacing: 18,
+                                            columns: [
+                                              const DataColumn(
+                                                  label: Text('Etapa')),
+                                              const DataColumn(
+                                                  label: Text('Realizado')),
+                                              if (dates) ...[
+                                                const DataColumn(
+                                                    label: Text('In\u00edcio')),
+                                                const DataColumn(
+                                                    label: Text('Fim'))
+                                              ],
+                                              const DataColumn(
+                                                  label: Text('Peso')),
+                                              if (planned)
+                                                const DataColumn(
+                                                    label: Text('Previsto'))
+                                            ],
+                                            rows: [
+                                              for (final row in rows)
+                                                DataRow(cells: [
+                                                  DataCell(Text(row['label']
+                                                          ?.toString() ??
+                                                      '')),
+                                                  DataCell(progress(context,
+                                                      row['percentage'])),
+                                                  if (dates) ...[
+                                                    DataCell(Text(
+                                                        date(row['start']))),
+                                                    DataCell(
+                                                        Text(date(row['end'])))
+                                                  ],
+                                                  DataCell(Text(
+                                                      percent(row['weight']))),
+                                                  if (planned)
+                                                    DataCell(progress(context,
+                                                        row['planned'])),
+                                                ])
+                                            ])))),
+                      const SizedBox(height: 7),
+                      Text(
+                          preview.error != null
+                              ? 'Pr\u00e9via desatualizada. Tente atualizar novamente.'
+                              : preview.stale || preview.updating
+                                  ? 'Atualizando porcentagens\u2026 Os valores anteriores ainda n\u00e3o incluem os \u00faltimos ajustes.'
+                                  : widget.unsaved
+                                      ? 'Pr\u00e9via das altera\u00e7\u00f5es pendentes. Use Salvar na planilha para gravar.'
+                                      : 'Porcentagens calculadas pelo Excel.',
+                          style: TextStyle(
+                              fontSize: 11, color: colors.onSurfaceVariant)),
                     ]))));
       });
 }

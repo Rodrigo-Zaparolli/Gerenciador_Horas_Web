@@ -4,6 +4,7 @@ import 'company_contacts.dart';
 import 'project_spreadsheet_kind.dart';
 import 'checklist_status_preview.dart';
 import 'checklist_live_preview.dart';
+import 'spreadsheet_dialog_chrome.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
@@ -481,80 +482,157 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     return LayoutBuilder(
         builder: (context, constraints) => Column(children: [
               SizedBox(
-                  height: (constraints.maxHeight * .44).clamp(100.0, 275.0),
+                  height: (constraints.maxHeight *
+                          (constraints.maxHeight < 400 ? .42 : .52))
+                      .clamp(80.0, 310.0),
                   child: ChecklistStatusPanel(
                       controller: livePreview, unsaved: pending.isNotEmpty)),
               Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Wrap(spacing: 12, runSpacing: 8, children: [
-                    SizedBox(
-                        width: 260,
-                        child: TextField(
-                            decoration: const InputDecoration(
-                                hintText: 'Buscar tarefa...',
-                                prefixIcon: Icon(Icons.search)),
-                            onChanged: (v) => setState(() => search = v))),
-                    for (final item in ['Todas', 'Pendentes', 'Concluídas'])
-                      ChoiceChip(
-                          label: Text(item),
-                          selected: filter == item,
-                          onSelected: (_) => setState(() => filter = item))
-                  ])),
+                  child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                          spacing: 10,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            SizedBox(
+                                width: 260,
+                                child: TextField(
+                                    decoration: InputDecoration(
+                                        hintText: 'Buscar tarefa...',
+                                        isDense: true,
+                                        filled: true,
+                                        fillColor: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerLow,
+                                        border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8)),
+                                        prefixIcon: Icon(Icons.search)),
+                                    onChanged: (v) =>
+                                        setState(() => search = v))),
+                            for (final item in [
+                              'Todas',
+                              'Pendentes',
+                              'Concluídas'
+                            ])
+                              ChoiceChip(
+                                  showCheckmark: false,
+                                  visualDensity: VisualDensity.compact,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                  label: Text(item),
+                                  selected: filter == item,
+                                  onSelected: (_) =>
+                                      setState(() => filter = item)),
+                            Text('${shown.length} tarefas',
+                                style: Theme.of(context).textTheme.bodySmall),
+                          ]))),
               Expanded(
                   child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
                     for (final group
-                        in all.map((f) => f['group'] as String).toSet())
+                        in shown.map((f) => f['group'] as String).toSet())
                       Card(
+                          elevation: 0,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant)),
+                          clipBehavior: Clip.antiAlias,
                           child: ExpansionTile(
-                              title: Text(group),
-                              subtitle: Text(
-                                  '${shown.where((f) => f['group'] == group).length} tarefas neste filtro'),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.surface,
+                              collapsedBackgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerLow,
+                              title: Row(children: [
+                                Expanded(
+                                    child: Text(group,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600))),
+                                Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: .08),
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    child: Text(
+                                        '${shown.where((f) => f['group'] == group).length} tarefas',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall))
+                              ]),
                               children: [
-                            for (final task
-                                in shown.where((f) => f['group'] == group))
-                              ListTile(
-                                  title: Text(task['label'] as String),
-                                  subtitle: Text(
-                                      'Estimado: ${task['estimated']}${task['note'] == '' ? '' : '\n${task['note']}'}'),
-                                  trailing: SizedBox(
-                                      width: 85,
-                                      child: DropdownButton<double>(
-                                          isExpanded: true,
-                                          value: const [
-                                            0.0,
-                                            .25,
-                                            .5,
-                                            .75,
-                                            1.0
-                                          ].contains((current(task) as num)
-                                                  .toDouble())
-                                              ? (current(task) as num)
-                                                  .toDouble()
-                                              : null,
-                                          hint: Text(
-                                              '${((current(task) as num) * 100).round()}%'),
-                                          items: [
-                                            for (final v in [
-                                              0.0,
-                                              .25,
-                                              .5,
-                                              .75,
-                                              1.0
-                                            ])
-                                              DropdownMenuItem(
-                                                  value: v,
-                                                  child: Text(
-                                                      '${(v * 100).round()}%'))
-                                          ],
-                                          onChanged: busy || !authorized
-                                              ? null
-                                              : (v) {
-                                                  if (v != null)
-                                                    change(task, v);
-                                                })))
-                          ]))
+                                for (final task
+                                    in shown.where((f) => f['group'] == group))
+                                  ListTile(
+                                      dense: true,
+                                      minTileHeight: 58,
+                                      shape: Border(
+                                          top: BorderSide(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .outlineVariant
+                                                  .withValues(alpha: .45))),
+                                      leading:
+                                          Icon(current(task) == 1 ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+                                              size: 19,
+                                              color: current(task) == 1
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant),
+                                      title: Text(task['label'] as String,
+                                          style: const TextStyle(fontSize: 14)),
+                                      subtitle: Text(
+                                          'Estimado: ${task['estimated']}${task['note'] == '' ? '' : '\n${task['note']}'}'),
+                                      trailing: Container(
+                                          width: 100,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8),
+                                          decoration: BoxDecoration(
+                                              border:
+                                                  Border.all(color: pending.containsKey(keyOf(task)) ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.outlineVariant),
+                                              borderRadius: BorderRadius.circular(7)),
+                                          child: DropdownButton<double>(
+                                              isDense: true,
+                                              underline: const SizedBox.shrink(),
+                                              isExpanded: true,
+                                              value: const [0.0, .25, .5, .75, 1.0].contains((current(task) as num).toDouble()) ? (current(task) as num).toDouble() : null,
+                                              hint: Text('${((current(task) as num) * 100).round()}%'),
+                                              items: [
+                                                for (final v in [
+                                                  0.0,
+                                                  .25,
+                                                  .5,
+                                                  .75,
+                                                  1.0
+                                                ])
+                                                  DropdownMenuItem(
+                                                      value: v,
+                                                      child: Text(
+                                                          '${(v * 100).round()}%'))
+                                              ],
+                                              onChanged: busy || !authorized
+                                                  ? null
+                                                  : (v) {
+                                                      if (v != null)
+                                                        change(task, v);
+                                                    })))
+                              ]))
                   ]))
             ]));
   }
@@ -562,110 +640,114 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final colors = Theme.of(context).colorScheme;
+    final menus = <PopupMenuEntry<String>>[
+      if (widget.uidProvider == null)
+        const PopupMenuItem(value: 'contacts', child: Text('Colaboradores')),
+      if (data != null && pending.isEmpty && store != null)
+        const PopupMenuItem(
+            value: 'copy', child: Text('Salvar c\u00f3pia no sistema')),
+    ];
     return PopScope(
         canPop: !busy && pending.isEmpty,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) close();
         },
         child: Dialog(
-            insetPadding: EdgeInsets.all(size.width < 600 ? 8 : 24),
-            child: SizedBox(
-                width: 1150,
-                height: size.height * .9,
-                child: DefaultTabController(
-                    length: 2,
-                    child: Column(children: [
-                      ListTile(
-                          title: const Text('Planilha do projeto'),
-                          subtitle: Text(
-                              '${widget.project.id} · ${data?['filename'] ?? widget.project.client}'),
-                          trailing: IconButton(
+          insetPadding: EdgeInsets.all(size.width < 600 ? 8 : 24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+              width: 1240,
+              height: size.height * .92,
+              child: DefaultTabController(
+                  length: 2,
+                  child: Column(children: [
+                    SpreadsheetDialogHeader(
+                        projectId: widget.project.id,
+                        client: widget.project.client,
+                        filename: data?['filename']?.toString() ?? '',
+                        serviceType: widget.project.serviceType,
+                        onClose: busy ? null : close,
+                        moreActions: menus.isEmpty || !authorized
+                            ? null
+                            : PopupMenuButton<String>(
+                                tooltip: 'Mais a\u00e7\u00f5es da planilha',
+                                enabled: !busy,
+                                itemBuilder: (_) => menus,
+                                onSelected: (value) async {
+                                  if (busy || !authorized) return;
+                                  if (value == 'contacts') {
+                                    await CompanyContacts.show(context);
+                                    if (mounted && authorized)
+                                      await loadContacts();
+                                  } else if (value == 'copy' && data != null) {
+                                    setState(() {
+                                      busy = true;
+                                      notice = null;
+                                    });
+                                    await remember(data!);
+                                    if (mounted) setState(() => busy = false);
+                                  }
+                                })),
+                    if (busy) const LinearProgressIndicator(minHeight: 2),
+                    if (error != null || notice != null)
+                      ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 100),
+                          child: SingleChildScrollView(
+                              child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SelectableText(error ?? notice!,
+                                      style: TextStyle(
+                                          color: error == null
+                                              ? colors.onSurface
+                                              : colors.error))))),
+                    TabBar(
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        indicatorWeight: 3,
+                        labelStyle:
+                            const TextStyle(fontWeight: FontWeight.w600),
+                        tabs: [
+                          const Tab(text: 'Informa\u00e7\u00f5es de entrada'),
+                          Tab(
+                              text: projectChecklistSheet(
+                                  widget.project.serviceType))
+                        ]),
+                    Expanded(
+                        child: data == null || !authorized
+                            ? Center(
+                                child: Text(busy
+                                    ? 'Carregando a planilha...'
+                                    : 'Nenhuma planilha carregada.'))
+                            : TabBarView(children: [entry(), checklist()])),
+                    SpreadsheetDialogFooter(
+                        pendingCount: pending.length,
+                        synchronization: synchronizationLabel,
+                        actions: [
+                          OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8))),
+                              onPressed: busy || !authorized ? null : load,
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text('Recarregar do Excel')),
+                          TextButton(
                               onPressed: busy ? null : close,
-                              icon: const Icon(Icons.close))),
-                      if (busy) const LinearProgressIndicator(),
-                      if (error != null)
-                        Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: SelectableText(error!,
-                                style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.error))),
-                      if (notice != null)
-                        Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: SelectableText(notice!)),
-                      if (data != null && authorized)
-                        Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(synchronizationLabel,
-                                style: Theme.of(context).textTheme.bodySmall)),
-                      TabBar(tabs: [
-                        const Tab(text: 'Informações de entrada'),
-                        Tab(
-                            text: projectChecklistSheet(
-                                widget.project.serviceType))
-                      ]),
-                      Expanded(
-                          child: data == null || !authorized
-                              ? Center(
-                                  child: Text(busy
-                                      ? 'Carregando a planilha...'
-                                      : 'Nenhuma planilha carregada.'))
-                              : TabBarView(children: [entry(), checklist()])),
-                      Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Wrap(
-                              spacing: 12,
-                              runSpacing: 8,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(pending.isEmpty
-                                    ? 'Sem alterações pendentes'
-                                    : '${pending.length} alteração(ões) não salva(s)'),
-                                OutlinedButton(
-                                    onPressed:
-                                        busy || !authorized ? null : load,
-                                    child: const Text('Recarregar do Excel')),
-                                if (widget.uidProvider == null)
-                                  OutlinedButton.icon(
-                                      icon: const Icon(Icons.people_outline),
-                                      label: const Text('Colaboradores'),
-                                      onPressed: busy || !authorized
-                                          ? null
-                                          : () async {
-                                              await CompanyContacts.show(
-                                                  context);
-                                              if (mounted && authorized)
-                                                await loadContacts();
-                                            }),
-                                if (data != null &&
-                                    pending.isEmpty &&
-                                    store != null)
-                                  TextButton(
-                                      onPressed: busy || !authorized
-                                          ? null
-                                          : () async {
-                                              setState(() {
-                                                busy = true;
-                                                notice = null;
-                                              });
-                                              await remember(data!);
-                                              if (mounted)
-                                                setState(() => busy = false);
-                                            },
-                                      child: const Text(
-                                          'Salvar cópia no sistema')),
-                                TextButton(
-                                    onPressed: busy ? null : close,
-                                    child: const Text('Cancelar')),
-                                FilledButton.icon(
-                                    onPressed:
-                                        busy || !authorized || pending.isEmpty
-                                            ? null
-                                            : save,
-                                    icon: const Icon(Icons.save_outlined),
-                                    label: const Text('Salvar na planilha'))
-                              ]))
-                    ])))));
+                              child: const Text('Cancelar')),
+                          FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8))),
+                              onPressed: busy || !authorized || pending.isEmpty
+                                  ? null
+                                  : save,
+                              icon: const Icon(Icons.save_outlined, size: 18),
+                              label: const Text('Salvar na planilha')),
+                        ]),
+                  ]))),
+        ));
   }
 }

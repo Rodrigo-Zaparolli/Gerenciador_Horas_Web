@@ -52,6 +52,71 @@ Map<String, dynamic> snapshot() => {
     };
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final size in [const Size(1366, 768), const Size(390, 844)]) {
+      testWidgets('Approved spreadsheet layout fits $size in $brightness',
+          (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(MaterialApp(
+            theme: ThemeData(brightness: brightness),
+            home: ProjectSpreadsheetDialog(
+                project: ProjectModel.fromJson({
+                  'id': '2261144',
+                  'client': 'ORQUINARE PLANEJADOS',
+                  'serviceType': 'Enterprise'
+                }),
+                uidProvider: () => 'owner',
+                emailProvider: () => 'rodrigozaparolli79@gmail.com',
+                transport: (args) async =>
+                    args['action'] == 'excel-editor-preview'
+                        ? {
+                            'preview': true,
+                            'checklistSheet': 'Checklist-Processo',
+                            'statusPreview': {
+                              'total': .64,
+                              'rows': [
+                                for (final name in [
+                                  'Contato Inicial',
+                                  'Levantamento de Escopo',
+                                  'Desenvolvimento',
+                                  'Implantação',
+                                  'Pós-Implantação'
+                                ])
+                                  {
+                                    'label': name,
+                                    'percentage': .5,
+                                    'weight': .2,
+                                    'planned': 1.0,
+                                    'start': '2026-07-07',
+                                    'end': '2026-10-16'
+                                  }
+                              ]
+                            }
+                          }
+                        : snapshot())));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Checklist-Processo'));
+        await tester.tap(find.text('Checklist-Processo'));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 800));
+        await tester.pumpAndSettle();
+        expect(find.text('Status Projeto'), findsOneWidget);
+        expect(find.text('64,0%'), findsOneWidget);
+        expect(find.text('Progresso total'), findsOneWidget);
+        expect(tester.getBottomRight(find.text('Salvar na planilha')).dy,
+            lessThan(size.height));
+        await tester
+            .ensureVisible(find.widgetWithText(ExpansionTile, 'Implantação'));
+        await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
+        await tester.pumpAndSettle();
+        expect(find.byType(DropdownButton<double>), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
   testWidgets(
       'Preview uses pending checklist edits without saving or replacing the snapshot',
       (tester) async {
@@ -88,7 +153,7 @@ void main() {
     final writes = store.writes;
     await tester.tap(find.text('Checklist-Processo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Implantação').first);
+    await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButton<double>));
     await tester.pumpAndSettle();
@@ -96,7 +161,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
-    expect(find.text('Total: 64,0%'), findsOneWidget);
+    expect(find.text('64,0%'), findsOneWidget);
     expect(
         find.textContaining('Prévia das alterações pendentes'), findsOneWidget);
     expect(calls.last['changes'], [
@@ -110,7 +175,7 @@ void main() {
     expect(calls.any((c) => c['action'] == 'excel-editor-write'), isFalse);
     expect(store.writes, writes);
     expect(find.byType(AlertDialog), findsNothing);
-    expect(find.text('1 alteração(ões) não salva(s)'), findsOneWidget);
+    expect(find.text('1 alteração pendente'), findsOneWidget);
   });
   test('Cached checklist must match the current service type', () {
     expect(spreadsheetMatchesProject(snapshot(), 'Enterprise'), isTrue);
@@ -175,7 +240,7 @@ void main() {
     expect(find.text('Maker CheckList-Processo'), findsOneWidget);
     await tester.tap(find.text('Maker CheckList-Processo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Implantação'));
+    await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButton<double>));
     await tester.pumpAndSettle();
@@ -268,7 +333,7 @@ void main() {
       expect(find.text('rodrigo@empresa.com'), findsOneWidget);
       expect(find.textContaining('fórmula do Excel será conferida'),
           findsOneWidget);
-      expect(find.text('1 alteração(ões) não salva(s)'), findsOneWidget);
+      expect(find.text('1 alteração pendente'), findsOneWidget);
       await tester.tap(find.text('Salvar na planilha'));
       await tester.pumpAndSettle();
       expect((calls.last['changes'] as List).single['cell'], 'F37');
@@ -344,6 +409,8 @@ void main() {
         findsOneWidget);
     expect(find.text('Sem alterações pendentes'), findsOneWidget);
     store.failSave = false;
+    await tester.tap(find.byTooltip('Mais ações da planilha'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar cópia no sistema'));
     await tester.pumpAndSettle();
     expect(writes, 1);
@@ -387,7 +454,7 @@ void main() {
     await tester.tap(find.text('Rodrigo').last);
     await tester.pumpAndSettle();
     expect(find.text('rodrigo@empresa.com'), findsOneWidget);
-    expect(find.text('2 alteração(ões) não salva(s)'), findsOneWidget);
+    expect(find.text('2 alterações pendentes'), findsOneWidget);
   });
   testWidgets(
       'Loads original values and sends only edits with revision and before value',

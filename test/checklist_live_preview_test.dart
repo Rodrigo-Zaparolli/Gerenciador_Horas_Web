@@ -153,7 +153,7 @@ void main() {
                     controller: preview, unsaved: true)))));
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
-    expect(find.text('Total: 60,0%'), findsOneWidget);
+    expect(find.text('60,0%'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

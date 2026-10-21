@@ -129,6 +129,16 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+O layout aprovado da planilha usa SpreadsheetDialogHeader/Footer: identificação
+do cliente, tipo de serviço, menu Mais ações da planilha para colaboradores e
+cópia no sistema, e rodapé fixo com pendências/sincronização e os três botões
+principais. Status Projeto destaca o total e exibe barras de realizado e previsto.
+A tabela ocupa a largura disponível e tem rolagem própria quando necessário.
+As tarefas ficam em grupos com contagem, estado concluído e borda de destaque
+nos percentuais pendentes; filtros omitem grupos sem tarefas correspondentes.
+Temas claro/escuro e telas 1366x768 e 390x844 foram verificados sem overflow.
+Os cálculos, fila de atualização e salvamento permanecem inalterados.
+
 A prévia Status Projeto fica fixa acima das tarefas, com rolagem própria em
 telas menores. Ao abrir o checklist, calcula os valores; cada edição invalida
 a prévia e agenda recálculo após 700 ms. ChecklistLivePreview mantém apenas
