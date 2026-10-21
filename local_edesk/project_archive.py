@@ -20,8 +20,10 @@ def _unsafe_reparse(info):
     return tag & 0xFFFF0FFF != 0x9000001A
 
 
-def _manifest(folder, version=2):
+def _inventory(folder, version=2):
     result = []
+    file_count = directory_count = total_bytes = project_files = 0
+    samples = []
     def unreadable(error):
         raise ValueError('Não foi possível conferir uma subpasta. Verifique as permissões e a disponibilidade dos arquivos no OneDrive antes de mover.') from error
     for root, dirs, files in os.walk(folder, followlinks=False, onerror=unreadable):
@@ -33,10 +35,45 @@ def _manifest(folder, version=2):
             if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
                 raise ValueError('A pasta contém um item especial que não pode ser movido.')
             directory = stat.S_ISDIR(info.st_mode)
-            result.append((str(path.relative_to(folder)), directory,
+            relative = path.relative_to(folder)
+            if directory:
+                directory_count += 1
+            else:
+                file_count += 1
+                total_bytes += info.st_size
+                if '.gerenciador-backups' not in relative.parts:
+                    project_files += 1
+                    if len(samples) < 12:
+                        samples.append(str(relative))
+            result.append((str(relative), directory,
                 0 if directory and version >= 2 else info.st_size,
                 0 if directory and version >= 2 else info.st_mtime_ns))
-    return hashlib.sha256(json.dumps(sorted(result)).encode()).hexdigest()
+    project_entries = [entry for entry in result if '.gerenciador-backups' not in Path(entry[0]).parts]
+    return {'manifest': hashlib.sha256(json.dumps(sorted(result)).encode()).hexdigest(),
+            'projectManifest': hashlib.sha256(json.dumps(sorted(project_entries)).encode()).hexdigest(),
+            'fileCount': file_count, 'directoryCount': directory_count,
+            'totalBytes': total_bytes, 'projectFileCount': project_files, 'sampleFiles': samples}
+
+
+def _manifest(folder, version=2):
+    return _inventory(folder, version)['manifest']
+
+
+def _folder_identity(folder):
+    info = folder.stat()
+    return [info.st_dev, info.st_ino]
+
+
+def _require_contents(inventory):
+    if inventory['projectFileCount'] == 0:
+        raise ValueError('A pasta selecionada não contém arquivos do projeto, apenas pastas vazias ou backups. Selecione a pasta inteira que contém os documentos. Nenhuma movimentação foi confirmada.')
+
+
+def _empty_target_identity(target):
+    if (not target.is_dir() or target.is_symlink() or _unsafe_reparse(target.lstat())
+            or target.resolve(strict=True) != target or next(target.iterdir(), None) is not None):
+        raise ValueError('Já existe uma pasta com este nome no destino e ela não está vazia ou não é uma pasta comum. Nenhum arquivo será substituído. Confira os dois caminhos.')
+    return _folder_identity(target)
 
 
 def _record(files, con, uid, reference, kind, label='Vínculo local'):
@@ -126,7 +163,11 @@ def _execute(files, uid, body):
                 elif not Path(plan['target']).is_dir():
                     raise ValueError('O destino da movimentação anterior não foi encontrado. Confira a pasta antes de recuperar os vínculos.')
                 else:
-                    return {**plan, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
+                    inventory = _inventory(Path(plan['target']), plan.get('manifestVersion', 1))
+                    _require_contents(inventory)
+                    if plan.get('projectManifest') and inventory['projectManifest'] != plan['projectManifest']:
+                        raise ValueError('O conteúdo no destino mudou após a movimentação. Confira os arquivos antes de recuperar os vínculos.')
+                    return {**plan, **inventory, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
             linked_folder = _record(files, con, uid, source_ref, 'folder', 'Pasta vinculada do projeto')
             root_ref = body.get('sourceReference') or source_ref
             source = _record(files, con, uid, root_ref, 'folder', 'Pasta inteira do projeto')
@@ -140,15 +181,20 @@ def _execute(files, uid, body):
             system = [Path(os.environ[name]).resolve() for name in ('SystemRoot', 'ProgramFiles', 'ProgramFiles(x86)') if os.environ.get(name)]
             if source == Path(source.anchor) or source in protected or any(p.is_relative_to(source) for p in protected) or any(source.is_relative_to(p) for p in system):
                 raise ValueError('Selecione somente a pasta deste projeto, não uma pasta de sistema ou da integração.')
-            if parent.is_relative_to(source) or source == target or target.exists():
-                raise ValueError('O destino deve ficar fora da pasta atual e não pode conter outra pasta com o mesmo nome.')
+            if parent.is_relative_to(source) or source == target:
+                raise ValueError('O destino deve ficar fora da pasta atual.')
+            empty_target = _empty_target_identity(target) if target.exists() else None
             if source.stat().st_dev != parent.stat().st_dev:
                 raise ValueError('Nesta versão, escolha um destino na mesma unidade/disco da pasta atual. Não é feita cópia com exclusão entre unidades.')
             excel = _record(files, con, uid, excel_ref, 'file', 'Planilha do projeto') if excel_ref else None
             if excel is not None:
                 files._validate(excel, 'file')
+            inventory = _inventory(source)
+            _require_contents(inventory)
             plan = {'source': str(source), 'target': str(target), 'parent': str(parent),
-                    'manifest': _manifest(source), 'manifestVersion': 2, 'excelInside': excel is not None and excel.is_relative_to(source),
+                    **inventory, 'folderIdentity': _folder_identity(source),
+                    'emptyTargetIdentity': empty_target,
+                    'manifestVersion': 2, 'excelInside': excel is not None and excel.is_relative_to(source),
                     'excelPath': str(excel) if excel else '',
                     'linkedFolderPath': str(linked_folder),
                     'oldFolderReference': source_ref, 'oldExcelReference': excel_ref}
@@ -168,26 +214,56 @@ def _execute(files, uid, body):
             if Path(plan['source']).exists() or not Path(plan['target']).is_dir():
                 raise ValueError('As pastas mudaram após a movimentação. Confira os caminhos antes de atualizar os vínculos.')
             result = json.loads(row[2])
+            inventory = _inventory(Path(plan['target']), plan.get('manifestVersion', 1))
+            _require_contents(inventory)
+            if plan.get('projectManifest') and inventory['projectManifest'] != plan['projectManifest']:
+                raise ValueError('O conteúdo no destino mudou após a movimentação. Confira os arquivos antes de recuperar os vínculos.')
+            # Older completed operations already passed the original manifest
+            # check before being recorded as moved. Reconfirm the remaining
+            # contents and missing source, rather than renaming a second time.
+            result = {**result, 'contentsVerified': True, 'sourceRemoved': True}
+            con.execute('UPDATE project_moves SET result=? WHERE uid=? AND operation=?',
+                        (json.dumps(result), uid, operation))
             return result if result.get('backupCleanup', {}).get('complete') else _cleanup_backups(con, uid, operation, result)
         source, target, parent = (Path(plan[k]) for k in ('source', 'target', 'parent'))
         # Paths were resolved from native authorizations and retained server-side.
         if target.parent != parent or parent.is_relative_to(source) or source == target:
             raise ValueError('Plano de movimentação inválido.')
         if source.exists():
-            if target.exists() or parent.resolve(strict=True) != parent or source.resolve(strict=True) != source:
+            if parent.resolve(strict=True) != parent or source.resolve(strict=True) != source:
                 raise ValueError('O destino/origem mudou ou já existe. Prepare a movimentação novamente.')
+            if target.exists() and (plan.get('emptyTargetIdentity') is None
+                    or _empty_target_identity(target) != plan['emptyTargetIdentity']):
+                raise ValueError('A pasta de destino mudou após a conferência. Confira novamente antes de mover.')
             if _manifest(source, plan.get('manifestVersion', 1)) != plan['manifest']:
                 raise ValueError('Os arquivos mudaram após a conferência. Prepare novamente antes de mover.')
+            if plan.get('folderIdentity') is not None and _folder_identity(source) != plan['folderIdentity']:
+                raise ValueError('A pasta de origem foi substituída após a conferência. Confira novamente antes de mover.')
+            _require_contents(_inventory(source))
             con.execute('UPDATE project_moves SET state="moving" WHERE uid=? AND operation=?', (uid, operation))
             con.commit()  # Survives interruption between filesystem and database updates.
             try:
+                if target.exists():
+                    # Only the exact empty directory displayed in the plan.
+                    # rmdir is non-recursive and refuses even hidden new files.
+                    if _empty_target_identity(target) != plan.get('emptyTargetIdentity'):
+                        raise ValueError('O destino mudou. Confira a movimentação novamente.')
+                    target.rmdir()
                 os.rename(source, target)  # Windows: atomic same-volume rename, no overwrite.
             except OSError as error:
                 raise ValueError('Não foi possível mover. Feche a planilha e os arquivos abertos, confira as permissões e tente novamente. A operação não exclui arquivos.') from error
         elif state != 'moving':
             raise ValueError('A pasta de origem não foi encontrada. Confira os caminhos antes de continuar.')
-        if not target.is_dir() or _manifest(target, plan.get('manifestVersion', 1)) != plan['manifest']:
+        if source.exists():
+            raise ValueError('A pasta ainda existe na origem. A movimentação completa não foi confirmada; os vínculos e backups foram preservados. Confira os dois caminhos.')
+        if not target.is_dir():
+            raise ValueError('A pasta não foi encontrada no destino. A movimentação não foi confirmada.')
+        inventory = _inventory(target, plan.get('manifestVersion', 1))
+        if inventory['manifest'] != plan['manifest']:
             raise ValueError('Não foi possível conferir o destino. Verifique a pasta antes de atualizar os vínculos.')
+        _require_contents(inventory)
+        if plan.get('folderIdentity') is not None and _folder_identity(target) != plan['folderIdentity']:
+            raise ValueError('O destino não corresponde à pasta original movida. Nenhum vínculo foi atualizado e os backups foram preservados.')
         linked_target = target / Path(plan.get('linkedFolderPath', plan['source'])).relative_to(source)
         folder_ref = _reference(uid, linked_target, 'folder')
         excel_ref = plan['oldExcelReference']
@@ -206,7 +282,7 @@ def _execute(files, uid, body):
             mappings.append((uid, excel_ref, str(new_excel), 'file'))
         con.executemany('INSERT OR IGNORE INTO files VALUES(?,?,?,?)', mappings)
         result = {**plan, 'operation': operation, 'moved': True, 'folderReference': folder_ref,
-                  'excelReference': excel_ref}
+                  'excelReference': excel_ref, 'contentsVerified': True, 'sourceRemoved': True}
         con.execute('UPDATE project_moves SET state="moved",result=? WHERE uid=? AND operation=?',
                     (json.dumps(result), uid, operation))
         return _cleanup_backups(con, uid, operation, result)

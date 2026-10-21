@@ -1,8 +1,8 @@
 {
   "changes": [
-    "Planilhas: limpeza automática mantendo os 5 backups mais recentes de cada arquivo, após salvamento bem-sucedido.",
-    "Projetos finalizados: backups automáticos excluídos dentro da pasta movida somente após a movimentação conferida. Aviso quando a limpeza não puder ser concluída.",
-    "Comentário com porcentagem: mantém a sessão do navegador aberta quando o E-Desk fecha as janelas após salvar, para continuar ao trabalho e verificar o percentual.",
-    "Requer atualizar e reiniciar a integração local v31."
+    "Movimentação de projetos: mostra a quantidade de arquivos, subpastas e exemplos do conteúdo antes de confirmar.",
+    "Confere o conteúdo no destino, a identidade da pasta original e a retirada da origem. Bloqueia pasta vazia e não atualiza vínculos nem exclui backups quando a verificação falha.",
+    "Permite substituir uma pasta de mesmo nome já existente no destino somente se estiver vazia e após confirmação. Não copia nem mescla pastas.",
+    "Requer atualizar e reiniciar a integração local v32. Inclui os ajustes da v31."
   ]
 }

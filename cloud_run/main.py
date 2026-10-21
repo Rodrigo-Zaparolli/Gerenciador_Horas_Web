@@ -140,6 +140,7 @@ def health_check():
         native = {'nativeActions': actions,
                   'nativeSpreadsheetLayouts': list(getattr(local_files, 'SPREADSHEET_LAYOUTS', [])),
                   'projectRootMove': getattr(local_files, 'PROJECT_ROOT_MOVE', False),
+                  'verifiedProjectMove': getattr(local_files, 'VERIFIED_PROJECT_MOVE', False),
                   'nativeFilesVersion': getattr(local_files, 'PROTOCOL_VERSION', None)}
     return jsonify({"status": "ok", "service": "gerenciador-horas-edesk",
                     "commentPercentage": True,

@@ -1,4 +1,4 @@
-"""Build the small backups-comment-percentage-31 update for an existing full installation."""
+"""Build the small verified-project-move-32 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -18,7 +18,7 @@ FILES = (
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO backups-comment-percentage-31 — instalação completa já existente
+README = '''ATUALIZAÇÃO verified-project-move-32 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -29,6 +29,12 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v32: confere arquivos, subpastas, tamanhos e identidade da pasta.
+Mostra a quantidade e exemplos de arquivos antes de confirmar. Bloqueia
+pasta vazia e nao confirma sucesso se a origem continuar existindo.
+Permite substituir somente a pasta de mesmo nome comprovadamente vazia no
+destino, mediante conferencia e confirmacao. Nunca copia o projeto.
 
 Novidade v31: mantem os 5 backups mais recentes de cada planilha apos salvar.
 Depois de mover e conferir a pasta finalizada, exclui os backups automaticos
@@ -113,7 +119,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-backups-comentario-31.zip'
+    target = ROOT / 'web/downloads/atualizacao-mover-pasta-completa-32.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

@@ -26,6 +26,7 @@ picker_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-5'
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 PROJECT_ROOT_MOVE = True
+VERIFIED_PROJECT_MOVE = True
 SUPPORTED_ACTIONS = frozenset({'authorize', 'pick-file', 'pick-folder', 'create-folder', 'open', 'read', 'preview', 'excel-editor-read', 'excel-editor-write', 'excel-editor-preview', 'project-move-prepare', 'project-move-commit'})
 
 

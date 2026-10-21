@@ -239,8 +239,11 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
         final result = await service.call('project-move-commit',
             operation: plan!['operation'] as String);
         if (!mounted || !authorized) return;
-        if (result['moved'] != true)
-          throw StateError('A movimentação não foi confirmada.');
+        if (result['moved'] != true ||
+            result['contentsVerified'] != true ||
+            result['sourceRemoved'] != true)
+          throw StateError(
+              'A movimentação de todo o conteúdo e a retirada da pasta da origem não foram confirmadas. Confira os dois caminhos antes de tentar novamente.');
         moved = result;
       }
       if (!authorized) throw StateError('A conta mudou.');
@@ -357,6 +360,19 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                           'Confira os caminhos abaixo e marque a confirmação para liberar o botão.'),
                       SelectableText(
                           'De: ${plan!['source']}\nPara: ${plan!['target']}'),
+                      if (plan!['emptyTargetIdentity'] != null)
+                        const Text(
+                            'Já existe uma pasta vazia com este nome no destino. Após sua confirmação, somente essa pasta vazia será removida para receber a pasta original completa.'),
+                      if (plan!['fileCount'] is num) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                            '${plan!['fileCount']} arquivos e ${plan!['directoryCount']} subpastas serão movidos com a pasta inteira.'),
+                        if (plan!['sampleFiles'] is List)
+                          SelectableText(
+                              (plan!['sampleFiles'] as List).join('\n')),
+                        const Text(
+                            'A pasta deixará de existir na origem após a movimentação. Os backups automáticos serão excluídos depois da conferência.'),
+                      ],
                       if (widget.excel.isNotEmpty)
                         Text(plan!['excelInside'] == true
                             ? 'A planilha está dentro da pasta e terá seu vínculo atualizado.'

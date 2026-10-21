@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='backups-comment-percentage-31',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='verified-project-move-32',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -105,7 +105,8 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'backups-comment-percentage-31'
+            assert health['integrationPackageVersion'] == 'verified-project-move-32'
+            assert health['verifiedProjectMove'] is True
             assert 'authorize' in health['nativeActions']
             assert 'excel-editor-preview' in health['nativeActions']
             assert health['projectRootMove'] is True

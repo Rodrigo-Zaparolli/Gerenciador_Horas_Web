@@ -22,6 +22,7 @@ class FakeArchiveService extends ProjectArchiveService {
   int checks = 0, applies = 0;
   bool failApply = false;
   bool cleanupPending = false;
+  bool contentsVerified = true;
   Completer<void>? prepareWait;
   @override
   Future<ArchiveDestination?> loadDestination(String owner) async =>
@@ -57,13 +58,23 @@ class FakeArchiveService extends ProjectArchiveService {
         'target': r'C:\Finalizados\2261144 - Orquinare',
         'operation': 'prepared',
         'excelInside': true,
+        'fileCount': 17,
+        'directoryCount': 4,
+        'sampleFiles': ['Documentos/Projeto.xlsm', 'Proposta.pdf'],
         'alreadyMoved': false
       };
     }
-    if (action == 'project-move-commit') return {
-      'moved': true,
-      if (cleanupPending) 'backupCleanup': {'complete': false, 'warnings': ['Arquivo bloqueado']},
-    };
+    if (action == 'project-move-commit')
+      return {
+        'moved': true,
+        'contentsVerified': contentsVerified,
+        'sourceRemoved': contentsVerified,
+        if (cleanupPending)
+          'backupCleanup': {
+            'complete': false,
+            'warnings': ['Arquivo bloqueado']
+          },
+      };
     throw StateError(action);
   }
 
@@ -106,17 +117,36 @@ void main() {
     }
   }
 
-  testWidgets('Cleanup failure is visible after links are updated without repeating the move', (tester) async {
+  testWidgets('Incomplete move never updates saved project paths',
+      (tester) async {
+    final service = FakeArchiveService()..contentsVerified = false;
+    await open(tester, service);
+    expect(find.textContaining('17 arquivos e 4 subpastas'), findsOneWidget);
+    expect(find.textContaining('Documentos/Projeto.xlsm'), findsOneWidget);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar e mover'));
+    await tester.pumpAndSettle();
+    expect(service.applies, 0);
+    expect(find.textContaining('não foram confirmadas'), findsOneWidget);
+    expect(find.byType(ProjectArchiveDialog), findsOneWidget);
+  });
+
+  testWidgets(
+      'Cleanup failure is visible after links are updated without repeating the move',
+      (tester) async {
     final service = FakeArchiveService()..cleanupPending = true;
     await open(tester, service);
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar e mover'));
     await tester.pumpAndSettle();
-    expect(find.text('Pasta movida; limpeza de backups pendente'), findsOneWidget);
+    expect(
+        find.text('Pasta movida; limpeza de backups pendente'), findsOneWidget);
     expect(find.textContaining('Arquivo bloqueado'), findsOneWidget);
     expect(service.applies, 1);
-    expect(service.calls.where((call) => call == 'project-move-commit').length, 1);
+    expect(
+        service.calls.where((call) => call == 'project-move-commit').length, 1);
     await tester.tap(find.text('Entendi'));
     await tester.pumpAndSettle();
     expect(find.byType(ProjectArchiveDialog), findsNothing);

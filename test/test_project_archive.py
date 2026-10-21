@@ -11,6 +11,113 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_previous_completed_move_recovers_with_visible_file_count_without_moving_again(self):
+        plan = self.prepare()
+        result = self.request('project-move-commit', operation=plan['operation'])
+        for key in ('fileCount', 'directoryCount', 'totalBytes', 'projectFileCount', 'sampleFiles', 'projectManifest', 'folderIdentity', 'emptyTargetIdentity'):
+            plan.pop(key, None)
+        result.pop('contentsVerified')
+        result.pop('sourceRemoved')
+        with local_files._connection() as con:
+            con.execute('UPDATE project_moves SET plan=?,result=? WHERE operation=?',
+                        (json.dumps(plan), json.dumps(result), plan['operation']))
+        recovered = self.prepare()
+        self.assertEqual(recovered['fileCount'], 1)
+        self.assertTrue(recovered['alreadyMoved'])
+        with patch.object(project_archive.os, 'rename', side_effect=AssertionError('must not move again')):
+            confirmed = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(confirmed['contentsVerified'])
+        self.assertTrue(confirmed['sourceRemoved'])
+
+    def test_confirmed_empty_destination_is_replaced_by_entire_original_folder(self):
+        target = self.destination / self.source.name
+        target.mkdir()
+        (self.source / 'Proposta.pdf').write_bytes(b'proposal')
+        plan = self.prepare()
+        self.assertIsNotNone(plan['emptyTargetIdentity'])
+        self.assertTrue(target.exists())
+        self.assertTrue(self.excel.exists())
+        result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(result['contentsVerified'])
+        self.assertFalse(self.source.exists())
+        self.assertEqual((target / 'Proposta.pdf').read_bytes(), b'proposal')
+        self.assertEqual((target / 'Documentos' / self.excel.name).read_bytes(), b'workbook-and-macros')
+
+    def test_empty_destination_that_gains_any_file_cannot_be_replaced(self):
+        target = self.destination / self.source.name
+        target.mkdir()
+        plan = self.prepare()
+        (target / '.oculto.txt').write_bytes(b'preserve')
+        with self.assertRaises(ValueError):
+            self.request('project-move-commit', operation=plan['operation'])
+        self.assertEqual((target / '.oculto.txt').read_bytes(), b'preserve')
+        self.assertTrue(self.excel.exists())
+
+    def test_moves_entire_nonempty_tree_without_copying_and_reports_contents(self):
+        import shutil
+        nested = self.source / 'Outros' / 'Subpasta'
+        nested.mkdir(parents=True)
+        (self.source / '.oculto.txt').write_bytes(b'hidden')
+        (nested / 'Proposta.pdf').write_bytes(b'proposal')
+        (nested / 'Anotacao.txt').write_bytes(b'notes')
+        expected = {p.relative_to(self.source): p.read_bytes() for p in self.source.rglob('*') if p.is_file()}
+        identity = project_archive._folder_identity(self.source)
+        plan = self.prepare()
+        self.assertEqual(plan['fileCount'], len(expected))
+        self.assertEqual(plan['directoryCount'], 3)
+        self.assertEqual(plan['totalBytes'], sum(map(len, expected.values())))
+        with patch.object(shutil, 'copytree', side_effect=AssertionError('must not copy')), patch.object(shutil, 'copy2', side_effect=AssertionError('must not copy')):
+            result = self.request('project-move-commit', operation=plan['operation'])
+        target = Path(result['target'])
+        self.assertFalse(self.source.exists())
+        self.assertEqual(project_archive._folder_identity(target), identity)
+        self.assertEqual({p.relative_to(target): p.read_bytes() for p in target.rglob('*') if p.is_file()}, expected)
+        self.assertTrue(result['contentsVerified'])
+        self.assertTrue(result['sourceRemoved'])
+
+    def test_empty_or_backup_only_source_is_not_confirmed(self):
+        self.excel.unlink()
+        self.excel_ref = ''
+        with self.assertRaisesRegex(ValueError, 'não contém arquivos'):
+            self.prepare()
+        backup = self.source / '.gerenciador-backups'
+        backup.mkdir()
+        (backup / 'Cliente-20261020-120000-abcdef12.xlsm').write_bytes(b'backup')
+        with self.assertRaisesRegex(ValueError, 'não contém arquivos'):
+            self.prepare()
+        self.assertTrue(self.source.exists())
+        self.assertFalse((self.destination / self.source.name).exists())
+
+    def test_empty_destination_never_updates_links_or_cleans_backups(self):
+        plan = self.prepare()
+        rename = os.rename
+        def simulate_missing_contents(source, target):
+            rename(source, target)
+            (target / 'Documentos' / self.excel.name).unlink()
+        with patch.object(project_archive.os, 'rename', side_effect=simulate_missing_contents), patch('local_edesk.backup_policy.remove_archived_backups') as cleanup:
+            with self.assertRaisesRegex(ValueError, 'conferir o destino'):
+                self.request('project-move-commit', operation=plan['operation'])
+            cleanup.assert_not_called()
+        with local_files._connection() as con:
+            self.assertEqual(con.execute('SELECT state FROM project_moves WHERE operation=?', (plan['operation'],)).fetchone()[0], 'moving')
+
+    def test_copy_left_at_source_is_not_reported_as_a_move(self):
+        import shutil
+        plan = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=lambda source, target: shutil.copytree(source, target)), patch('local_edesk.backup_policy.remove_archived_backups') as cleanup:
+            with self.assertRaisesRegex(ValueError, 'ainda existe na origem'):
+                self.request('project-move-commit', operation=plan['operation'])
+            cleanup.assert_not_called()
+        self.assertTrue(self.excel.exists())
+
+    def test_missing_file_after_move_cannot_recover_as_success(self):
+        (self.source / 'Proposta.pdf').write_bytes(b'proposal')
+        plan = self.prepare()
+        result = self.request('project-move-commit', operation=plan['operation'])
+        (Path(result['target']) / 'Proposta.pdf').unlink()
+        with self.assertRaisesRegex(ValueError, 'conteúdo no destino mudou'):
+            self.request('project-move-commit', operation=plan['operation'])
+
     def test_backups_removed_only_after_verified_move_and_recovery_is_idempotent(self):
         backup = self.excel.parent / '.gerenciador-backups'
         backup.mkdir()
@@ -277,7 +384,9 @@ class ArchiveTests(unittest.TestCase):
         self.assertTrue(self.prepare()['alreadyMoved'])
 
     def test_destination_collision_and_descendant_do_not_change_source(self):
-        (self.destination / self.source.name).mkdir()
+        collision = self.destination / self.source.name
+        collision.mkdir()
+        (collision / 'Nao substituir.txt').write_bytes(b'keep')
         with self.assertRaises(ValueError): self.prepare()
         self.destination_ref = self.authorize(self.source / 'Documentos', 'folder')
         with self.assertRaises(ValueError): self.prepare()

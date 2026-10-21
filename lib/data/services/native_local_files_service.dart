@@ -53,7 +53,7 @@ class NativeLocalFiles {
       throw const NativeFilesException('Entre novamente na sua conta.');
     }
     final kind = serviceType?.toLowerCase() ?? '';
-    if (action == 'project-move-prepare' && sourceReference != null) {
+    if (action == 'project-move-prepare') {
       final health =
           await nativeFileRequest({'action': 'health', 'interactive': true})
               .timeout(const Duration(seconds: 4));
@@ -63,9 +63,10 @@ class NativeLocalFiles {
       final data = health['data'];
       if (health['status'] != 200 ||
           data is! Map ||
-          data['projectRootMove'] != true) {
+          data['projectRootMove'] != true ||
+          data['verifiedProjectMove'] != true) {
         throw const NativeFilesException(
-            'Atualize e reinicie a integração local v27 para mover a pasta inteira do projeto. Nenhum arquivo foi movido.');
+            'Atualize e reinicie a integração local v32 para conferir e mover a pasta inteira com todos os arquivos. Nenhum arquivo foi movido.');
       }
     }
     if (action == 'excel-editor-write' &&
