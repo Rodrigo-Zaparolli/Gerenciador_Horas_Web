@@ -1,7 +1,5 @@
 {
   "changes": [
-    "Movimentação de pastas: corrigida a recuperação de vínculos antigos cuja autorização local apontava para outro caminho. Autorizar vínculos neste PC agora permite selecionar o caminho exato nessa situação.",
-    "A conferência identifica se o conflito está no destino, na pasta vinculada, na pasta inteira ou na planilha. A janela também mostra o caminho da planilha vinculada.",
-    "Requer atualização e reinício da integração local v30. A recuperação preserva outros vínculos e contas, e a pasta só é movida após conferência e confirmação."
+    "Comentários E-Desk: botão Editar campo na aba Excel para alterar o nome e o intervalo de células. Aplique a edição e clique em Salvar configurações para gravar."
   ]
 }

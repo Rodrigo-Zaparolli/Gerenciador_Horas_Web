@@ -1,4 +1,5 @@
 import 'comment_template.dart';
+import 'excel_field_edit_dialog.dart';
 import 'comment_percentage_work.dart';
 import 'standalone_percentage_dialog.dart';
 import '../../../shared/widgets/writing_review.dart';
@@ -3670,6 +3671,29 @@ class ComentarioModal {
                                       ),
                                     ),
                                     const SizedBox(width: 6),
+                                    IconButton(
+                                      tooltip: 'Editar campo',
+                                      onPressed: () async {
+                                        final edited =
+                                            await showExcelFieldEditDialog(
+                                          context,
+                                          Map<String, String>.from(campo),
+                                        );
+                                        if (edited == null || !context.mounted)
+                                          return;
+                                        setConfigState(() {
+                                          final current =
+                                              camposEtiqueta.indexOf(campo);
+                                          if (current >= 0)
+                                            camposEtiqueta[current] = edited;
+                                        });
+                                      },
+                                      icon: Icon(
+                                        Icons.edit_outlined,
+                                        size: 18,
+                                        color: CoresApp.destaque,
+                                      ),
+                                    ),
                                     IconButton(
                                       tooltip: 'Duplicar campo',
                                       onPressed: () {
