@@ -129,6 +129,20 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+A v30 recupera autorizações antigas conflitantes: authorize ignora o registro
+incompatível com o caminho completo da referência e exige seleção nativa exata
+ou outra autorização já existente do mesmo UID para esse mesmo caminho.
+Somente essa ação pode reparar o alias, sem alterar os demais registros/UIDs.
+Referências antigas contendo apenas nome não são reatribuídas automaticamente.
+A conferência de movimentação pode reutilizar um caminho exato já autorizado
+e informa qual vínculo está em conflito, com o caminho esperado e o antigo.
+Cancelar ou escolher outro caminho mantém o registro antigo e bloqueia o envio.
+Testes cobrem os quatro vínculos, outras contas, outra pasta com mesmo nome,
+recuperação e movimentação da pasta correta; arquivos de outros projetos são preservados.
+Se uma renomeação falhar antes de mover, a preparação recupera o plano válido
+para nova confirmação. Se os arquivos tiverem mudado nesse intervalo, aposenta
+o plano antigo e exige conferir o novo; operações antigas ficam bloqueadas.
+
 O layout aprovado da planilha usa SpreadsheetDialogHeader/Footer: identificação
 do cliente, tipo de serviço, menu Mais ações da planilha para colaboradores e
 cópia no sistema, e rodapé fixo com pendências/sincronização e os três botões

@@ -39,15 +39,19 @@ def _manifest(folder, version=2):
     return hashlib.sha256(json.dumps(sorted(result)).encode()).hexdigest()
 
 
-def _record(files, con, uid, reference, kind):
+def _record(files, con, uid, reference, kind, label='Vínculo local'):
     if not isinstance(reference, str):
         raise ValueError('Selecione a pasta do projeto e a pasta de destino neste computador.')
     actual_kind, _ = files.parse_reference(reference, uid)
     row = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
-    if row is None:
+    expected = files._expected_path(reference)
+    if row is None or row[1] != kind or expected is not None and not files._same_path(expected, row[0]):
+        original = row
         row = files._authorized_path(con, uid, reference, kind)
+        if not row and original and expected is not None:
+            raise ValueError(f'{label}: o caminho salvo é {expected}, mas a autorização antiga aponta para {original[0]}. Use Autorizar vínculos neste PC e selecione o caminho salvo. Nenhuma pasta foi movida.')
     if not row or actual_kind != kind or row[1] != kind:
-        raise ValueError('Selecione novamente a pasta/planilha no editor deste computador.')
+        raise ValueError(f'{label}: Selecione novamente a pasta/planilha usando Autorizar vínculos neste PC. Nenhuma pasta foi movida.')
     files._check_expected_path(reference, row[0])
     return Path(row[0]).resolve()
 
@@ -85,7 +89,7 @@ def _execute(files, uid, body):
         if body['action'] == 'project-move-prepare':
             source_ref, destination_ref = body.get('reference'), body.get('destination')
             excel_ref = body.get('excelReference') or ''
-            approved_parent = _record(files, con, uid, destination_ref, 'folder')
+            approved_parent = _record(files, con, uid, destination_ref, 'folder', 'Pasta de destino')
             # Recover a completed/interrupted operation before validating the old path.
             candidates = con.execute('SELECT operation,plan,state,result FROM project_moves WHERE uid=? '
                 'AND source_reference=? AND excel_reference=? '
@@ -94,14 +98,23 @@ def _execute(files, uid, body):
             previous = next((row for row in candidates if files._same_path(json.loads(row[1])['parent'], approved_parent)), None)
             if previous:
                 plan = json.loads(previous[1])
-                if Path(plan['source']).exists() and not (previous[2] == 'moving' and not Path(plan['target']).exists()):
+                retry_before_move = (previous[2] == 'moving' and Path(plan['source']).is_dir()
+                    and not Path(plan['target']).exists())
+                if retry_before_move and _manifest(Path(plan['source']), plan.get('manifestVersion', 1)) == plan['manifest']:
+                    return {**plan, 'operation': previous[0], 'alreadyMoved': False}
+                if retry_before_move:
+                    # Rename never took place and the source changed afterward.
+                    # Retire the old plan; prepare/confirm a fresh manifest below.
+                    con.execute('UPDATE project_moves SET state="abandoned" WHERE uid=? AND operation=?', (uid, previous[0]))
+                elif Path(plan['source']).exists():
                     raise ValueError('Existe uma movimentação anterior para esta pasta e a origem voltou a existir. Confira as duas pastas antes de continuar.')
-                if not Path(plan['target']).is_dir():
+                elif not Path(plan['target']).is_dir():
                     raise ValueError('O destino da movimentação anterior não foi encontrado. Confira a pasta antes de recuperar os vínculos.')
-                return {**plan, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
-            linked_folder = _record(files, con, uid, source_ref, 'folder')
+                else:
+                    return {**plan, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
+            linked_folder = _record(files, con, uid, source_ref, 'folder', 'Pasta vinculada do projeto')
             root_ref = body.get('sourceReference') or source_ref
-            source = _record(files, con, uid, root_ref, 'folder')
+            source = _record(files, con, uid, root_ref, 'folder', 'Pasta inteira do projeto')
             if source != linked_folder and not (linked_folder.name.casefold() == 'documentos' and source == linked_folder.parent):
                 raise ValueError('Selecione a pasta vinculada ou a pasta principal imediatamente acima dela. Não selecione Clientes ou outra pasta geral.')
             parent = approved_parent
@@ -116,7 +129,7 @@ def _execute(files, uid, body):
                 raise ValueError('O destino deve ficar fora da pasta atual e não pode conter outra pasta com o mesmo nome.')
             if source.stat().st_dev != parent.stat().st_dev:
                 raise ValueError('Nesta versão, escolha um destino na mesma unidade/disco da pasta atual. Não é feita cópia com exclusão entre unidades.')
-            excel = _record(files, con, uid, excel_ref, 'file') if excel_ref else None
+            excel = _record(files, con, uid, excel_ref, 'file', 'Planilha do projeto') if excel_ref else None
             if excel is not None:
                 files._validate(excel, 'file')
             plan = {'source': str(source), 'target': str(target), 'parent': str(parent),
@@ -134,6 +147,8 @@ def _execute(files, uid, body):
         if not row:
             raise ValueError('Prepare e confirme a movimentação novamente.')
         plan, state = json.loads(row[0]), row[1]
+        if state == 'abandoned':
+            raise ValueError('Este plano foi substituído. Confira e confirme a movimentação mais recente.')
         if state == 'moved':
             if Path(plan['source']).exists() or not Path(plan['target']).is_dir():
                 raise ValueError('As pastas mudaram após a movimentação. Confira os caminhos antes de atualizar os vínculos.')

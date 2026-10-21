@@ -11,6 +11,92 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_reopening_after_failed_rename_recovers_retry_instead_of_blocking(self):
+        plan = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('Excel open')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=plan['operation'])
+        recovered = self.prepare()
+        self.assertFalse(recovered['alreadyMoved'])
+        self.assertEqual(recovered['operation'], plan['operation'])
+        self.assertTrue(self.request('project-move-commit', operation=recovered['operation'])['moved'])
+
+    def test_changed_source_after_failed_rename_requires_a_new_confirmation(self):
+        plan = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('Excel open')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=plan['operation'])
+        (self.source / 'Novo.txt').write_text('new content')
+        fresh = self.prepare()
+        self.assertNotEqual(fresh['operation'], plan['operation'])
+        with self.assertRaisesRegex(ValueError, 'substituído'):
+            self.request('project-move-commit', operation=plan['operation'])
+        result = self.request('project-move-commit', operation=fresh['operation'])
+        self.assertTrue((Path(result['target']) / 'Novo.txt').exists())
+
+    def test_conflicting_authorizations_can_be_repaired_then_move_the_correct_project(self):
+        root_ref = self.folder_ref
+        self.folder_ref = self.authorize(self.source / 'Documentos', 'folder')
+        bindings = [
+            (self.destination_ref, self.destination, 'folder', 'Pasta de destino'),
+            (self.folder_ref, self.source / 'Documentos', 'folder', 'Pasta vinculada'),
+            (root_ref, self.source, 'folder', 'Pasta inteira'),
+            (self.excel_ref, self.excel, 'file', 'Planilha do projeto')]
+        wrong_paths = []
+        for index, (ref, expected, kind, label) in enumerate(bindings):
+            with self.subTest(binding=label):
+                wrong = self.root / f'Outro projeto {index}' / expected.name
+                wrong.parent.mkdir()
+                wrong.mkdir() if kind == 'folder' else wrong.write_bytes(b'other workbook')
+                wrong_paths.append(wrong)
+                other_ref = self.authorize(wrong, kind)
+                with local_files._connection() as con:
+                    con.execute('UPDATE files SET path=? WHERE uid=? AND reference=?', (str(wrong), 'owner', ref))
+                    con.execute('INSERT INTO files VALUES(?,?,?,?)', ('other', ref, str(wrong), kind))
+                with self.assertRaisesRegex(ValueError, label):
+                    self.request('project-move-prepare', reference=self.folder_ref,
+                        sourceReference=root_ref, destination=self.destination_ref, excelReference=self.excel_ref)
+                with patch.object(local_files, 'choose', return_value=str(expected)) as picker, patch.object(local_files.os, 'startfile') as opener:
+                    self.assertTrue(self.request('authorize', reference=ref)['authorized'])
+                    picker.assert_called_once()
+                    opener.assert_not_called()
+                with local_files._connection() as con:
+                    self.assertEqual(con.execute('SELECT path FROM files WHERE uid=? AND reference=?', ('owner', ref)).fetchone()[0], str(expected))
+                    self.assertEqual(con.execute('SELECT path FROM files WHERE uid=? AND reference=?', ('other', ref)).fetchone()[0], str(wrong))
+                    self.assertEqual(con.execute('SELECT path FROM files WHERE uid=? AND reference=?', ('owner', other_ref)).fetchone()[0], str(wrong))
+        plan = self.request('project-move-prepare', reference=self.folder_ref,
+            sourceReference=root_ref, destination=self.destination_ref, excelReference=self.excel_ref)
+        result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(result['moved'])
+        self.assertTrue((self.destination / self.source.name / 'Documentos' / self.excel.name).exists())
+        self.assertTrue(all(path.exists() for path in wrong_paths))
+
+    def test_conflicting_link_cancellation_or_wrong_choice_does_not_repair_or_move(self):
+        wrong = self.root / 'Outro projeto'
+        wrong.mkdir()
+        with local_files._connection() as con:
+            con.execute('UPDATE files SET path=? WHERE uid=? AND reference=?', (str(wrong), 'owner', self.folder_ref))
+        with patch.object(local_files, 'choose', return_value=''):
+            self.assertTrue(self.request('authorize', reference=self.folder_ref)['cancelled'])
+        with patch.object(local_files, 'choose', return_value=str(wrong)):
+            with self.assertRaisesRegex(ValueError, 'corresponde'):
+                self.request('authorize', reference=self.folder_ref)
+        with local_files._connection() as con:
+            self.assertEqual(con.execute('SELECT path FROM files WHERE uid=? AND reference=?', ('owner', self.folder_ref)).fetchone()[0], str(wrong))
+        with self.assertRaises(ValueError): self.prepare()
+        self.assertTrue(self.source.exists())
+
+    def test_conflicting_alias_can_reuse_an_exact_path_already_approved_by_same_user(self):
+        wrong = self.root / 'Outro projeto'
+        wrong.mkdir()
+        self.authorize(self.source, 'folder')
+        with local_files._connection() as con:
+            con.execute('UPDATE files SET path=? WHERE uid=? AND reference=?', (str(wrong), 'owner', self.folder_ref))
+        with patch.object(local_files, 'choose') as picker:
+            self.assertEqual(Path(self.prepare()['source']), self.source)
+            self.assertTrue(self.request('authorize', reference=self.folder_ref)['authorized'])
+            picker.assert_not_called()
+
     def test_move_project_parent_preserves_documents_link_and_all_siblings(self):
         self.folder_ref = self.authorize(self.source / 'Documentos', 'folder')
         root_ref = self.authorize(self.source, 'folder')

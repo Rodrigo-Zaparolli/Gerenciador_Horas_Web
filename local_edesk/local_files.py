@@ -191,6 +191,13 @@ def execute(uid, body, verified_user=None):
             raise ValueError('Selecione a planilha do trabalho, não a pasta.')
         with _connection() as con:
             record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
+            expected = _expected_path(reference)
+            conflicting = bool(record and (record[1] != kind or expected is not None and not _same_path(expected, record[0])))
+            # Only explicit authorization can repair a conflicting local alias.
+            # The full path must still match the reference and be selected in
+            # Windows, or already authorized for this same UID.
+            if conflicting and action == 'authorize' and expected is not None:
+                record = None
             recovered = record is None
             if recovered:
                 record = _authorized_path(con, uid, reference, kind)
@@ -200,21 +207,21 @@ def execute(uid, body, verified_user=None):
                 raise ValueError('O tipo do vínculo local não corresponde ao arquivo ou pasta.')
             _check_expected_path(reference, path)
             if recovered:
-                _save(uid, reference, path, kind)
+                _save(uid, reference, path, kind, repair=action == 'authorize' and conflicting)
         elif action == 'read' or editor:
             raise ValueError('Selecione novamente o arquivo no editor deste computador.')
         else:
             if not picker_lock.acquire(blocking=False):
                 raise ValueError('Conclua a seleção de arquivo ou pasta que já está aberta.')
             try:
-                selected = choose(kind, f'Localize {expected_name} — vínculo deste computador')
+                selected = choose(kind, f'Localize {expected or expected_name} — vínculo deste computador')
                 if not selected:
                     return {'cancelled': True}
                 path = _validate(selected, kind)
                 _check_expected_path(reference, path)
                 if (path.name or path.anchor).casefold() != expected_name.casefold():
                     raise ValueError('O nome selecionado é diferente do vínculo. Altere o arquivo ou pasta no editor.')
-                _save(uid, reference, path, kind)
+                _save(uid, reference, path, kind, repair=action == 'authorize' and conflicting)
             finally:
                 picker_lock.release()
         persistent = _persistent_reference(uid, reference, path, kind)
@@ -260,10 +267,13 @@ def execute(uid, body, verified_user=None):
         picker_lock.release()
 
 
-def _save(uid, reference, path, kind):
+def _save(uid, reference, path, kind, repair=False):
     _check_expected_path(reference, path)
     with _connection() as con:
         con.execute('INSERT OR IGNORE INTO files VALUES(?,?,?,?)', (uid, reference, str(path), kind))
         existing = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
         if existing[1] != kind or not _same_path(existing[0], path):
+            if repair and _expected_path(reference) is not None:
+                con.execute('UPDATE files SET path=?,kind=? WHERE uid=? AND reference=?', (str(path), kind, uid, reference))
+                return
             raise ValueError('Este vínculo já pertence a outra pasta ou planilha. Faça uma nova seleção no editor do trabalho.')

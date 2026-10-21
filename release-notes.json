@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Planilha do projeto: novo layout com cabeçalho compacto, progresso total em destaque, tabela Status Projeto alinhada e barras para realizado e previsto.",
-    "Checklist com grupos mais claros, busca e filtros organizados, destaque nos percentuais alterados e rolagem independente das tarefas. Rodapé fixo com alterações pendentes, sincronização e ações principais.",
-    "Colaboradores e Salvar cópia no sistema estão no menu Mais ações da planilha. O cálculo automático e a gravação continuam iguais; não é necessário atualizar a integração v29."
+    "Movimentação de pastas: corrigida a recuperação de vínculos antigos cuja autorização local apontava para outro caminho. Autorizar vínculos neste PC agora permite selecionar o caminho exato nessa situação.",
+    "A conferência identifica se o conflito está no destino, na pasta vinculada, na pasta inteira ou na planilha. A janela também mostra o caminho da planilha vinculada.",
+    "Requer atualização e reinício da integração local v30. A recuperação preserva outros vínculos e contas, e a pasta só é movida após conferência e confirmação."
   ]
 }

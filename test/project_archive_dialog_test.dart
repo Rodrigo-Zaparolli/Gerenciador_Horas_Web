@@ -16,6 +16,7 @@ class FakeArchiveService extends ProjectArchiveService {
   @override
   Stream<void> get accountChanges => changes.stream;
   final calls = <String>[];
+  final authorizedReferences = <String?>[];
   String? selectedRoot;
   String? prepareError;
   int checks = 0, applies = 0;
@@ -42,6 +43,7 @@ class FakeArchiveService extends ProjectArchiveService {
     if (action == 'pick-folder')
       return {'reference': r'C:\Clientes\2261144 - Orquinare'};
     if (action == 'authorize') {
+      authorizedReferences.add(reference);
       prepareError = null;
       return {'authorized': true};
     }
@@ -99,6 +101,29 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
   }
+
+  testWidgets(
+      'Whole-project recovery authorizes folder, workbook, root and destination in the same dialog',
+      (tester) async {
+    final service = FakeArchiveService()
+      ..prepareError =
+          'Planilha do projeto: autorização antiga aponta para outro caminho.';
+    await open(tester, service, documents: true);
+    expect(find.textContaining('Planilha vinculada:'), findsOneWidget);
+    await tester.tap(find.text('Selecionar pasta inteira do projeto'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('autorização antiga'), findsOneWidget);
+    await tester.tap(find.text('Autorizar vínculos neste PC'));
+    await tester.pumpAndSettle();
+    expect(service.authorizedReferences, [
+      r'C:\Clientes\2261144 - Orquinare\Documentos',
+      r'C:\Clientes\2261144 - Orquinare\Documentos\Projeto.xlsm',
+      r'C:\Clientes\2261144 - Orquinare',
+      r'C:\Finalizados',
+    ]);
+    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(service.calls.contains('project-move-commit'), isFalse);
+  });
 
   testWidgets(
       'Documents requires selecting the project root; automatic preview never moves',

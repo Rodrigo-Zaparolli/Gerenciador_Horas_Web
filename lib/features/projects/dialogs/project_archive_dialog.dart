@@ -81,6 +81,9 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     setState(() {
       busy = true;
       activity = 'Carregando destino…';
+      error = null;
+      plan = null;
+      confirmed = false;
     });
     try {
       final value = await service.loadDestination(owner);
@@ -281,6 +284,9 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                         'A pasta selecionada será movida com suas subpastas. Os vínculos serão atualizados após a conferência. Feche o Excel antes de continuar.'),
                     const SizedBox(height: 12),
                     SelectableText('Pasta atual: ${label(widget.folder)}'),
+                    if (widget.excel.isNotEmpty)
+                      SelectableText(
+                          'Planilha vinculada: ${label(widget.excel)}'),
                     if (needsProjectRoot)
                       const Text(
                           'O vínculo aponta para Documentos. Selecione a pasta principal do projeto para mover todo o conteúdo.'),
