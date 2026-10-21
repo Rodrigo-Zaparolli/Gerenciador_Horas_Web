@@ -135,7 +135,7 @@ void main() {
             store: store,
             transport: (args) async {
               calls.add(args);
-              if (args['action'] == 'excel-editor-preview')
+              if (args['action'] == 'excel-editor-preview') {
                 return {
                   'preview': true,
                   'checklistSheet': 'Checklist-Processo',
@@ -147,6 +147,7 @@ void main() {
                     ]
                   }
                 };
+              }
               return snapshot();
             })));
     await tester.pumpAndSettle();

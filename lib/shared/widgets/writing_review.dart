@@ -171,12 +171,13 @@ class _WritingReviewScopeState extends State<WritingReviewScope> {
             ?.showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           reviewing = false;
           plain = null;
           rich = null;
         });
+      }
     }
   }
 

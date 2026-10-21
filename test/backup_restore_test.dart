@@ -1,3 +1,6 @@
+// In-memory Firestore test doubles; production uses the SDK classes directly.
+// ignore_for_file: subtype_of_sealed_class
+
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,6 +53,7 @@ class MemorySnapshot extends Fake
 class MemoryCollection extends Fake
     implements CollectionReference<Map<String, dynamic>> {
   final MemoryFirestore store;
+  @override
   final String path;
   MemoryCollection(this.store, this.path);
   @override
@@ -100,8 +104,9 @@ class MemoryBatch extends Fake implements WriteBatch {
   @override
   Future<void> commit() async {
     store.commits++;
-    if (store.commits == store.failCommit)
+    if (store.commits == store.failCommit) {
       throw StateError('Simulated network failure');
+    }
     for (final entry in pending.entries) {
       store.documents[entry.key] = {
         ...?store.documents[entry.key],

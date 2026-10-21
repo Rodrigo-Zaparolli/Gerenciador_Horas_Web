@@ -83,7 +83,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       List<Map<String, dynamic>>? changes,
       Map<String, String>? selectedSheets}) {
     final selected = selectedSheets ?? sheetNames;
-    if (widget.transport != null)
+    if (widget.transport != null) {
       return widget.transport!({
         'action': action,
         'reference': widget.project.excelLink,
@@ -92,6 +92,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         if (revision != null) 'revision': revision,
         if (changes != null) 'changes': changes
       });
+    }
     return NativeLocalFiles.call(action,
         reference: widget.project.excelLink,
         serviceType: widget.project.serviceType,
@@ -105,7 +106,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     super.initState();
     owner = uid;
     livePreview = ChecklistLivePreview(calculate: calculateStatus);
-    if (widget.uidProvider == null)
+    if (widget.uidProvider == null) {
       subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
         if (mounted && !authorized) {
           livePreview.clear();
@@ -117,9 +118,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           });
         }
       });
+    }
     openConfigured();
-    if (widget.uidProvider == null || widget.contactsLoader != null)
+    if (widget.uidProvider == null || widget.contactsLoader != null) {
       loadContacts();
+    }
   }
 
   Future<void> openConfigured() async {
@@ -137,12 +140,13 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       });
       await openSaved();
     } catch (e) {
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() {
           busy = false;
           error =
               'Não foi possível carregar a configuração de abas. Use Abas para conferir antes de editar. $e';
         });
+      }
     }
   }
 
@@ -169,8 +173,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final result =
           await request('excel-editor-read', selectedSheets: selected);
       if (!mounted || !authorized) return;
-      if (!matches(result, names: selected))
+      if (!matches(result, names: selected)) {
         throw StateError('A integração não confirmou as abas selecionadas.');
+      }
       await settingsStore?.save(
           owner!, widget.project.id, widget.project.excelLink ?? '', selected);
       if (!mounted || !authorized) return;
@@ -224,9 +229,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           await (widget.contactsLoader?.call() ?? CompanyContacts.load());
       if (mounted && authorized) setState(() => contacts = result);
     } catch (e) {
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(
             () => notice = 'Não foi possível carregar os colaboradores: $e');
+      }
     }
   }
 
@@ -252,8 +258,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     }
     if (mounted && authorized) {
       await load();
-      if (mounted && authorized && warning != null)
+      if (mounted && authorized && warning != null) {
         setState(() => notice = warning);
+      }
     }
   }
 
@@ -263,12 +270,14 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     try {
       await store!.save(
           owner!, widget.project.id, widget.project.excelLink ?? '', result);
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() => data = {...result, 'syncedAt': stamp});
+      }
     } catch (e) {
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() => notice =
             'O Excel foi lido/gravado, mas a cópia no sistema não foi atualizada. Use Salvar cópia no sistema para tentar novamente. $e');
+      }
     }
   }
 
@@ -298,13 +307,14 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         throw StateError(
             'A integração retornou um checklist diferente do tipo do projeto. Atualize e reinicie a integração v25 para usar Professional/Maker.');
       }
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() {
           data = result;
           pending.clear();
           calculatedEmails.clear();
           notice = null;
         });
+      }
       if (mounted && authorized) await remember(result);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
@@ -317,8 +327,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   }
 
   Future<Map<String, dynamic>> calculateStatus() async {
-    if (!mounted || !authorized || data == null)
+    if (!mounted || !authorized || data == null) {
       throw StateError('A conta mudou.');
+    }
     final result = await request('excel-editor-preview',
         revision: data!['revision'] as String,
         changes: pending.values.toList());
@@ -345,9 +356,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final result = await request('excel-editor-write',
           revision: data!['revision'] as String,
           changes: pending.values.toList());
-      if (result['saved'] != true)
+      if (result['saved'] != true) {
         throw StateError(
             'A gravação não foi confirmada. Recarregue para conferir antes de tentar novamente.');
+      }
       if (!matches(result)) {
         throw StateError(
             'O checklist retornado não corresponde ao projeto. Recarregue do Excel para conferir.');
@@ -359,7 +371,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               f['value'].toString().trim().toLowerCase() ==
                   entry.value.trim().toLowerCase()))
           .isNotEmpty;
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() {
           data = result;
           pending.clear();
@@ -371,6 +383,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
             notice = '$notice\n${result['backupCleanupWarning']}';
           }
         });
+      }
       if (mounted && authorized) await remember(result);
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
@@ -475,7 +488,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                   onFieldSubmitted: (_) => submit(),
                   onChanged: (v) => change(field, v)));
     }
-    if (kind == 'yesno')
+    if (kind == 'yesno') {
       return DropdownButtonFormField<String>(
           key: ValueKey('${data!['revision']}:${keyOf(field)}'),
           initialValue: current(field) as String,
@@ -485,6 +498,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
             DropdownMenuItem(value: 'Não', child: Text('Não'))
           ],
           onChanged: busy ? null : (v) => change(field, v));
+    }
     if (kind == 'date') {
       final raw = current(field) as String;
       final date = DateTime.tryParse(raw);
@@ -509,8 +523,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                       initialDate: date ?? DateTime.now(),
                       firstDate: DateTime(1900),
                       lastDate: DateTime(2200));
-                  if (selected != null && mounted && authorized)
+                  if (selected != null && mounted && authorized) {
                     change(field, selected.toIso8601String().substring(0, 10));
+                  }
                 });
     }
     return TextFormField(
@@ -726,8 +741,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                               onChanged: busy || !authorized
                                                   ? null
                                                   : (v) {
-                                                      if (v != null)
+                                                      if (v != null) {
                                                         change(task, v);
+                                                      }
                                                     })))
                               ]))
                   ]))
@@ -782,8 +798,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                   if (busy || !authorized) return;
                                   if (value == 'contacts') {
                                     await CompanyContacts.show(context);
-                                    if (mounted && authorized)
+                                    if (mounted && authorized) {
                                       await loadContacts();
+                                    }
                                   } else if (value == 'copy' && data != null) {
                                     setState(() {
                                       busy = true;

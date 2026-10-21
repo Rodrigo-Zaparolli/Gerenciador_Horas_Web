@@ -8,7 +8,9 @@ const defaultEdeskApiUrl = String.fromEnvironment('EDESK_API_URL',
 bool _privateIpv4(String host) {
   final parts = host.split('.').map(int.tryParse).toList();
   if (parts.length != 4 ||
-      parts.any((part) => part == null || part < 0 || part > 255)) return false;
+      parts.any((part) => part == null || part < 0 || part > 255)) {
+    return false;
+  }
   return parts[0] == 10 ||
       parts[0] == 192 && parts[1] == 168 ||
       parts[0] == 172 && parts[1]! >= 16 && parts[1]! <= 31;
@@ -66,8 +68,9 @@ class EdeskEndpointSettings {
         _owner == uid &&
         _url != null &&
         _loaded != null &&
-        DateTime.now().difference(_loaded!) < const Duration(minutes: 5))
+        DateTime.now().difference(_loaded!) < const Duration(minutes: 5)) {
       return _url!;
+    }
     if (!refresh && _loadingOwner == uid && _loading != null) return _loading!;
     final loading = _load(uid);
     _loadingOwner = uid;
@@ -84,8 +87,9 @@ class EdeskEndpointSettings {
 
   Future<String> _load(String uid) async {
     final settings = await read(uid).timeout(const Duration(seconds: 8));
-    if (uidProvider() != uid)
+    if (uidProvider() != uid) {
       throw StateError('A conta mudou durante a configuração.');
+    }
     final url = settings?['mode'] == 'central'
         ? normalizeEdeskUrl(settings?['url'] as String? ?? '')
         : normalizeEdeskUrl(defaultEdeskApiUrl);
@@ -97,8 +101,9 @@ class EdeskEndpointSettings {
 
   Future<void> save({String? centralUrl}) async {
     final uid = uidProvider();
-    if (uid == null)
+    if (uid == null) {
       throw StateError('Entre na sua conta para configurar a integração.');
+    }
     final url = centralUrl == null
         ? normalizeEdeskUrl(defaultEdeskApiUrl)
         : normalizeEdeskUrl(centralUrl);
@@ -106,8 +111,9 @@ class EdeskEndpointSettings {
       'mode': centralUrl == null ? 'local' : 'central',
       if (centralUrl != null) 'url': url
     });
-    if (uidProvider() != uid)
+    if (uidProvider() != uid) {
       throw StateError('A conta mudou durante a configuração.');
+    }
     _owner = uid;
     _url = url;
     _loaded = DateTime.now();

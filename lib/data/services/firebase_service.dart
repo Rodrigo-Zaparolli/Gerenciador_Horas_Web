@@ -34,13 +34,15 @@ class FirebaseService {
       ];
       final saved = await transaction.get(cache);
       if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou.');
-      if (!projects.any((p) => p.exists))
+      if (!projects.any((p) => p.exists)) {
         throw StateError(
             'O projeto não foi encontrado para atualizar os vínculos.');
+      }
       for (var i = 0; i < projects.length; i++) {
-        if (projects[i].exists)
+        if (projects[i].exists) {
           transaction.update(
               refs[i], projectMovePatch(projects[i].data()!, move));
+        }
       }
       if (saved.data()?['reference'] == move['oldExcelReference']) {
         transaction.update(cache, {'reference': move['excelReference']});
@@ -71,8 +73,9 @@ class FirebaseService {
         await transaction.get(refs[0]),
         await transaction.get(refs[1])
       ];
-      if (_auth.currentUser?.uid != uid)
+      if (_auth.currentUser?.uid != uid) {
         throw StateError('A conta mudou. Abra o trabalho novamente.');
+      }
       for (var i = 0; i < refs.length; i++) {
         final data = snapshots[i].data();
         if (data == null) continue;
@@ -1079,11 +1082,11 @@ URL: ${task.edeskUrl}
 
   /// Mantido para compatibilidade
   /// com código antigo do projeto.
-  get firestore => _db;
+  FirebaseFirestore get firestore => _db;
 
   /// Mantido para compatibilidade
   /// com código antigo do projeto.
-  get currentUserId => _userId;
+  String get currentUserId => _userId;
 
   // ------------------------------------------------------------
   // BUSCAR ORIENTAÇÕES
@@ -1334,7 +1337,7 @@ URL: ${task.edeskUrl}
         );
       }).toList();
     } catch (e) {
-      print(
+      debugPrint(
         'Erro ao buscar modelos de check list: $e',
       );
 
@@ -1351,7 +1354,7 @@ URL: ${task.edeskUrl}
             SetOptions(merge: true),
           );
     } catch (e) {
-      print(
+      debugPrint(
         'Erro ao salvar modelo de check list: $e',
       );
 
@@ -1365,7 +1368,7 @@ URL: ${task.edeskUrl}
     try {
       await _checklistFormatsRef.doc(id).delete();
     } catch (e) {
-      print(
+      debugPrint(
         'Erro ao excluir modelo de check list: $e',
       );
 

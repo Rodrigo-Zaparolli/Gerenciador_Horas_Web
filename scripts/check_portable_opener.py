@@ -4,16 +4,40 @@ import os
 import subprocess
 import tempfile
 import zipfile
+import shutil
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 validation_root = (root / 'build').resolve()
 validation_root.mkdir(exist_ok=True)
-with tempfile.TemporaryDirectory(prefix='opener-validation-', dir=validation_root) as directory:
+@contextmanager
+def extracted_directory():
+    directory = Path(tempfile.mkdtemp(prefix='opener-validation-', dir=validation_root)).resolve()
+    assert directory.is_relative_to(validation_root) and directory != validation_root
+    try:
+        yield directory
+    finally:
+        # Indexers/antivirus can briefly hold freshly extracted Windows headers.
+        # Retry only this unique, verified temporary tree; never user files.
+        for attempt in range(10):
+            try:
+                shutil.rmtree(directory)
+                break
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(.5)
+
+
+with extracted_directory() as directory:
     extracted = Path(directory).resolve()
     assert extracted.is_relative_to(validation_root)
     with zipfile.ZipFile(root / 'web/downloads/abertura-local-windows.zip') as archive:
-        for source in ['local_edesk/local_files.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1']:
+        for source in ['local_edesk/local_files.py', 'local_edesk/project_archive.py',
+                       'local_edesk/excel_editor.py', 'local_edesk/backup_policy.py',
+                       'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1']:
             assert archive.read(source) == (root / source).read_bytes()
         for item in archive.infolist():
             target = (extracted / item.filename).resolve()
@@ -34,7 +58,10 @@ health=client.get('/healthz')
 assert health.status_code==200 and health.json['nativeFiles'] is True
 assert health.json['excelMirror'] is True
 assert 'preview' in health.json['nativeActions']
-assert health.json['nativeFilesVersion'] == 'persistent-file-links-4'
+assert health.json['nativeFilesVersion'] == 'persistent-file-links-6'
+assert health.json['nativeSpreadsheetSheetNames'] is True
+assert health.json['verifiedProjectMove'] is True
+assert 'excel-editor-sheets' in health.json['nativeActions']
 headers={'Origin':'https://gerenciador-horas.web.app','Authorization':'Bearer invalid-test-token'}
 with patch('local_edesk.files_server.verify_token',side_effect=ValueError):
     assert client.post('/api/local-files',json={'action':'open'},headers=headers).status_code==401
@@ -43,7 +70,7 @@ assert client.post('/api/local-files',json={},headers=headers,environ_overrides=
 assert client.post('/api/local-files',json={},headers={**headers,'Origin':'https://evil.invalid'}).status_code==403
 with patch('local_edesk.files_server.verify_token',return_value={'sub':'test-user'}),patch('local_edesk.files_server.execute',return_value={'opened':True}) as opened:
     assert client.post('/api/local-files',json={'action':'open','reference':'test'},headers=headers).status_code==200
-    opened.assert_called_once_with('test-user',{'action':'open','reference':'test'})
+    opened.assert_called_once_with('test-user',{'action':'open','reference':'test'}, verified_user={'sub':'test-user'})
 gui=tkinter.Tk();gui.withdraw();gui.update();gui.destroy()
 print(json.dumps({'portable_runtime':'ok','native_dialog_dependencies':'ok','user_auth':'required','loopback_only':'ok','app_origin_only':'ok'}))
 '''

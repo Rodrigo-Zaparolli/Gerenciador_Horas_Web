@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 /// ================================================================
 /// PROCESSO ATUAL DA SINCRONIZAÇÃO DE FASES
@@ -17,17 +18,17 @@ Process? _edeskComentarioTesteProcessoAtual;
 ///
 /// Procura os arquivos primeiro ao lado do executável instalado:
 ///
-///   <app>\python\python.exe
-///   <app>\python\Scripts\python.exe
-///   <app>\python\ms-playwright
-///   <app>\edesk_bot\<script>
+///   &lt;app&gt;\python\python.exe
+///   &lt;app&gt;\python\Scripts\python.exe
+///   &lt;app&gt;\python\ms-playwright
+///   &lt;app&gt;\edesk_bot\&lt;script&gt;
 ///
 /// Durante o desenvolvimento também aceita:
 ///
-///   <projeto>\.venv\Scripts\python.exe
-///   <projeto>\python\python.exe
-///   <projeto>\python\ms-playwright
-///   <projeto>\edesk_bot\<script>
+///   &lt;projeto&gt;\.venv\Scripts\python.exe
+///   &lt;projeto&gt;\python\python.exe
+///   &lt;projeto&gt;\python\ms-playwright
+///   &lt;projeto&gt;\edesk_bot\&lt;script&gt;
 ///
 /// Assim a integração não depende de caminhos absolutos da máquina
 /// de desenvolvimento.
@@ -42,7 +43,7 @@ class _EdeskRuntime {
   ///
   /// Exemplo:
   ///
-  /// <app>\python\ms-playwright
+  /// &lt;app&gt;\python\ms-playwright
   final String? playwrightBrowsersPath;
 
   const _EdeskRuntime({
@@ -59,7 +60,7 @@ class _EdeskRuntime {
 ///
 /// Procura:
 ///
-///   <root>\python\ms-playwright
+///   &lt;root&gt;\python\ms-playwright
 ///
 /// Se a pasta não existir, retorna null.
 ///
@@ -248,36 +249,36 @@ Future<_EdeskRuntime?> _resolverEdeskRuntime(String script) async {
   // LOG DAS RAÍZES
   // ================================================================
 
-  print('');
+  debugPrint('');
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] ========================================',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] Procurando ambiente para: $script',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] Executável Flutter: '
     '${Platform.resolvedExecutable}',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] Directory.current: $currentDirectory',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] Raízes encontradas:',
   );
 
   for (final root in roots) {
-    print(
+    debugPrint(
       '[E-Desk][Runtime] - $root',
     );
   }
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] ========================================',
   );
 
@@ -295,7 +296,7 @@ Future<_EdeskRuntime?> _resolverEdeskRuntime(String script) async {
       continue;
     }
 
-    print(
+    debugPrint(
       '[E-Desk][Runtime] Script encontrado: $scriptPath',
     );
 
@@ -345,26 +346,26 @@ Future<_EdeskRuntime?> _resolverEdeskRuntime(String script) async {
       final playwrightBrowsersPath =
           await _resolverPlaywrightBrowsersPath(root);
 
-      print(
+      debugPrint(
         '[E-Desk][Runtime] Python encontrado: $pythonExe',
       );
 
-      print(
+      debugPrint(
         '[E-Desk][Runtime] WorkingDirectory: $root',
       );
 
       if (playwrightBrowsersPath != null) {
-        print(
+        debugPrint(
           '[E-Desk][Runtime] Playwright portátil: '
           '$playwrightBrowsersPath',
         );
       } else {
-        print(
+        debugPrint(
           '[E-Desk][Runtime] Playwright portátil não encontrado.',
         );
       }
 
-      print(
+      debugPrint(
         '[E-Desk][Runtime] Ambiente E-Desk encontrado.',
       );
 
@@ -376,7 +377,7 @@ Future<_EdeskRuntime?> _resolverEdeskRuntime(String script) async {
       );
     }
 
-    print(
+    debugPrint(
       '[E-Desk][Runtime] Script encontrado, '
       'mas Python não encontrado em: $root',
     );
@@ -386,21 +387,21 @@ Future<_EdeskRuntime?> _resolverEdeskRuntime(String script) async {
   // NÃO ENCONTROU
   // ================================================================
 
-  print('');
+  debugPrint('');
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] ========================================',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] AMBIENTE NÃO ENCONTRADO',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] Script solicitado: $script',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Runtime] ========================================',
   );
 
@@ -478,32 +479,32 @@ Future<EdeskPythonResult> executarPythonEdesk({
       encoding: utf8,
     );
 
-    print('');
+    debugPrint('');
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
-    print('[E-Desk] Executando Python.');
+    debugPrint('[E-Desk] Executando Python.');
 
-    print(
+    debugPrint(
       '[E-Desk] Modo: ${enviar ? 'ENVIO' : 'TESTE'}',
     );
 
-    print('[E-Desk] Python: $pythonExe');
+    debugPrint('[E-Desk] Python: $pythonExe');
 
-    print('[E-Desk] Script: $scriptPath');
+    debugPrint('[E-Desk] Script: $scriptPath');
 
-    print('[E-Desk] Request: ${requestFile.path}');
+    debugPrint('[E-Desk] Request: ${requestFile.path}');
 
     if (runtime.playwrightBrowsersPath != null) {
-      print(
+      debugPrint(
         '[E-Desk] PLAYWRIGHT_BROWSERS_PATH: '
         '${runtime.playwrightBrowsersPath}',
       );
     }
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
@@ -524,7 +525,7 @@ Future<EdeskPythonResult> executarPythonEdesk({
       environment: _criarAmbientePython(runtime),
     );
 
-    print(
+    debugPrint(
       '[E-Desk] Python iniciado. PID=${processo.pid}',
     );
 
@@ -562,13 +563,13 @@ Future<EdeskPythonResult> executarPythonEdesk({
         final linhaLimpa = linha.trimRight();
 
         if (linhaLimpa.isNotEmpty) {
-          print(
+          debugPrint(
             '[E-Desk][Python] $linhaLimpa',
           );
         }
       },
       onError: (Object erro) {
-        print(
+        debugPrint(
           '[E-Desk][Python][ERRO STDOUT] $erro',
         );
       },
@@ -590,13 +591,13 @@ Future<EdeskPythonResult> executarPythonEdesk({
         final linhaLimpa = linha.trimRight();
 
         if (linhaLimpa.isNotEmpty) {
-          print(
+          debugPrint(
             '[E-Desk][Python][ERRO] $linhaLimpa',
           );
         }
       },
       onError: (Object erro) {
-        print(
+        debugPrint(
           '[E-Desk][Python][ERRO STREAM] $erro',
         );
       },
@@ -615,7 +616,7 @@ Future<EdeskPythonResult> executarPythonEdesk({
     // permanecia em "Enviando horas...".
     // ============================================================
 
-    print(
+    debugPrint(
       '[E-Desk] Aguardando encerramento do Python...',
     );
 
@@ -626,7 +627,7 @@ Future<EdeskPythonResult> executarPythonEdesk({
       ]);
 
       if (preparado) {
-        print(
+        debugPrint(
           '[E-Desk] Teste preenchido; o Chromium permanecerá aberto.',
         );
 
@@ -652,9 +653,9 @@ Future<EdeskPythonResult> executarPythonEdesk({
 
     final stderr = stderrBuffer.toString();
 
-    print('');
+    debugPrint('');
 
-    print(
+    debugPrint(
       '[E-Desk] Python finalizado. exitCode=$exitCode',
     );
 
@@ -673,27 +674,27 @@ Future<EdeskPythonResult> executarPythonEdesk({
           ? linhasDiagnostico.skip(linhasDiagnostico.length - 12).join('\n')
           : linhasDiagnostico.join('\n');
 
-      print('');
+      debugPrint('');
 
-      print(
+      debugPrint(
         '[E-Desk] ============================================',
       );
 
-      print(
+      debugPrint(
         '[E-Desk] PYTHON RETORNOU ERRO',
       );
 
-      print(
+      debugPrint(
         '[E-Desk] ExitCode: $exitCode',
       );
 
-      print(
+      debugPrint(
         '[E-Desk] Diagnóstico:',
       );
 
-      print(diagnostico);
+      debugPrint(diagnostico);
 
-      print(
+      debugPrint(
         '[E-Desk] ============================================',
       );
 
@@ -712,21 +713,21 @@ Future<EdeskPythonResult> executarPythonEdesk({
     // SUCESSO
     // ============================================================
 
-    print('');
+    debugPrint('');
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
-    print(
+    debugPrint(
       '[E-Desk] OPERAÇÃO CONCLUÍDA COM SUCESSO',
     );
 
-    print(
+    debugPrint(
       '[E-Desk] O Flutter recebeu o término do Python.',
     );
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
@@ -739,23 +740,23 @@ Future<EdeskPythonResult> executarPythonEdesk({
       responseBody: stdout,
     );
   } catch (e, stackTrace) {
-    print('');
+    debugPrint('');
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
-    print(
+    debugPrint(
       '[E-Desk] ERRO AO EXECUTAR PYTHON',
     );
 
-    print(
+    debugPrint(
       '[E-Desk] $e',
     );
 
-    print(stackTrace);
+    debugPrint(stackTrace.toString());
 
-    print(
+    debugPrint(
       '[E-Desk] ============================================',
     );
 
@@ -798,28 +799,28 @@ Future<bool> cancelarPythonEdeskBackground() async {
   final completer = _edeskFasesCompleterAtual;
 
   if (processo == null) {
-    print(
+    debugPrint(
       '[E-Desk][Background] Nenhuma sincronização ativa.',
     );
 
     return false;
   }
 
-  print('');
+  debugPrint('');
 
-  print(
+  debugPrint(
     '[E-Desk][Background] ========================================',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Background] INTERROMPENDO SINCRONIZAÇÃO',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Background] PID=${processo.pid}',
   );
 
-  print(
+  debugPrint(
     '[E-Desk][Background] ========================================',
   );
 
@@ -846,18 +847,18 @@ Future<bool> cancelarPythonEdeskBackground() async {
 
       interrompido = resultado.exitCode == 0;
 
-      print(
+      debugPrint(
         '[E-Desk][Background] taskkill exitCode=${resultado.exitCode}',
       );
 
       if (resultado.stdout.toString().trim().isNotEmpty) {
-        print(
+        debugPrint(
           '[E-Desk][Background] ${resultado.stdout}',
         );
       }
 
       if (resultado.stderr.toString().trim().isNotEmpty) {
-        print(
+        debugPrint(
           '[E-Desk][Background][ERRO] ${resultado.stderr}',
         );
       }
@@ -865,7 +866,7 @@ Future<bool> cancelarPythonEdeskBackground() async {
       interrompido = processo.kill();
     }
   } catch (e) {
-    print(
+    debugPrint(
       '[E-Desk][Background] Erro ao interromper processo: $e',
     );
 
@@ -896,11 +897,11 @@ Future<bool> cancelarPythonEdeskBackground() async {
   }
 
   if (interrompido) {
-    print(
+    debugPrint(
       '[E-Desk][Background] Sincronização interrompida.',
     );
   } else {
-    print(
+    debugPrint(
       '[E-Desk][Background] Não foi possível interromper o processo.',
     );
   }
@@ -974,36 +975,36 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
       encoding: utf8,
     );
 
-    print('');
+    debugPrint('');
 
-    print(
+    debugPrint(
       '[E-Desk][Background] ========================================',
     );
 
-    print(
+    debugPrint(
       '[E-Desk][Background] Iniciando Python.',
     );
 
-    print(
+    debugPrint(
       '[E-Desk][Background] Modo: ${enviar ? 'ENVIO' : 'TESTE'}',
     );
 
-    print(
+    debugPrint(
       '[E-Desk][Background] Python: $pythonExe',
     );
 
-    print(
+    debugPrint(
       '[E-Desk][Background] Script: $scriptPath',
     );
 
     if (runtime.playwrightBrowsersPath != null) {
-      print(
+      debugPrint(
         '[E-Desk][Background] PLAYWRIGHT_BROWSERS_PATH: '
         '${runtime.playwrightBrowsersPath}',
       );
     }
 
-    print(
+    debugPrint(
       '[E-Desk][Background] ========================================',
     );
 
@@ -1030,7 +1031,7 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
 
     _edeskFasesProcessoAtual = processo;
 
-    print(
+    debugPrint(
       '[E-Desk][Background] Python iniciado. PID=${processo.pid}',
     );
 
@@ -1072,7 +1073,7 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
         final linhaLimpa = linha.trim();
 
         if (linhaLimpa.isNotEmpty) {
-          print(
+          debugPrint(
             '[E-Desk][Python] $linhaLimpa',
           );
         }
@@ -1143,13 +1144,13 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
         final linhaLimpa = linha.trim();
 
         if (linhaLimpa.isNotEmpty) {
-          print(
+          debugPrint(
             '[E-Desk][Python][ERRO] $linhaLimpa',
           );
         }
       },
       onError: (Object erro) {
-        print(
+        debugPrint(
           '[E-Desk][Python][ERRO STREAM] $erro',
         );
       },
@@ -1174,25 +1175,25 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
 
         final stderr = stderrBuffer.toString().trim();
 
-        print('');
+        debugPrint('');
 
-        print(
+        debugPrint(
           '[E-Desk][Background] ========================================',
         );
 
-        print(
+        debugPrint(
           '[E-Desk][Background] Python encerrado.',
         );
 
-        print(
+        debugPrint(
           '[E-Desk][Background] PID=${processo.pid}',
         );
 
-        print(
+        debugPrint(
           '[E-Desk][Background] ExitCode=$exitCode',
         );
 
-        print(
+        debugPrint(
           '[E-Desk][Background] ========================================',
         );
 
@@ -1257,14 +1258,14 @@ Future<EdeskPythonResult> executarPythonEdeskBackground({
             );
           }
         } catch (e) {
-          print(
+          debugPrint(
             '[E-Desk][Background] '
             'Erro ao remover arquivo temporário: $e',
           );
         }
       },
       onError: (Object erro) {
-        print(
+        debugPrint(
           '[E-Desk][Background] '
           'Erro monitorando processo: $erro',
         );

@@ -31,31 +31,35 @@ class _ArchiveDestinationDialogState extends State<ArchiveDestinationDialog> {
     super.initState();
     store = widget.store ?? FirebaseArchiveDestinationStore();
     owner = store.currentUserId ?? '';
-    if (widget.store == null)
+    if (widget.store == null) {
       subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
-        if (mounted && !authorized)
+        if (mounted && !authorized) {
           setState(() {
             path.clear();
             reference = null;
             error = 'A conta mudou. Feche esta janela.';
           });
+        }
       });
+    }
     load();
   }
 
   Future<void> load() async {
     setState(() => busy = true);
     try {
-      if (!authorized)
+      if (!authorized) {
         throw StateError('Entre na sua conta para configurar a pasta.');
+      }
       final saved = await store.load(owner);
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() {
           path.text =
               saved?.path ?? ArchiveDestination.suggestion(store.currentEmail);
           reference = saved?.reference;
           original = path.text;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
@@ -75,14 +79,16 @@ class _ArchiveDestinationDialogState extends State<ArchiveDestinationDialog> {
         selected = await widget.pickFolder!();
       } else {
         final result = await NativeLocalFiles.call('pick-folder');
-        if (result['cancelled'] != true)
+        if (result['cancelled'] != true) {
           selected = result['reference'] as String;
+        }
       }
       if (!mounted || !authorized || selected == null) return;
       final value =
           ArchiveDestination.fromData({'destination': selected}, owner);
-      if (value?.reference == null)
+      if (value?.reference == null) {
         throw StateError('Selecione uma pasta local válida para esta conta.');
+      }
       setState(() {
         path.text = value!.path;
         reference = value.reference;

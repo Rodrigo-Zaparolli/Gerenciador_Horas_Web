@@ -562,20 +562,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
     await _salvarBloco(item);
   }
 
-  Future<void> _removerImagem(
-    OrientacaoModel item,
-    int index,
-  ) async {
-    if (index < 0 || index >= item.imagens.length) {
-      return;
-    }
 
-    setState(() {
-      item.imagens.removeAt(index);
-    });
-
-    await _salvarBloco(item);
-  }
 
   Uint8List _decodeImagem(
     String imagem,
@@ -1137,148 +1124,11 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
     );
   }
 
-  Widget _buildAreaImagens(
-    OrientacaoModel item,
-    StateSetter setStateModal,
-  ) {
-    return SizedBox(
-      height: 86,
-      child: Row(
-        children: [
-          _buildBotaoColarPrint(item),
-          const SizedBox(width: 8),
-          _buildBotaoAdicionarImagem(item),
-          if (item.imagens.isNotEmpty) const SizedBox(width: 12),
-          if (item.imagens.isNotEmpty)
-            Expanded(
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: item.imagens.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  return _buildMiniatura(
-                    item,
-                    index,
-                    setStateModal,
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildBotaoAdicionarImagem(
-    OrientacaoModel item,
-  ) {
-    return Tooltip(
-      message: 'Adicionar imagens',
-      child: InkWell(
-        onTap: () => _adicionarImagens(item),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 92,
-          height: 76,
-          decoration: BoxDecoration(
-            color: CoresApp.fundo.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: CoresApp.borda,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_photo_alternate_outlined,
-                color: CoresApp.primaria,
-                size: 22,
-              ),
-              SizedBox(height: 5),
-              Text(
-                'Adicionar',
-                style: TextStyle(
-                  color: CoresApp.textoSecundario,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildMiniatura(
-    OrientacaoModel item,
-    int index,
-    StateSetter setStateModal,
-  ) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: () => _visualizarImagem(
-            item.imagens[index],
-          ),
-          child: Container(
-            width: 80,
-            height: 76,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: CoresApp.borda,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: Image.memory(
-                _decodeImagem(
-                  item.imagens[index],
-                ),
-                width: 80,
-                height: 76,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
-                  return Icon(
-                    Icons.broken_image_outlined,
-                    color: CoresApp.textoSecundario,
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: Material(
-            color: Colors.black54,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () async {
-                setStateModal(() {
-                  item.imagens.removeAt(index);
-                });
 
-                await _salvarBloco(item);
-              },
-              child: Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 11,
-                  color: AppPalette.text,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+
+
 
   Widget _buildRodapeModal(
     OrientacaoModel item,
@@ -1343,51 +1193,7 @@ class _OrientacaoScreenState extends State<OrientacaoScreen> {
   // BOTÃO COLAR PRINT
   // ============================================================
 
-  Widget _buildBotaoColarPrint(
-    OrientacaoModel item,
-  ) {
-    final bool selecionado = _cardComFoco == item.id;
 
-    return Tooltip(
-      message: 'Colar print (Ctrl + V)',
-      child: InkWell(
-        onTap: () => _colarPrint(item),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 92,
-          height: 76,
-          decoration: BoxDecoration(
-            color: selecionado
-                ? CoresApp.primaria.withValues(alpha: 0.12)
-                : CoresApp.fundo.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selecionado ? CoresApp.primaria : CoresApp.borda,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.content_paste_rounded,
-                color: CoresApp.primaria,
-                size: 21,
-              ),
-              const SizedBox(height: 5),
-              Text(
-                _colandoImagem && selecionado ? 'Colando...' : 'Colar print',
-                style: TextStyle(
-                  color: CoresApp.textoSecundario,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // ============================================================
   // DISPOSE

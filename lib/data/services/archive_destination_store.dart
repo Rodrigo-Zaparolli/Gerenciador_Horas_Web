@@ -43,9 +43,10 @@ class ArchiveDestination {
   }
 
   Map<String, dynamic> toData() {
-    if (!validPath(path))
+    if (!validPath(path)) {
       throw ArgumentError(
           'Informe um caminho completo do Windows ou selecione a pasta.');
+    }
     if (reference != null && pathOf(reference!) != path) {
       throw ArgumentError(
           'O caminho mudou. Selecione novamente a pasta para autorizar o novo destino.');
@@ -67,8 +68,9 @@ class FirebaseArchiveDestinationStore implements ArchiveDestinationStore {
   @override
   String? get currentEmail => FirebaseAuth.instance.currentUser?.email;
   void check(String uid) {
-    if (uid.isEmpty || currentUserId != uid)
+    if (uid.isEmpty || currentUserId != uid) {
       throw StateError('A conta mudou. Abra as configurações novamente.');
+    }
   }
 
   DocumentReference<Map<String, dynamic>> document(String uid) =>

@@ -54,10 +54,11 @@ class _EdeskCentralDialogState extends State<EdeskCentralDialog> {
     try {
       await action();
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         message = error
             .toString()
             .replaceFirst(RegExp(r'^(Bad state|FormatException): '), '');
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -68,8 +69,9 @@ class _EdeskCentralDialogState extends State<EdeskCentralDialog> {
         final result = await EdeskIntegrationApi.call('/api/edesk/central/pair',
             baseUrl: 'http://127.0.0.1:8765', body: {});
         final url = normalizeEdeskUrl(result['url'] as String? ?? '');
-        if (uid != owner)
+        if (uid != owner) {
           throw StateError('A conta mudou. Abra a configuração novamente.');
+        }
         await settings.save(centralUrl: url);
         if (!mounted) return;
         central = true;
@@ -90,32 +92,37 @@ class _EdeskCentralDialogState extends State<EdeskCentralDialog> {
           }
           final session = await EdeskIntegrationApi.call('/api/edesk/session',
               baseUrl: url);
-          if (session['authorized'] != true)
+          if (session['authorized'] != true) {
             throw StateError('Esta conta não está autorizada na central.');
-          if (uid != owner)
+          }
+          if (uid != owner) {
             throw StateError('A conta mudou. Abra a configuração novamente.');
+          }
           await settings.save(centralUrl: url);
         } else {
           await settings.save();
         }
-        if (mounted)
+        if (mounted) {
           message =
               'Configuração salva para esta conta. Nenhum envio foi realizado.';
+        }
       });
 
   Future<void> authorize() => perform(() async {
         final owner = this.uid;
         final uid = account.text.trim();
-        if (uid.isEmpty || uid.length > 128)
+        if (uid.isEmpty || uid.length > 128) {
           throw StateError('Informe o ID da conta a autorizar.');
+        }
         final url = normalizeEdeskUrl(address.text);
         final existing = await EdeskIntegrationApi.call(
             '/api/edesk/central/access',
             baseUrl: url);
         final users = (existing['users'] as List).cast<String>().toSet()
           ..add(uid);
-        if (this.uid != owner)
+        if (this.uid != owner) {
           throw StateError('A conta mudou. Abra a configuração novamente.');
+        }
         await EdeskIntegrationApi.call('/api/edesk/central/access',
             baseUrl: url, body: {'users': users.toList()});
         if (mounted) {

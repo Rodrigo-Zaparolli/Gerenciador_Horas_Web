@@ -282,8 +282,9 @@ class _MetricsScreenState extends State<MetricsScreen> {
       }
 
       setState(() {
-        if (data['horasDia'] is String)
+        if (data['horasDia'] is String) {
           _horasDiaController.text = data['horasDia'];
+        }
         if (data['metaColor'] is int) {
           _metaColor = Color(data['metaColor']);
         }
@@ -319,10 +320,11 @@ class _MetricsScreenState extends State<MetricsScreen> {
       try {
         await ref.set({'horasDia': value}, SetOptions(merge: true));
       } catch (_) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content:
                   Text('Não foi possível salvar a jornada. Tente novamente.')));
+        }
       }
     });
   }
@@ -847,29 +849,9 @@ class _MetricsScreenState extends State<MetricsScreen> {
   // CÁLCULOS
   // ================================================================
 
-  double _calcularHorasCadastradasDouble(
-    int mes,
-  ) {
-    double totalHoras = 0.0;
 
-    for (final log in widget.timeLogStore.logs) {
-      if (log.date.month == mes && log.date.year == _ano) {
-        totalHoras += WorkDuration.minutes(log) / 60;
-      }
-    }
 
-    return totalHoras;
-  }
 
-  String _calcularHorasCadastradas(
-    int mes,
-  ) {
-    return _formatDoubleToTime(
-      _calcularHorasCadastradasDouble(
-        mes,
-      ),
-    );
-  }
 
   String _calcularHorasPorTipo(
     int mes,
@@ -1036,25 +1018,9 @@ class _MetricsScreenState extends State<MetricsScreen> {
     );
   }
 
-  double _getCadastradasSum(
-    int index,
-  ) {
-    return _calcularHorasCadastradasDouble(
-      index + 1,
-    );
-  }
 
-  double _getDemaisSum(
-    int index,
-  ) {
-    final cadastradas = _getCadastradasSum(index);
 
-    final cobradas = _getCobradasSum(index);
 
-    final demais = cadastradas - cobradas;
-
-    return demais < 0 ? 0.0 : demais;
-  }
 
   double _getRealizadoSum(
     int index,
@@ -1108,15 +1074,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
     return total;
   }
 
-  double _getCadastradasAnual() {
-    double total = 0.0;
 
-    for (int i = 0; i < 12; i++) {
-      total += _getCadastradasSum(i);
-    }
-
-    return total;
-  }
 
   double _getCobradasAnual() {
     double total = 0.0;
@@ -2037,7 +1995,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
   Widget _buildJornadaConfigCard() {
     final totalDias = _diasUteisCalculados.fold<int>(
       0,
-      (sum, val) => sum + val,
+      (total, val) => total + val,
     );
 
     return Container(
@@ -2304,682 +2262,35 @@ class _MetricsScreenState extends State<MetricsScreen> {
     );
   }
 
-  Widget _buildRobustChart() {
-    return LayoutBuilder(
-      builder: (
-        context,
-        constraints,
-      ) {
-        AppAppearance.watch(context);
 
-        final valores = <double>[];
 
-        for (int i = 0; i < 12; i++) {
-          valores.add(
-            _parseTimeToDouble(
-              _metaControllers[i].text,
-            ),
-          );
 
-          valores.add(
-            _getCobradasSum(i),
-          );
 
-          valores.add(
-            _getDemaisSum(i),
-          );
-        }
 
-        double maiorValor = valores.fold<double>(
-          0.0,
-          (max, value) => value > max ? value : max,
-        );
 
-        if (maiorValor < 50) {
-          maiorValor = 50;
-        }
 
-        final maxValor = maiorValor * 1.18;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.13),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: AppPalette.text.withValues(alpha: 0.045),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 18,
-                offset: const Offset(0, 7),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: _buildChartBackground(),
-                ),
-                Positioned.fill(
-                  left: 48,
-                  right: 10,
-                  top: 14,
-                  bottom: 43,
-                  child: _buildChartGrid(maxValor),
-                ),
-                Positioned.fill(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        width: 48,
-                        child: _buildYAxis(maxValor),
-                      ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            right: 8,
-                            top: 12,
-                            bottom: 8,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: List.generate(
-                              12,
-                              (index) {
-                                return Expanded(
-                                  child: _buildProfessionalMonthColumn(
-                                    index,
-                                    maxValor,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  left: 48,
-                  right: 10,
-                  bottom: 42,
-                  child: Container(
-                    height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppPalette.text.withValues(alpha: 0.02),
-                          AppPalette.text.withValues(alpha: 0.14),
-                          AppPalette.text.withValues(alpha: 0.02),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChartBackground() {
-    return Stack(
-      children: [
-        Positioned(
-          top: -80,
-          right: -50,
-          child: Container(
-            width: 220,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  CoresApp.destaque.withValues(alpha: 0.075),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -100,
-          left: -50,
-          child: Container(
-            width: 220,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  _cobradasColor.withValues(alpha: 0.045),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChartGrid(
-    double maxValor,
-  ) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(
-        5,
-        (index) {
-          return Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 1,
-                  color: AppPalette.text.withValues(
-                    alpha: index == 4 ? 0.085 : 0.028,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildYAxis(
-    double maxValor,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: 14,
-        bottom: 43,
-        right: 8,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(
-          5,
-          (index) {
-            final percentual = 1 - (index / 4);
-            final valor = maxValor * percentual;
-
-            return Text(
-              _formatDoubleToTime(valor),
-              style: TextStyle(
-                color: CoresApp.textoSecundario.withValues(
-                  alpha: index == 4 ? 0.85 : 0.60,
-                ),
-                fontSize: 6.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.15,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
 
   // ================================================================
   // COLUNA MENSAL
   // ================================================================
 
-  Widget _buildProfessionalMonthColumn(
-    int index,
-    double maxValor,
-  ) {
-    final meta = _parseTimeToDouble(
-      _metaControllers[index].text,
-    );
 
-    final realizado = _getCadastradasSum(index);
-    final cobradas = _getCobradasSum(index);
-    final demais = _getDemaisSum(index);
 
-    final currentMonth =
-        DateTime.now().year == _ano && DateTime.now().month == index + 1;
 
-    final maxBarHeight = 238.0;
 
-    double barHeight(
-      double value,
-    ) {
-      if (value <= 0) {
-        return 3;
-      }
 
-      final result = (value / maxValor) * maxBarHeight;
 
-      return result.clamp(
-        4.0,
-        maxBarHeight,
-      );
-    }
 
-    final percentualMensal = meta <= 0 ? 0.0 : (realizado / meta) * 100;
 
-    // EFICIÊNCIA = HORAS COBRADAS ÷ META × 100
-    final eficienciaMensal = meta <= 0 ? 0.0 : (cobradas / meta) * 100;
 
-    final isBestMonth = _isBestMonth(index);
-
-    return Tooltip(
-      waitDuration: const Duration(milliseconds: 180),
-      showDuration: const Duration(seconds: 4),
-      preferBelow: false,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppPalette.text.withValues(alpha: 0.09),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      textStyle: TextStyle(
-        color: AppPalette.text,
-        fontSize: 9,
-        height: 1.45,
-      ),
-      message: '${_meses[index].toUpperCase()}\n'
-          'Meta: ${_metaControllers[index].text}h\n'
-          'Cobradas: ${_formatDoubleToTime(cobradas)}h\n'
-          'Demais: ${_formatDoubleToTime(demais)}h\n'
-          'Atingimento: ${percentualMensal.toStringAsFixed(1)}%\n'
-          'Eficiência: ${eficienciaMensal.toStringAsFixed(1)}%',
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-        margin: const EdgeInsets.symmetric(
-          horizontal: 1,
-          vertical: 3,
-        ),
-        padding: const EdgeInsets.only(
-          top: 4,
-          bottom: 2,
-        ),
-        decoration: BoxDecoration(
-          color: currentMonth
-              ? CoresApp.destaque.withValues(alpha: 0.045)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-          border: currentMonth
-              ? Border.all(
-                  color: CoresApp.destaque.withValues(alpha: 0.13),
-                )
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            SizedBox(
-              height: 17,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (isBestMonth)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 2),
-                      child: Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 8,
-                        color: CoresApp.destaqueAmarelo,
-                      ),
-                    ),
-                  if (currentMonth)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: CoresApp.destaque.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        'ATUAL',
-                        style: TextStyle(
-                          color: CoresApp.destaque,
-                          fontSize: 5,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.25,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  Positioned.fill(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _buildProfessionalBar(
-                          value: cobradas,
-                          height: barHeight(cobradas),
-                          color: _cobradasColor,
-                          width: 18,
-                          isMain: true,
-                        ),
-                        const SizedBox(width: 4),
-                        _buildProfessionalBar(
-                          value: demais,
-                          height: barHeight(demais),
-                          color: _demaisColor,
-                          width: 11,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    left: 3,
-                    right: 3,
-                    bottom: _calculateMetaLinePosition(
-                      meta,
-                      maxValor,
-                      maxBarHeight,
-                    ),
-                    child: _buildMetaLine(meta),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 5,
-                vertical: 3,
-              ),
-              decoration: BoxDecoration(
-                color: currentMonth
-                    ? CoresApp.destaque.withValues(alpha: 0.13)
-                    : AppPalette.text.withValues(alpha: 0.035),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                _meses[index].substring(0, 3).toUpperCase(),
-                style: TextStyle(
-                  color: currentMonth
-                      ? CoresApp.destaque
-                      : CoresApp.textoSecundario,
-                  fontSize: 6.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.35,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  double _calculateMetaLinePosition(
-    double meta,
-    double maxValor,
-    double maxBarHeight,
-  ) {
-    if (meta <= 0) {
-      return 0;
-    }
-
-    final position = (meta / maxValor) * maxBarHeight;
-
-    return position.clamp(
-      2.0,
-      maxBarHeight - 2,
-    );
-  }
-
-  Widget _buildMetaLine(
-    double meta,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 2,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _metaColor.withValues(alpha: 0.05),
-                  _metaColor,
-                  _metaColor.withValues(alpha: 0.05),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _metaColor.withValues(alpha: 0.35),
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 2),
-        Container(
-          width: 5,
-          height: 5,
-          decoration: BoxDecoration(
-            color: _metaColor,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: _metaColor.withValues(alpha: 0.45),
-                blurRadius: 5,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  bool _isBestMonth(
-    int index,
-  ) {
-    double maior = -1;
-    int melhorIndex = -1;
-
-    for (int i = 0; i < 12; i++) {
-      final realizado = _getCadastradasSum(i);
-
-      if (realizado > maior) {
-        maior = realizado;
-        melhorIndex = i;
-      }
-    }
-
-    return melhorIndex == index && maior > 0;
-  }
-
-  Widget _buildProfessionalBar({
-    required double value,
-    required double height,
-    required Color color,
-    required double width,
-    bool isMain = false,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(
-        begin: 0,
-        end: height,
-      ),
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeOutCubic,
-      builder: (
-        context,
-        animatedHeight,
-        child,
-      ) {
-        AppAppearance.watch(context);
-
-        return Container(
-          width: width,
-          height: animatedHeight,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color.lerp(
-                  Colors.white,
-                  color,
-                  0.10,
-                )!,
-                color,
-                color.withValues(alpha: 0.46),
-              ],
-              stops: const [
-                0.0,
-                0.18,
-                1.0,
-              ],
-            ),
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(6),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(
-                  alpha: isMain ? 0.30 : 0.16,
-                ),
-                blurRadius: isMain ? 10 : 7,
-                spreadRadius: isMain ? 0.4 : 0,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   // ================================================================
   // LEGENDA
   // ================================================================
 
-  Widget _buildLegend() {
-    return Wrap(
-      spacing: 18,
-      runSpacing: 7,
-      children: [
-        _buildLegendItem(
-          'Meta',
-          _metaColor,
-          isLine: true,
-        ),
-        _buildLegendItem(
-          'Cobradas',
-          _cobradasColor,
-        ),
-        _buildLegendItem(
-          'Demais',
-          _demaisColor,
-        ),
-      ],
-    );
-  }
 
-  Widget _buildLegendItem(
-    String label,
-    Color color, {
-    bool isLine = false,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isLine)
-          SizedBox(
-            width: 12,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.30),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  color,
-                  color.withValues(alpha: 0.55),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(3),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.20),
-                  blurRadius: 5,
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: TextStyle(
-            color: CoresApp.textoSecundario,
-            fontSize: 8.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
+
+
 
   Widget _buildCustomizeButton() {
     return Material(
@@ -3028,58 +2339,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
   // SECTION HEADER
   // ================================================================
 
-  Widget _buildSectionHeader({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    Widget? trailing,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 39,
-          height: 39,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: CoresApp.destaque.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: Icon(
-            icon,
-            color: CoresApp.destaque,
-            size: 19,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: CoresApp.textoPrincipal,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: CoresApp.textoSecundario,
-                  fontSize: 8.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (trailing != null) trailing,
-      ],
-    );
-  }
+
 
   // ================================================================
   // TABELA
@@ -3311,7 +2571,7 @@ class _MetricsScreenState extends State<MetricsScreen> {
         _buildCellText(
           '${_diasUteisCalculados.fold<int>(
             0,
-            (sum, val) => sum + val,
+            (total, val) => total + val,
           )}',
           isBold: true,
         ),
@@ -3340,8 +2600,8 @@ class _MetricsScreenState extends State<MetricsScreen> {
           _formatDoubleToTime(
             _metaControllers.fold<double>(
               0,
-              (sum, item) =>
-                  sum +
+              (total, item) =>
+                  total +
                   _parseTimeToDouble(
                     item.text,
                   ),
@@ -3421,8 +2681,8 @@ class _MetricsScreenState extends State<MetricsScreen> {
           _formatDoubleToTime(
             controllers.fold<double>(
               0,
-              (sum, item) =>
-                  sum +
+              (total, item) =>
+                  total +
                   _parseTimeToDouble(
                     item.text,
                   ),

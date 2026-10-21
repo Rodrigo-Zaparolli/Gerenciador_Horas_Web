@@ -18,8 +18,9 @@ class MonthlyPerformanceData {
     charged = List.filled(DateTime(month.year, month.month + 1, 0).day, 0);
     other = List.filled(charged.length, 0);
     for (final log in logs) {
-      if (log.date.year != month.year || log.date.month != month.month)
+      if (log.date.year != month.year || log.date.month != month.month) {
         continue;
+      }
       final kind = (log.typeHs ?? '')
           .toLowerCase()
           .replaceAll('ã', 'a')

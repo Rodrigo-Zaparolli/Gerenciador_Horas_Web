@@ -197,9 +197,9 @@ class _CabecalhoState extends State<Cabecalho> {
   }
 
   String _getUserName() {
-    final cacheName = _cache.userName?.trim();
+    final cacheName = _cache.userName.trim();
 
-    if (cacheName != null && cacheName.isNotEmpty) {
+    if (cacheName.isNotEmpty) {
       return cacheName;
     }
 

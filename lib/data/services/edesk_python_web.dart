@@ -46,17 +46,19 @@ Future<EdeskPythonResult> _executar({
   if (enviar) {
     try {
       final data = jsonDecode(requestJson);
-      if (data is! Map<String, dynamic>)
+      if (data is! Map<String, dynamic>) {
         return _failure('Dados inválidos.', 400);
+      }
       if (script != 'edesk_horas.py') {
         decision = await reviewEdeskSend(data, script);
       }
     } on FormatException {
       return _failure('Dados inválidos.', 400);
     }
-    if (!decision.send)
+    if (!decision.send) {
       return _failure(
           'Envio cancelado. Nenhum registro foi enviado nesta tentativa.', 499);
+    }
   }
   // Editor snapshot is UI-only; never duplicate its images in the API payload.
   final deliveryData = jsonDecode(requestJson) as Map<String, dynamic>;
@@ -98,9 +100,10 @@ Future<EdeskPythonResult> _executar({
           }
         }
       } catch (_) {
-        if (timer?.isActive == true)
+        if (timer?.isActive == true) {
           edeskProgress.value =
               'Aguardando resposta. Não reenvie enquanto esta tentativa estiver em andamento.';
+        }
       } finally {
         polling = false;
       }
@@ -152,8 +155,9 @@ Future<EdeskPythonResult> _executar({
         503);
   } finally {
     timer?.cancel();
-    if (route != null && navigator?.mounted == true && route.isActive)
+    if (route != null && navigator?.mounted == true && route.isActive) {
       navigator!.removeRoute(route);
+    }
   }
   final context = appNavigatorKey.currentContext;
   EdeskOperationHistory.update(historyUid, historyId,

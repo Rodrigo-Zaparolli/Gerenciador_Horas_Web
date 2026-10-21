@@ -142,21 +142,33 @@ def _execute(files, uid, body):
             source_ref, destination_ref = body.get('reference'), body.get('destination')
             excel_ref = body.get('excelReference') or ''
             approved_parent = _record(files, con, uid, destination_ref, 'folder', 'Pasta de destino')
+            linked_folder = _record(files, con, uid, source_ref, 'folder', 'Pasta vinculada do projeto')
+            root_ref = body.get('sourceReference') or source_ref
+            source = _record(files, con, uid, root_ref, 'folder', 'Pasta inteira do projeto')
+            if source != linked_folder and not (linked_folder.name.casefold() == 'documentos' and source == linked_folder.parent):
+                raise ValueError('Selecione a pasta vinculada ou a pasta principal imediatamente acima dela. Não selecione Clientes ou outra pasta geral.')
             # Recover a completed/interrupted operation before validating the old path.
             candidates = con.execute('SELECT operation,plan,state,result FROM project_moves WHERE uid=? '
                 'AND source_reference=? AND excel_reference=? '
-                'AND state IN ("moving","moved") ORDER BY rowid DESC LIMIT 1',
+                'AND state IN ("moving","moved") ORDER BY rowid DESC',
                 (uid, source_ref, excel_ref)).fetchall()
             previous = next((row for row in candidates if files._same_path(json.loads(row[1])['parent'], approved_parent)), None)
             if previous:
                 plan = json.loads(previous[1])
-                retry_before_move = (previous[2] == 'moving' and Path(plan['source']).is_dir()
-                    and not Path(plan['target']).exists())
-                if retry_before_move and _manifest(Path(plan['source']), plan.get('manifestVersion', 1)) == plan['manifest']:
-                    return {**plan, 'operation': previous[0], 'alreadyMoved': False}
+                old_source, old_target = Path(plan['source']), Path(plan['target'])
+                retry_before_move = (previous[2] == 'moving' and old_source.is_dir())
                 if retry_before_move:
-                    # Rename never took place and the source changed afterward.
-                    # Retire the old plan; prepare/confirm a fresh manifest below.
+                    # A failed rename may leave the pre-existing empty target.
+                    # Never treat a nonempty target as a safe failed attempt.
+                    if old_target.exists():
+                        _empty_target_identity(old_target)
+                    same_identity = (plan.get('folderIdentity') is None
+                        or _folder_identity(old_source) == plan['folderIdentity'])
+                    if (source == old_source and not old_target.exists() and same_identity
+                            and _manifest(old_source, plan.get('manifestVersion', 1)) == plan['manifest']):
+                        return {**plan, 'operation': previous[0], 'alreadyMoved': False}
+                    # A different root, changed contents or an empty target must
+                    # be shown in a fresh plan before another confirmation.
                     con.execute('UPDATE project_moves SET state="abandoned" WHERE uid=? AND operation=?', (uid, previous[0]))
                 elif Path(plan['source']).exists():
                     raise ValueError('Existe uma movimentação anterior para esta pasta e a origem voltou a existir. Confira as duas pastas antes de continuar.')
@@ -168,11 +180,6 @@ def _execute(files, uid, body):
                     if plan.get('projectManifest') and inventory['projectManifest'] != plan['projectManifest']:
                         raise ValueError('O conteúdo no destino mudou após a movimentação. Confira os arquivos antes de recuperar os vínculos.')
                     return {**plan, **inventory, 'operation': previous[0], 'alreadyMoved': previous[2] == 'moved'}
-            linked_folder = _record(files, con, uid, source_ref, 'folder', 'Pasta vinculada do projeto')
-            root_ref = body.get('sourceReference') or source_ref
-            source = _record(files, con, uid, root_ref, 'folder', 'Pasta inteira do projeto')
-            if source != linked_folder and not (linked_folder.name.casefold() == 'documentos' and source == linked_folder.parent):
-                raise ValueError('Selecione a pasta vinculada ou a pasta principal imediatamente acima dela. Não selecione Clientes ou outra pasta geral.')
             parent = approved_parent
             source = files._validate(source, 'folder')
             parent = files._validate(parent, 'folder')

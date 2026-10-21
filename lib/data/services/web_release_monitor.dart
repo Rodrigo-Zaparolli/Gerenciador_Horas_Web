@@ -76,10 +76,13 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
         _checking ||
         !mounted ||
         EdeskActivity.active != 0 ||
-        ModalRoute.of(context)?.isCurrent != true) return;
-    if (_lastCheck != null &&
-        DateTime.now().difference(_lastCheck!) < const Duration(minutes: 5))
+        ModalRoute.of(context)?.isCurrent != true) {
       return;
+    }
+    if (_lastCheck != null &&
+        DateTime.now().difference(_lastCheck!) < const Duration(minutes: 5)) {
+      return;
+    }
     _checking = true;
     _lastCheck = DateTime.now();
     try {
@@ -113,7 +116,9 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
           release == _dismissed ||
           !mounted ||
           EdeskActivity.active != 0 ||
-          ModalRoute.of(context)?.isCurrent != true) return;
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
       final update = await showDialog<bool>(
           context: context,
           builder: (dialog) => AlertDialog(

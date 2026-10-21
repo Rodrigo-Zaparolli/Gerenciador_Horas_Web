@@ -15,10 +15,8 @@ import 'package:gerenciador_horas/domain/models/timer_session.dart';
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:gerenciador_horas/core/theme/cores_app.dart';
 import 'package:gerenciador_horas/data/services/firebase_service.dart';
@@ -132,7 +130,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           widget.selectedIndex != 0 ||
           FirebaseAuth.instance.currentUser?.uid != uid ||
           (!showEmpty && pending.isEmpty && deadlines.isEmpty) ||
-          _updateDialogOpen) return;
+          _updateDialogOpen) {
+        return;
+      }
       if (ModalRoute.of(context)?.isCurrent == false) return;
       _updateDialogOpen = true;
       opened = true;
@@ -141,7 +141,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           updatesUnavailable: updatesUnavailable);
       if (!mounted ||
           widget.selectedIndex != 0 ||
-          FirebaseAuth.instance.currentUser?.uid != uid) return;
+          FirebaseAuth.instance.currentUser?.uid != uid) {
+        return;
+      }
       if (action == 'requests') {
         widget.onSelectTab(7);
       } else if (action != null && action.startsWith('comment:')) {
@@ -178,8 +180,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // FOTO DE PERFIL
   // ============================================================
 
-  ImageProvider? _fotoPerfilProvider;
-  bool _carregandoFoto = true;
 
   // ============================================================
   // FILTROS
@@ -381,7 +381,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _restorePersonalFilters();
     widget.timeLogStore.addListener(_onTimeLogsChanged);
 
-    _carregarFotoDoFirestore();
     _loadDataFromFirebase(showLoader: true, checkCommentUpdates: true);
   }
 
@@ -406,89 +405,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ============================================================
   // FOTO DE PERFIL
   // ============================================================
-
-  Future<void> _carregarFotoDoFirestore() async {
-    try {
-      final User? user = FirebaseAuth.instance.currentUser;
-
-      if (user != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (doc.exists && doc.data()?['photoBase64'] != null) {
-          final String base64Str = doc.data()!['photoBase64'];
-          final bytes = base64Decode(base64Str);
-
-          if (mounted && context.mounted) {
-            setState(() {
-              _fotoPerfilProvider = MemoryImage(bytes);
-            });
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Erro ao carregar foto: $e');
-    } finally {
-      if (mounted && context.mounted) {
-        setState(() {
-          _carregandoFoto = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _alterarFotoPerfil() async {
-    final ImagePicker picker = ImagePicker();
-
-    final XFile? image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 300,
-      maxHeight: 300,
-      imageQuality: 70,
-    );
-
-    if (image == null) {
-      return;
-    }
-
-    try {
-      final User? user = FirebaseAuth.instance.currentUser;
-
-      if (user != null) {
-        final bytes = await image.readAsBytes();
-        final String base64Image = base64Encode(bytes);
-
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
-          {
-            'photoBase64': base64Image,
-          },
-          SetOptions(merge: true),
-        );
-
-        if (mounted && context.mounted) {
-          setState(() {
-            _fotoPerfilProvider = MemoryImage(bytes);
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Foto alterada com sucesso!'),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao alterar foto: $e'),
-          ),
-        );
-      }
-    }
-  }
 
   // ============================================================
   // DISPOSE
@@ -3093,9 +3009,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
 
-      if (_selectedTargetId == null) {
-        _selectedTargetId = projectWithSubtasks.id;
-      }
+      _selectedTargetId ??= projectWithSubtasks.id;
     });
 
     // ============================================================
@@ -4255,7 +4169,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
         offerArchive: () async {
           if (!mounted || !context.mounted || FirebaseAuth.instance.currentUser?.uid != owner || !ProjectArchiveDialog.allowed ||
-              !ProjectArchiveDialog.acceptsFolder(project.folderPath ?? '')) return false;
+              !ProjectArchiveDialog.acceptsFolder(project.folderPath ?? '')) {
+            return false;
+          }
           final result = await ProjectArchiveDialog.show(context,
             projectId: project.id, folder: project.folderPath!, excel: project.excelLink ?? '');
           if (result == null) return false;

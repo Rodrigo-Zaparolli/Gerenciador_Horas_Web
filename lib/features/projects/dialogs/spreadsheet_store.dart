@@ -14,8 +14,9 @@ class FirebaseSpreadsheetStore implements SpreadsheetStore {
   void check(String uid) {
     final user = FirebaseAuth.instance.currentUser;
     if (user?.uid != uid ||
-        !PilotFeatureAccess.allows(uid: user?.uid, email: user?.email))
+        !PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
       throw StateError('A conta mudou.');
+    }
   }
 
   DocumentReference<Map<String, dynamic>> document(
@@ -39,7 +40,9 @@ class FirebaseSpreadsheetStore implements SpreadsheetStore {
     check(uid);
     if (value == null ||
         value['reference'] != reference ||
-        value['schema'] != 1) return null;
+        value['schema'] != 1) {
+      return null;
+    }
     final data =
         Map<String, dynamic>.from(jsonDecode(value['payload'] as String));
     return {...data, 'syncedAt': value['syncedAt']};
@@ -50,9 +53,10 @@ class FirebaseSpreadsheetStore implements SpreadsheetStore {
       Map<String, dynamic> data) async {
     check(uid);
     final payload = jsonEncode(data);
-    if (utf8.encode(payload).length > 850000)
+    if (utf8.encode(payload).length > 850000) {
       throw StateError(
           'Os dados excedem o limite de armazenamento da planilha.');
+    }
     await document(uid, project).set({
       'schema': 1,
       'reference': reference,

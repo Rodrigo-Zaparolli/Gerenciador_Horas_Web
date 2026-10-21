@@ -983,7 +983,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
               });
             }
 
-            final checklistItems = project.checklist ?? [];
+            final checklistItems = project.checklist;
             final int totalItems = checklistItems.length;
             final int completedItems = checklistItems
                 .where((item) => item['completed'] == true)
@@ -1095,9 +1095,6 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                   }
 
                                   if (chosenFormat != null) {
-                                    project.checklist ??=
-                                        <Map<String, dynamic>>[];
-
                                     for (final formatItem
                                         in chosenFormat.items) {
                                       final name = formatItem['name']
@@ -1193,8 +1190,6 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                             final text = newItemController.text.trim();
 
                             if (text.isNotEmpty) {
-                              project.checklist ??= [];
-
                               final nextOrder =
                                   (project.checklist.length + 1).toString();
 
@@ -1823,8 +1818,9 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                                                 createName:
                                                                     '${idController.text.trim()} - ${clientController.text.trim()}');
                                                     if (reference == null ||
-                                                        !dialogContext.mounted)
+                                                        !dialogContext.mounted) {
                                                       return;
+                                                    }
                                                     setDialogState(() =>
                                                         folderController.text =
                                                             reference);
@@ -1893,8 +1889,9 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                                       await createLocalFolder(
                                                           pastaBase, nomePasta);
 
-                                                  if (!mounted || !dialogContext.mounted || !context.mounted)
+                                                  if (!mounted || !dialogContext.mounted || !context.mounted) {
                                                     return;
+                                                  }
                                                   setDialogState(() {
                                                     folderController.text =
                                                         caminhoPasta;
@@ -2004,8 +2001,9 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                                       .pickFile(
                                                           idController.text);
                                               if (reference == null ||
-                                                  !dialogContext.mounted)
+                                                  !dialogContext.mounted) {
                                                 return;
+                                              }
                                               setDialogState(() {
                                                 excelController.text =
                                                     reference;

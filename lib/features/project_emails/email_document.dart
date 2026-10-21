@@ -259,10 +259,14 @@ String cleanRemovedEmailFields(String body, ProjectEmailKind kind,
   return body.split('\n').where((line) {
     final text = line.trim();
     if (RegExp(r'^(Att,|Atenciosamente)', caseSensitive: false)
-        .hasMatch(text)) inSignature = true;
+        .hasMatch(text)) {
+      inSignature = true;
+    }
     if (line.contains('{telefone_consultor}')) return false;
     if (inSignature && consultantPhone.trim().isNotEmpty &&
-        text == consultantPhone.trim()) return false;
+        text == consultantPhone.trim()) {
+      return false;
+    }
     if (kind == ProjectEmailKind.initial &&
         (line.contains('{data_reuniao}') || line.contains('{hora_reuniao}') ||
             text.startsWith('Nossa primeira reunião está agendada para o dia '))) {

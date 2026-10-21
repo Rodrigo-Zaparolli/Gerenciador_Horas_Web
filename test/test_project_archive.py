@@ -11,6 +11,75 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_failed_move_with_empty_destination_can_be_prepared_and_confirmed_again(self):
+        target = self.destination / self.source.name
+        target.mkdir()
+        plan = self.prepare()
+        original = Path.rmdir
+        def locked(path):
+            if path == target:
+                raise PermissionError('destination temporarily locked')
+            return original(path)
+        with patch.object(Path, 'rmdir', locked):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=plan['operation'])
+        renewed = self.prepare()
+        self.assertNotEqual(renewed['operation'], plan['operation'])
+        self.assertTrue(self.excel.exists())
+        self.assertTrue(target.is_dir())
+        result = self.request('project-move-commit', operation=renewed['operation'])
+        self.assertTrue(result['contentsVerified'])
+        self.assertFalse(self.source.exists())
+        self.assertEqual((target / 'Documentos' / self.excel.name).read_bytes(), b'workbook-and-macros')
+
+    def test_retry_never_discards_nonempty_destination_after_failed_move(self):
+        plan = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('locked')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=plan['operation'])
+        target = self.destination / self.source.name
+        target.mkdir()
+        (target / 'preserve.txt').write_bytes(b'do not delete')
+        with self.assertRaises(ValueError):
+            self.prepare()
+        self.assertEqual((target / 'preserve.txt').read_bytes(), b'do not delete')
+        self.assertTrue(self.excel.exists())
+
+    def test_selecting_whole_project_replaces_failed_documents_only_plan(self):
+        root_reference = self.folder_ref
+        self.folder_ref = self.authorize(self.source / 'Documentos', 'folder')
+        (self.source / 'Proposta.pdf').write_bytes(b'proposal')
+        previous = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('locked')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=previous['operation'])
+        plan = self.request('project-move-prepare', reference=self.folder_ref,
+            sourceReference=root_reference, destination=self.destination_ref, excelReference=self.excel_ref)
+        self.assertEqual(Path(plan['source']), self.source)
+        self.assertNotEqual(plan['operation'], previous['operation'])
+        with self.assertRaisesRegex(ValueError, 'substituído'):
+            self.request('project-move-commit', operation=previous['operation'])
+        result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertFalse(self.source.exists())
+        self.assertEqual((Path(result['target']) / 'Proposta.pdf').read_bytes(), b'proposal')
+        self.assertEqual((Path(result['target']) / 'Documentos' / self.excel.name).read_bytes(), b'workbook-and-macros')
+
+    def test_recovery_finds_matching_destination_before_latest_other_destination(self):
+        first = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('locked')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=first['operation'])
+        original_destination = self.destination_ref
+        other = self.root / 'Outro destino'
+        other.mkdir()
+        self.destination_ref = self.authorize(other, 'folder')
+        second = self.prepare()
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('locked')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=second['operation'])
+        self.destination_ref = original_destination
+        self.assertEqual(self.prepare()['operation'], first['operation'])
+
     def test_previous_completed_move_recovers_with_visible_file_count_without_moving_again(self):
         plan = self.prepare()
         result = self.request('project-move-commit', operation=plan['operation'])

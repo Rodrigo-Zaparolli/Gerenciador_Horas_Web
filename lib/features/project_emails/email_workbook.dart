@@ -146,7 +146,9 @@ EmailWorkbookData parseEmailWorkbookRows(List<List<String>> rows) {
                 'diretorios',
                 'informacoescomerciais',
                 'acessoaoprices'
-              }.contains(_key(value)))) return '';
+              }.contains(_key(value)))) {
+        return '';
+      }
       return value;
     }
     return '';
@@ -155,14 +157,17 @@ EmailWorkbookData parseEmailWorkbookRows(List<List<String>> rows) {
   for (final row in rows) {
     if (row.any((v) => _key(v) == 'acessoaoprices')) prices = true;
     if (row.any((v) =>
-        ['cliente', 'cyncly', 'informacoescomerciais'].contains(_key(v))))
+        ['cliente', 'cyncly', 'informacoescomerciais'].contains(_key(v)))) {
       prices = false;
-    if (row.any((v) => _key(v) == 'cliente') && !row.any(validEmail))
+    }
+    if (row.any((v) => _key(v) == 'cliente') && !row.any(validEmail)) {
       section = 'Cliente';
+    }
     if (row.any((v) => _key(v) == 'cyncly')) section = 'Cyncly';
     if (row.any(
-        (v) => ['informacoescomerciais', 'acessoaoprices'].contains(_key(v))))
+        (v) => ['informacoescomerciais', 'acessoaoprices'].contains(_key(v)))) {
       section = null;
+    }
     if (section != null) {
       for (var i = 0; i + 1 < row.length; i++) {
         final role = row[i].trim(), name = row[i + 1].trim();
@@ -177,8 +182,9 @@ EmailWorkbookData parseEmailWorkbookRows(List<List<String>> rows) {
         }
         if (_key(role) == 'consultordeimplantacao' && i + 3 < row.length) {
           final phone = row[i + 3].trim();
-          if (phone.isNotEmpty && !_placeholder(phone))
+          if (phone.isNotEmpty && !_placeholder(phone)) {
             fields['telefone_consultor'] = phone;
+          }
         }
       }
     }
@@ -197,7 +203,9 @@ EmailWorkbookData parseEmailWorkbookRows(List<List<String>> rows) {
         if (role.isEmpty ||
             name.isEmpty ||
             name.contains('#') ||
-            role.contains('#')) continue;
+            role.contains('#')) {
+          continue;
+        }
         if (contacts.any((c) =>
             _key(c.role) == _key(role) &&
             c.group == section &&
@@ -211,8 +219,9 @@ EmailWorkbookData parseEmailWorkbookRows(List<List<String>> rows) {
           fields['email_cliente'] = email;
           if (i + 1 < row.length &&
               row[i + 1].trim().isNotEmpty &&
-              !row[i + 1].contains('#'))
+              !row[i + 1].contains('#')) {
             fields['telefone_cliente'] = row[i + 1].trim();
+          }
           if (i + 2 < row.length &&
               row[i + 2].trim().isNotEmpty &&
               !_placeholder(row[i + 2])) {

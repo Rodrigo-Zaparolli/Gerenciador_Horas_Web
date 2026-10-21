@@ -89,8 +89,9 @@ class NativeLocalFiles {
       final health =
           await nativeFileRequest({'action': 'health', 'interactive': true})
               .timeout(const Duration(seconds: 4));
-      if (FirebaseAuth.instance.currentUser?.uid != user!.uid)
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
         throw const NativeFilesException('A conta mudou.');
+      }
       final capabilities = health['data'];
       if (health['status'] != 200 ||
           capabilities is! Map ||

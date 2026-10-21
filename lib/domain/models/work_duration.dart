@@ -13,7 +13,9 @@ class WorkDuration {
           hours < 0 ||
           minutes == null ||
           minutes < 0 ||
-          minutes >= 60) return null;
+          minutes >= 60) {
+        return null;
+      }
       return hours * 60 + minutes;
     }
     final hours = double.tryParse(text.replaceAll(',', '.'));

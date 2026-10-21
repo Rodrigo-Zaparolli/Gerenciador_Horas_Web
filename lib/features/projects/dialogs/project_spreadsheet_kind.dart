@@ -11,10 +11,13 @@ bool spreadsheetMatchesProject(Map<String, dynamic> data, String serviceType,
   final actualEntry = data['entrySheet'];
   if (actualEntry is String &&
       actualEntry.toLowerCase() !=
-          (entrySheet ?? 'Informações de entrada').toLowerCase()) return false;
-  if (entrySheet != null &&
-      data['entrySheet']?.toString().toLowerCase() != entrySheet.toLowerCase())
+          (entrySheet ?? 'Informações de entrada').toLowerCase()) {
     return false;
+  }
+  if (entrySheet != null &&
+      data['entrySheet']?.toString().toLowerCase() != entrySheet.toLowerCase()) {
+    return false;
+  }
   final expected = projectChecklistSheet(serviceType, override: checklistSheet)
       .toLowerCase();
   final declared = data['checklistSheet'];

@@ -42,8 +42,9 @@ class FakeArchiveService extends ProjectArchiveService {
       String? sourceReference,
       String? operation}) async {
     calls.add(action);
-    if (action == 'pick-folder')
+    if (action == 'pick-folder') {
       return {'reference': r'C:\Clientes\2261144 - Orquinare'};
+    }
     if (action == 'authorize') {
       authorizedReferences.add(reference);
       prepareError = null;
@@ -64,7 +65,7 @@ class FakeArchiveService extends ProjectArchiveService {
         'alreadyMoved': false
       };
     }
-    if (action == 'project-move-commit')
+    if (action == 'project-move-commit') {
       return {
         'moved': true,
         'contentsVerified': contentsVerified,
@@ -75,6 +76,7 @@ class FakeArchiveService extends ProjectArchiveService {
             'warnings': ['Arquivo bloqueado']
           },
       };
+    }
     throw StateError(action);
   }
 

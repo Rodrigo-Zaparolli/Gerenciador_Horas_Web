@@ -29,43 +29,51 @@ bool _secretKey(String key) =>
 bool backupIncludesDocument(String path) => path != 'configuracoes/edesk_credenciais';
 
 dynamic encodeBackupValue(dynamic value) {
-  if (value is Timestamp)
+  if (value is Timestamp) {
     return {
       '__backupType': 'timestamp',
       'seconds': value.seconds,
       'nanoseconds': value.nanoseconds
     };
-  if (value is GeoPoint)
+  }
+  if (value is GeoPoint) {
     return {
       '__backupType': 'geo',
       'latitude': value.latitude,
       'longitude': value.longitude
     };
-  if (value is Blob)
+  }
+  if (value is Blob) {
     return {'__backupType': 'blob', 'data': base64Encode(value.bytes)};
-  if (value is DocumentReference)
+  }
+  if (value is DocumentReference) {
     return {'__backupType': 'reference', 'path': value.path};
-  if (value is Map)
+  }
+  if (value is Map) {
     return {
       for (final entry in value.entries)
         if (!_secretKey(entry.key.toString()))
           entry.key.toString(): encodeBackupValue(entry.value)
     };
+  }
   if (value is List) return value.map(encodeBackupValue).toList();
   return value;
 }
 
 dynamic decodeBackupValue(dynamic value,
     {required String uid, FirebaseFirestore? db}) {
-  if (value is List)
+  if (value is List) {
     return value.map((e) => decodeBackupValue(e, uid: uid, db: db)).toList();
+  }
   if (value is! Map) return value;
   final type = value['__backupType'];
-  if (type == 'timestamp')
+  if (type == 'timestamp') {
     return Timestamp(value['seconds'] as int, value['nanoseconds'] as int);
-  if (type == 'geo')
+  }
+  if (type == 'geo') {
     return GeoPoint((value['latitude'] as num).toDouble(),
         (value['longitude'] as num).toDouble());
+  }
   if (type == 'blob') return Blob(base64Decode(value['data'] as String));
   if (type == 'reference') {
     final path = value['path'] as String;
@@ -74,8 +82,9 @@ dynamic decodeBackupValue(dynamic value,
     }
     return (db ?? FirebaseFirestore.instance).doc(path);
   }
-  if (type != null)
+  if (type != null) {
     throw const FormatException('Tipo de dado de backup desconhecido.');
+  }
   return {
     for (final entry in value.entries)
       if (!_secretKey(entry.key.toString()))
@@ -106,12 +115,14 @@ BackupPlan validateBackup(String text, String uid, {FirebaseFirestore? db}) {
     throw const FormatException(
         'Este arquivo não é um backup compatível do aplicativo.');
   }
-  if (root['uid'] != uid)
+  if (root['uid'] != uid) {
     throw const FormatException(
         'Este backup pertence a outra conta. Entre na conta que o exportou.');
+  }
   final records = root['documents'];
-  if (records is! List || records.length > 100000)
+  if (records is! List || records.length > 100000) {
     throw const FormatException('Lista de documentos inválida.');
+  }
   final seen = <String>{};
   final documents = <BackupDocument>[];
   for (final record in records) {
@@ -127,8 +138,9 @@ BackupPlan validateBackup(String text, String uid, {FirebaseFirestore? db}) {
                 (parts.length == 4 &&
                     {'projects', 'completed_projects'}.contains(parts.first) &&
                     backupChildCollections.contains(parts[2]))));
-    if (!valid || !seen.add(path))
+    if (!valid || !seen.add(path)) {
       throw const FormatException('Caminho inválido ou repetido no backup.');
+    }
     if (!backupIncludesDocument(path)) continue;
     final decoded = Map<String, dynamic>.from(
         decodeBackupValue(record['data'], uid: uid, db: db) as Map);
@@ -136,8 +148,9 @@ BackupPlan validateBackup(String text, String uid, {FirebaseFirestore? db}) {
   }
   Map<String, String>? history;
   if (root['edeskHistory'] != null) {
-    if (root['edeskHistory'] is! Map)
+    if (root['edeskHistory'] is! Map) {
       throw const FormatException('Histórico E-Desk inválido.');
+    }
     history = Map<String, String>.from(root['edeskHistory']);
     if (history.length > 100000 ||
         history.entries.any((e) =>
@@ -169,9 +182,10 @@ class BackupService {
     final user = db.collection('users').doc(account);
     final records = <Map<String, dynamic>>[];
     final profile = await user.get(const GetOptions(source: Source.server));
-    if (profile.exists)
+    if (profile.exists) {
       records
           .add({'path': 'profile', 'data': encodeBackupValue(profile.data())});
+    }
     for (final name in backupCollections) {
       progress?.call('Exportando $name…');
       final snapshot = await user
@@ -203,8 +217,9 @@ class BackupService {
     } catch (_) {
       /* Firestore backup remains available when local integration is off. */
     }
-    if (uid != account)
+    if (uid != account) {
       throw StateError('A conta mudou durante o backup. Tente novamente.');
+    }
     return const JsonEncoder.withIndent('  ').convert({
       'format': 'gerenciador_horas_backup',
       'version': 1,
@@ -218,24 +233,27 @@ class BackupService {
   Future<void> restore(BackupPlan plan,
       {void Function(String)? progress}) async {
     final account = uid;
-    if (plan.uid != account)
+    if (plan.uid != account) {
       throw StateError('Este backup pertence a outra conta.');
+    }
     final user = db.collection('users').doc(account);
     await user.get(const GetOptions(source: Source.server));
     if (plan.edeskHistory != null) {
       final health =
           await EdeskIntegrationApi.call('/healthz', authenticated: false);
-      if (health['busy'] == true)
+      if (health['busy'] == true) {
         throw StateError(
             'Aguarde o envio ao E-Desk terminar antes de restaurar.');
+      }
       await EdeskIntegrationApi.call('/api/edesk/history',
           body: {'items': plan.edeskHistory!});
     }
     var restored = 0;
     try {
       for (var start = 0; start < plan.documents.length; start += 100) {
-        if (uid != account)
+        if (uid != account) {
           throw StateError('A conta mudou durante a restauração.');
+        }
         final batch = db.batch();
         final chunk = plan.documents.skip(start).take(100);
         for (final record in chunk) {
@@ -248,8 +266,9 @@ class BackupService {
                     if (record.data.containsKey(key)) key: record.data[key],
                 }
               : record.data;
-          if (data.isNotEmpty)
+          if (data.isNotEmpty) {
             batch.set(reference, data, SetOptions(merge: true));
+          }
         }
         await batch.commit();
         restored += chunk.length;

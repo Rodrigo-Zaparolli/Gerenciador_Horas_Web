@@ -1,7 +1,8 @@
 Map<String, dynamic> projectMovePatch(
     Map<String, dynamic> project, Map<String, dynamic> move) {
-  if (move['moved'] != true)
+  if (move['moved'] != true) {
     throw StateError('A movimentação não foi confirmada.');
+  }
   final oldFolder = move['oldFolderReference'],
       newFolder = move['folderReference'];
   final oldExcel = move['oldExcelReference'] ?? '',

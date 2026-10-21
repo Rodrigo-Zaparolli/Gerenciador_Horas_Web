@@ -106,12 +106,14 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
   Future<void> _loadCompanyDirectory() async {
     try {
       final result = await CompanyContacts.load();
-      if (mounted && _companyContactsAllowed)
+      if (mounted && _companyContactsAllowed) {
         setState(() => _directory = result);
+      }
     } catch (e) {
-      if (mounted && _sameAccount)
+      if (mounted && _sameAccount) {
         setState(
             () => _message = 'Não foi possível carregar os colaboradores: $e');
+      }
     }
   }
 
@@ -177,9 +179,10 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
         recovery = null;
       }
       var draft = _cache[_kind] ?? recovery ?? remote;
-      if (recovery != null)
+      if (recovery != null) {
         _localStatus =
             'Rascunho recuperado neste dispositivo. Revise os destinatários e selecione os anexos novamente.';
+      }
       if (draft == null) {
         Map<String, dynamic>? shared =
             _cache.isEmpty ? null : _cache.values.last;
@@ -254,8 +257,9 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
         if (encodedImage is String && encodedImage.length <= 700000) {
           try {
             final bytes = base64Decode(encodedImage);
-            if (bytes.isNotEmpty && bytes.length <= 512 * 1024)
+            if (bytes.isNotEmpty && bytes.length <= 512 * 1024) {
               _productsImage = bytes;
+            }
           } catch (_) {
             /* A damaged image must not prevent restoring the text. */
           }
@@ -699,8 +703,9 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                         child: const Text('Manter e fechar'))
                   ]));
       if (keep == null || !mounted) return;
-      if (keep && !(_recipientKey.currentState?.commitPending() ?? true))
+      if (keep && !(_recipientKey.currentState?.commitPending() ?? true)) {
         return;
+      }
       final snapshots = {..._cache, _kind: _snapshot()};
       if (keep) {
         if (!_sameAccount ||
@@ -1071,8 +1076,9 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                                                             .pick(context);
                                                     if (!_sameAccount ||
                                                         !_companyContactsAllowed ||
-                                                        contact == null)
+                                                        contact == null) {
                                                       return null;
+                                                    }
                                                     return EmailContact(
                                                         name: contact.name,
                                                         email: contact.email);
@@ -1091,12 +1097,14 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                                                   await CompanyContacts.show(
                                                       context);
                                                   if (mounted &&
-                                                      _companyContactsAllowed)
+                                                      _companyContactsAllowed) {
                                                     await _loadCompanyDirectory();
+                                                  }
                                                 } catch (e) {
-                                                  if (mounted && _sameAccount)
+                                                  if (mounted && _sameAccount) {
                                                     setState(() => _message =
                                                         e.toString());
+                                                  }
                                                 }
                                               })),
                                     const Divider(),
@@ -1110,7 +1118,9 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
                                               if (kind == _kind) return;
                                               if (!(_recipientKey.currentState
                                                       ?.commitPending() ??
-                                                  true)) return;
+                                                  true)) {
+                                                return;
+                                              }
                                               _recoverLocally();
                                               _cache[_kind] = _snapshot();
                                               _attachments.clear();

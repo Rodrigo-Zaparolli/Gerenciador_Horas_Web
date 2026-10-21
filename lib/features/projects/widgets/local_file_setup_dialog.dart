@@ -47,10 +47,11 @@ class LocalFileSetupDialog extends StatelessWidget {
                       mode: LaunchMode.externalApplication);
                   if (!opened) throw StateError('Página indisponível');
                 } catch (_) {
-                  if (context.mounted)
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                         content: Text(
                             'Abra gerenciador-horas.web.app/integracao-completa.html no navegador deste PC.')));
+                  }
                 }
               }),
         ],

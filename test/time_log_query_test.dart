@@ -1,3 +1,6 @@
+// In-memory Firestore test doubles; production uses the SDK classes directly.
+// ignore_for_file: subtype_of_sealed_class
+
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -67,6 +70,8 @@ class TestReference extends Fake
       TestQuery(db, '$path/$name');
 }
 
+// This test double deliberately owns a mutable subscription controller.
+// ignore: must_be_immutable
 class TestQuery extends Fake
     implements CollectionReference<Map<String, dynamic>> {
   TestQuery(this.db, this.path, {this.start, this.end});

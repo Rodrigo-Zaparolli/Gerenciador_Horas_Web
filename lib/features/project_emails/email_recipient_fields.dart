@@ -185,8 +185,9 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
                             _selectCompany(contact, destination);
                           });
                         } catch (e) {
-                          if (mounted)
+                          if (mounted) {
                             setState(() => _errors[destination] = e.toString());
+                          }
                         }
                       }),
                 PopupMenuButton<String>(
@@ -232,8 +233,9 @@ class EmailRecipientFieldsState extends State<EmailRecipientFields> {
                         final address = email.substring('company:'.length);
                         final contact = widget.companyContacts
                             .where((c) => c.email.trim() == address);
-                        if (contact.isNotEmpty && _available(contact.first))
+                        if (contact.isNotEmpty && _available(contact.first)) {
                           _selectCompany(contact.first, destination);
+                        }
                       } else if (email == '__all__') {
                         final emails = widget.contacts
                             .where(_available)

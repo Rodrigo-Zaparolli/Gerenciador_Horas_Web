@@ -299,35 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // LOGO
   // ============================================================
 
-  Widget _buildLogo({
-    required bool compact,
-  }) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: compact ? 280 : 330,
-      ),
-      child: Image.asset(
-        _logoPath,
-        height: compact ? 70 : 82,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            height: 70,
-            alignment: Alignment.center,
-            child: Text(
-              'Gestão de Horas e Projetos',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: CoresApp.textoPrincipal,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+
 
   // ============================================================
   // CARD DE CADASTRO

@@ -71,7 +71,7 @@ class GraficoHorasWidget extends StatelessWidget {
           _label(name),
           const SizedBox(height: 2),
           _label(formatHours(value),
-              size: 18, color: color ?? muted, bold: true)
+              size: 18, color: color, bold: true)
         ]));
 
     return Container(
@@ -88,7 +88,7 @@ class GraficoHorasWidget extends StatelessWidget {
                       size: 13, color: AppPalette.text, bold: true)),
             ]);
             final values = monthly;
-            if (values == null)
+            if (values == null) {
               return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -96,6 +96,7 @@ class GraficoHorasWidget extends StatelessWidget {
                     _label('Últimos ${points.length} dias'),
                     const SizedBox(height: 9)
                   ]);
+            }
             Widget value(String label, double hours, Color color) => Expanded(
                 child: Tooltip(
                     message: '$label: ${formatHours(hours)}',
@@ -105,7 +106,7 @@ class GraficoHorasWidget extends StatelessWidget {
                           _label(label, size: 8),
                           const SizedBox(height: 3),
                           _label(formatHours(hours),
-                              size: 14, color: color ?? muted, bold: true)
+                              size: 14, color: color, bold: true)
                         ])));
             final indicators =
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

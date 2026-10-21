@@ -34,9 +34,10 @@ class _ProductsImageFieldState extends State<ProductsImageField> {
         accepts: () => mounted && widget.enabled && _focus.hasFocus,
         onImage: (bytes) => unawaited(_accept(bytes)),
         onError: () {
-          if (mounted)
+          if (mounted) {
             setState(() => _error =
                 'Não foi possível ler o print. Use Selecionar imagem.');
+          }
         });
     _focus.addListener(_redraw);
   }
@@ -52,8 +53,9 @@ class _ProductsImageFieldState extends State<ProductsImageField> {
       _error = null;
     });
     try {
-      if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024)
+      if (bytes.isEmpty || bytes.length > 10 * 1024 * 1024) {
         throw const FormatException();
+      }
       Uint8List? result;
       for (final width in [1600, 1200, 900, 640]) {
         final codec = await ui.instantiateImageCodec(bytes,
@@ -72,13 +74,15 @@ class _ProductsImageFieldState extends State<ProductsImageField> {
         }
         if (result != null && result.length <= 512 * 1024) break;
       }
-      if (result == null || result.length > 512 * 1024)
+      if (result == null || result.length > 512 * 1024) {
         throw const FormatException();
+      }
       if (mounted && widget.enabled) widget.onChanged(result);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error =
             'Use um print PNG ou JPG menor, com apenas os produtos da proposta.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -96,9 +100,10 @@ class _ProductsImageFieldState extends State<ProductsImageField> {
         await _accept(bytes);
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error =
             'Clique neste campo e use Ctrl + V, ou Selecione a imagem.');
+      }
     }
   }
 
@@ -112,9 +117,10 @@ class _ProductsImageFieldState extends State<ProductsImageField> {
       final bytes = selection.files.single.bytes;
       if (bytes != null) await _accept(bytes);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error =
             'Não foi possível selecionar. Tente colar o print com Ctrl + V.');
+      }
     }
   }
 

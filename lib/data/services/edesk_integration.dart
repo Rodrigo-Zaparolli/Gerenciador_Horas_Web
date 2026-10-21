@@ -107,8 +107,9 @@ class _IntegrationStatusDialogState extends State<_IntegrationStatusDialog> {
     setState(() => checking = true);
     try {
       final health = await EdeskIntegrationApi.call('/healthz', authenticated: false);
-      if (health['mode'] == 'central')
+      if (health['mode'] == 'central') {
         await EdeskIntegrationApi.call('/api/edesk/session');
+      }
       if (!mounted) return;
       connected = health['service'] == 'gerenciador-horas-edesk' &&
           health['status'] == 'ok' &&
@@ -268,18 +269,21 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
           health['commentPercentageReceipt'] != true) {
         throw StateError('Atualize e reinicie a integração no computador que executa o E-Desk antes de enviar comentário com porcentagem. Nenhum comentário foi enviado.');
       }
-      if (health['mode'] == 'central')
+      if (health['mode'] == 'central') {
         await EdeskIntegrationApi.call('/api/edesk/session');
-      if (health['service'] != 'gerenciador-horas-edesk')
+      }
+      if (health['service'] != 'gerenciador-horas-edesk') {
         throw StateError('Integração não reconhecida.');
+      }
       if (health['mode'] == 'files-only') {
         throw StateError('A abertura de arquivos está ativa, mas o envio E-Desk não. Execute Iniciar integração E-Desk.cmd e tente novamente.');
       }
       if (widget.script == 'edesk_percentual.py' && health['standalonePercentage'] != true) {
         throw StateError('Atualize a integração local para enviar somente a porcentagem.');
       }
-      if (health['busy'] == true)
+      if (health['busy'] == true) {
         throw StateError('Há outro envio em andamento. Aguarde sua conclusão.');
+      }
       if (widget.script == 'edesk_horas.py') {
         final result = await EdeskIntegrationApi.call('/api/edesk/review',
             body: {'request': widget.data});
@@ -331,11 +335,12 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
       });
       await load();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           loading = false;
           error = 'Não foi possível salvar a conferência. Tente novamente.';
         });
+      }
     }
   }
 
@@ -498,20 +503,23 @@ class _EdeskConnectionButtonState extends State<EdeskConnectionButton> {
     try {
       final result =
           await EdeskIntegrationApi.call('/healthz', authenticated: false);
-      if (result['mode'] == 'central')
+      if (result['mode'] == 'central') {
         await EdeskIntegrationApi.call('/api/edesk/session');
-      if (mounted)
+      }
+      if (mounted) {
         setState(() {
           connected = result['status'] == 'ok' &&
               result['service'] == 'gerenciador-horas-edesk';
           busy = result['busy'] == true;
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           connected = false;
           busy = false;
         });
+      }
     } finally {
       checking = false;
     }

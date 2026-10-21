@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Planilha do projeto: novo botão Abas para escolher as abas de informações de entrada e checklist existentes no arquivo Excel, inclusive Maker, Professional ou nomes alterados.",
-    "A escolha fica salva por projeto e é usada ao carregar, calcular a prévia e salvar na planilha. Não renomeia o arquivo nem as abas originais.",
-    "Requer atualizar e reiniciar a integração local v34 para utilizar a configuração de abas."
+    "Revisão geral: limpeza de arquivos antigos sem uso, estados redundantes e avisos de análise do código.",
+    "Movimentação de projetos: corrige a nova conferência após uma tentativa interrompida com destino vazio e respeita a seleção da pasta inteira em vez de Documentos. Destinos com arquivos continuam protegidos.",
+    "Remove uma consulta de foto de perfil que não era usada pelo painel. Mantém os recursos de planilha, comentários, horas e métricas.",
+    "Atualize e reinicie a integração local v35 para receber a correção da movimentação."
   ]
 }

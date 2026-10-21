@@ -12,9 +12,6 @@ analyzer:
     - build/**
     - python/**
     - .venv/**
-  errors:
-    unused_element: ignore
-    valid_regexps: ignore
 include: package:flutter_lints/flutter.yaml
 
 linter:

@@ -81,7 +81,7 @@ class ProgressoProjetoWidget extends StatelessWidget {
             _text(label, color: muted, size: 10),
             const SizedBox(height: 3),
             _text(formatHours(hours),
-                color: color ?? AppPalette.text, size: 16, bold: true),
+                color: color, size: 16, bold: true),
           ]));
 
   Widget _tableRow(

@@ -168,17 +168,7 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
         '${date.year.toString().substring(2)}';
   }
 
-  String _formatDateTime(DateTime? date) {
-    if (date == null) {
-      return '-';
-    }
 
-    return '${date.day.toString().padLeft(2, '0')}/'
-        '${date.month.toString().padLeft(2, '0')}/'
-        '${date.year.toString().substring(2)} '
-        '${date.hour.toString().padLeft(2, '0')}:'
-        '${date.minute.toString().padLeft(2, '0')}';
-  }
 
   // ============================================================
   // HORAS
@@ -1578,82 +1568,7 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
   // CARD DE RESUMO DAS HORAS
   // ============================================================
 
-  Widget _buildHoursSummaryCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required String subtitle,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.055),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(
-          color: color.withValues(alpha: 0.16),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: CoresApp.textoSecundario,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.35,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: CoresApp.textoSecundario,
-                    fontSize: 8.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // ============================================================
   // BADGE REGISTRADO
@@ -1888,307 +1803,7 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
   // SEÇÃO DE HORAS
   // ============================================================
 
-  Widget _buildProjectHoursSection(
-    String projectId,
-    User user,
-  ) {
-    return StreamBuilder<List<TimeLog>>(
-      stream: _timeLogStore.streamProjectTimeLogs(
-        user.uid,
-        projectId,
-      ),
-      builder: (context, snapshot) {
-        AppAppearance.watch(context);
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              vertical: 24,
-              horizontal: 16,
-            ),
-            decoration: BoxDecoration(
-              color: CoresApp.destaque.withValues(alpha: 0.035),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: CoresApp.destaque.withValues(alpha: 0.13),
-              ),
-            ),
-            child: Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: CoresApp.destaque,
-                ),
-              ),
-            ),
-          );
-        }
 
-        if (snapshot.hasError) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              color: CoresApp.erro.withValues(alpha: 0.045),
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: CoresApp.erro.withValues(alpha: 0.18),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.error_outline_rounded,
-                  color: CoresApp.erro,
-                  size: 19,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Não foi possível carregar os horários: ${snapshot.error}',
-                    style: TextStyle(
-                      color: CoresApp.textoSecundario,
-                      fontSize: 9.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final logs = snapshot.data ?? <TimeLog>[];
-
-        int totalMinutes = 0;
-        int registeredCount = 0;
-
-        for (final log in logs) {
-          totalMinutes += _getLogMinutes(log);
-
-          if (log.isRegistered) {
-            registeredCount++;
-          }
-        }
-
-        final String totalHours = _minutesToTime(
-          totalMinutes,
-        );
-
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: CoresApp.destaque.withValues(alpha: 0.025),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: CoresApp.destaque.withValues(alpha: 0.14),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(13),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 35,
-                      height: 35,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: CoresApp.destaque.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: Icon(
-                        Icons.access_time_filled_rounded,
-                        color: CoresApp.destaque,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Horas trabalhadas',
-                            style: TextStyle(
-                              color: CoresApp.textoPrincipal,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Apontamentos cadastrados neste projeto',
-                            style: TextStyle(
-                              color: CoresApp.textoSecundario,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: logs.isNotEmpty
-                            ? CoresApp.destaque.withValues(alpha: 0.09)
-                            : CoresApp.textoSecundario.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${logs.length} apontamento(s)',
-                        style: TextStyle(
-                          color: logs.isNotEmpty
-                              ? CoresApp.destaque
-                              : CoresApp.textoSecundario,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    AppAppearance.watch(context);
-                    if (constraints.maxWidth < 600) {
-                      return Column(
-                        children: [
-                          _buildHoursSummaryCard(
-                            icon: Icons.timer_rounded,
-                            title: 'Total trabalhado',
-                            value: totalHours,
-                            subtitle: 'horas registradas no projeto',
-                            color: CoresApp.destaque,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildHoursSummaryCard(
-                            icon: Icons.receipt_long_rounded,
-                            title: 'Apontamentos',
-                            value: '${logs.length}',
-                            subtitle: 'lançamento(s) encontrado(s)',
-                            color: CoresApp.textoSecundario,
-                          ),
-                          const SizedBox(height: 8),
-                          _buildHoursSummaryCard(
-                            icon: Icons.check_circle_rounded,
-                            title: 'Registrados',
-                            value: '$registeredCount',
-                            subtitle: 'apontamento(s) registrado(s)',
-                            color: CoresApp.sucesso,
-                          ),
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _buildHoursSummaryCard(
-                            icon: Icons.timer_rounded,
-                            title: 'Total trabalhado',
-                            value: totalHours,
-                            subtitle: 'horas registradas no projeto',
-                            color: CoresApp.destaque,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildHoursSummaryCard(
-                            icon: Icons.receipt_long_rounded,
-                            title: 'Apontamentos',
-                            value: '${logs.length}',
-                            subtitle: 'lançamento(s) encontrado(s)',
-                            color: CoresApp.textoSecundario,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildHoursSummaryCard(
-                            icon: Icons.check_circle_rounded,
-                            title: 'Registrados',
-                            value: '$registeredCount',
-                            subtitle: 'apontamento(s) registrado(s)',
-                            color: CoresApp.sucesso,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 13),
-                if (logs.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 22,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CoresApp.textoPrincipal.withValues(alpha: 0.018),
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(
-                        color: CoresDashboard.tabelaBorda,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.schedule_outlined,
-                          color: CoresApp.textoSecundario,
-                          size: 26,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Nenhum horário encontrado',
-                          style: TextStyle(
-                            color: CoresApp.textoPrincipal,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Não existem apontamentos de horas '
-                          'salvos para o projeto $projectId.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: CoresApp.textoSecundario,
-                            fontSize: 8.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else ...[
-                  Text(
-                    'Lançamentos de horas',
-                    style: TextStyle(
-                      color: CoresApp.textoPrincipal,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...logs.map(
-                    (log) => _buildTimeLogCard(log),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   Future<void> _openProjectResource(String reference, String projectId,
       {required String field}) async {
@@ -2196,9 +1811,10 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
       await ProjectFileService.openFile(reference,
           projectId: projectId, field: field);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
@@ -2951,8 +2567,9 @@ class _CompletedProjectsScreenState extends State<CompletedProjectsScreen> {
                                                 projectId: id,
                                                 folder: folderPath,
                                                 excel: excelLink);
-                                        if (result != null && context.mounted)
+                                        if (result != null && context.mounted) {
                                           Navigator.pop(context);
+                                        }
                                       }),
                                 Row(
                                   children: [

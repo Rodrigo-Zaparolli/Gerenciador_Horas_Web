@@ -32,7 +32,9 @@ class MonthlyHours {
           hours >= 0 &&
           minutes != null &&
           minutes >= 0 &&
-          minutes < 60) return hours + minutes / 60;
+          minutes < 60) {
+        return hours + minutes / 60;
+      }
       return 0;
     }
     final number = double.tryParse(value.replaceAll(',', '.')) ?? 0;

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
-import '../lib/core/platform/comment_paste.dart';
-import '../lib/core/platform/image_paste.dart';
+import 'package:gerenciador_horas/core/platform/comment_paste.dart';
+import 'package:gerenciador_horas/core/platform/image_paste.dart';
 
 void main() {
   final events = <Map<String, Object>>[];

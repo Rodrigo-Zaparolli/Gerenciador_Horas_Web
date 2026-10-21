@@ -29,7 +29,9 @@ class ProjectActionsPilot extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 240, maxWidth: 320),
         onSelected: (value) {
           if ((value == 'folder' && !hasFolder) ||
-              (['open', 'spreadsheet'].contains(value) && !hasExcel)) return;
+              (['open', 'spreadsheet'].contains(value) && !hasExcel)) {
+            return;
+          }
           final actions = <String, VoidCallback>{
             'folder': onFolder,
             'open': onExcel,

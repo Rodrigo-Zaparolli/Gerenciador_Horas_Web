@@ -65,9 +65,10 @@ class _StandalonePercentageDialogState
         setState(() => error = result.message);
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => error =
             'Não foi possível confirmar a porcentagem. Confira o E-Desk antes de repetir.');
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }

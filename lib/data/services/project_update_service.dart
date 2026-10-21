@@ -65,8 +65,9 @@ class ProjectUpdateService {
       Iterable<Map<String, dynamic>> comments) {
     ProjectCommentUpdate? latest;
     for (final data in comments) {
-      if (data['status']?.toString().trim().toLowerCase() != 'enviado')
+      if (data['status']?.toString().trim().toLowerCase() != 'enviado') {
         continue;
+      }
       DateTime? date;
       for (final field in [
         'enviadoEm',

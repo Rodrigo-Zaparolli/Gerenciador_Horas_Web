@@ -1090,14 +1090,6 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
 
         String subId = (index + 1).toString();
 
-        // ========================================================
-        // E-DESK
-        // ========================================================
-
-        String? edeskSolicitacao;
-        String? edeskUrl;
-        String? edeskIdTrabalho;
-
         TaskModel? existingTask;
 
         if (existingTasks.isNotEmpty) {
@@ -1128,13 +1120,6 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
             subId = existingTask.subId.trim();
           }
 
-          // ======================================================
-          // PRESERVAR E-DESK
-          // ======================================================
-
-          edeskSolicitacao = existingTask.edeskSolicitacao;
-          edeskUrl = existingTask.edeskUrl;
-          edeskIdTrabalho = existingTask.edeskIdTrabalho;
         }
 
         stepStart = _onlyDate(stepStart);
@@ -1557,8 +1542,9 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         if (resolved != null && mounted) {
           final controller =
               isFolder ? _folderPathController : _excelLinkController;
-          if (controller.text.trim() == path)
+          if (controller.text.trim() == path) {
             setState(() => controller.text = resolved);
+          }
         }
       }
     } catch (e) {

@@ -60,13 +60,14 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     service = widget.service ?? ProjectArchiveService();
     owner = service.uid!;
     subscription = service.accountChanges.listen((_) {
-      if (mounted && !authorized)
+      if (mounted && !authorized) {
         setState(() {
           plan = null;
           moved = null;
           destination = null;
           error = 'A conta mudou. Feche esta janela.';
         });
+      }
     });
     loadDestination();
   }
@@ -86,21 +87,24 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
     });
     try {
       final value = await service.loadDestination(owner);
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() {
           final suggestion = ArchiveDestination.suggestion(service.email);
           destination =
               value?.destination ?? (suggestion.isEmpty ? null : suggestion);
         });
+      }
     } catch (e) {
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() => error =
             'Selecione a pasta de destino. Não foi possível carregar a preferência: $e');
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
-    if (mounted && authorized && destination != null && error == null)
+    if (mounted && authorized && destination != null && error == null) {
       await prepare();
+    }
   }
 
   Future<void> selectDestination() async {
@@ -236,9 +240,10 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
         if (!mounted || !authorized) return;
         if (result['moved'] != true ||
             result['contentsVerified'] != true ||
-            result['sourceRemoved'] != true)
+            result['sourceRemoved'] != true) {
           throw StateError(
               'A movimentação de todo o conteúdo e a retirada da pasta da origem não foram confirmadas. Confira os dois caminhos antes de tentar novamente.');
+        }
         moved = result;
       }
       if (!authorized) throw StateError('A conta mudou.');
@@ -271,10 +276,11 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
         Navigator.pop(context, moved);
       }
     } catch (e) {
-      if (mounted && authorized)
+      if (mounted && authorized) {
         setState(() => error = moved == null
             ? e.toString()
             : 'A pasta já foi movida. Falta atualizar os vínculos no sistema. Clique em Atualizar vínculos; a pasta não será movida novamente. $e');
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }

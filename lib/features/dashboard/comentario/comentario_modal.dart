@@ -97,7 +97,6 @@ class ComentarioModal {
     String? comentarioSelecionadoId;
     String? idRascunhoParaSalvar;
     String? imagemBase64;
-    Uint8List? excelSelecionadoBytes;
 
     // Todas as imagens que serão enviadas no mesmo comentário.
     final List<String> imagensBase64 = <String>[];
@@ -111,8 +110,6 @@ class ComentarioModal {
     final Map<Map<String, String>, _ComentarioRichTextController>
         controllersBlocosTexto = {};
     final Map<Map<String, String>, FocusNode> focosBlocosTexto = {};
-    _ComentarioRichTextController? controllerBlocoTextoAtivo;
-    FocusNode? focoBlocoTextoAtivo;
 
     // Formatação do bloco de texto atualmente em edição.
     String fonteComentario = 'Segoe UI';
@@ -124,18 +121,7 @@ class ComentarioModal {
     TextAlign alinhamentoComentario = TextAlign.left;
     Color corFonteComentario = const Color(0xFFF8FAFC);
 
-    Map<String, String> criarBlocoTexto(String texto) => {
-          'tipo': 'texto',
-          'valor': texto,
-          'fonte': fonteComentario,
-          'tamanho': tamanhoFonteComentario.toString(),
-          'negrito': negritoComentario.toString(),
-          'italico': italicoComentario.toString(),
-          'sublinhado': sublinhadoComentario.toString(),
-          'tachado': tachadoComentario.toString(),
-          'alinhamento': alinhamentoComentario.name,
-          'cor': corFonteComentario.toARGB32().toRadixString(16).padLeft(8, '0'),
-        };
+
 
     void aplicarFormatacaoNaSelecao() {
       final atributos = <quill.Attribute<dynamic>>[
@@ -1385,8 +1371,6 @@ class ComentarioModal {
         blocosComentario.clear();
         controllersBlocosTexto.clear();
         focosBlocosTexto.clear();
-        controllerBlocoTextoAtivo = null;
-        focoBlocoTextoAtivo = null;
         imagensExcelBase64.clear();
         intervalosExcelAdicionados.clear();
         imagemBase64 = null;
@@ -1405,6 +1389,9 @@ class ComentarioModal {
       StateSetter setDialogState,
       String comentarioId,
     ) async {
+      if (excluindo) {
+        return;
+      }
       final confirmar = await showDialog<bool>(
         context: dialogContext,
         builder: (confirmContext) {
@@ -1464,7 +1451,9 @@ class ComentarioModal {
         },
       );
 
-      if (confirmar != true) return;
+      if (confirmar != true || excluindo || !dialogContext.mounted) {
+        return;
+      }
 
       setDialogState(() {
         excluindo = true;
@@ -1473,6 +1462,10 @@ class ComentarioModal {
       try {
         final ref = comentariosRef();
         await ref.doc(comentarioId).delete();
+        if (!dialogContext.mounted) {
+          excluindo = false;
+          return;
+        }
 
         if (comentarioSelecionadoId == comentarioId) {
           comentarioController.clear();
@@ -1503,6 +1496,10 @@ class ComentarioModal {
           ),
         );
       } catch (e) {
+        if (!dialogContext.mounted) {
+          excluindo = false;
+          return;
+        }
         setDialogState(() {
           excluindo = false;
         });
@@ -1560,8 +1557,9 @@ class ComentarioModal {
             preserveLayout: true,
           );
         } else {
-          if (caminho.isEmpty)
+          if (caminho.isEmpty) {
             throw StateError('Nenhum arquivo Excel vinculado ao projeto.');
+          }
           preview = await renderLocalExcel(caminho, intervalo);
         }
         if (!dialogContext.mounted) return;
@@ -1846,7 +1844,9 @@ class ComentarioModal {
       if (enviar && parseCommentPercentage(percentualController.text) != null && task != null) {
         task = await chooseCommentPercentageWork(dialogContext, project.subTasks ?? []);
         if (task == null || !dialogContext.mounted ||
-            FirebaseAuth.instance.currentUser?.uid != sendingOwner) return;
+            FirebaseAuth.instance.currentUser?.uid != sendingOwner) {
+          return;
+        }
       }
 
       if (task == null) {
@@ -2259,8 +2259,9 @@ class ComentarioModal {
                                         snapshot.data?.docs ?? [];
                                     final comentarios =
                                         todosComentarios.where((doc) {
-                                      if (buscaHistoricoModal.isEmpty)
+                                      if (buscaHistoricoModal.isEmpty) {
                                         return true;
+                                      }
                                       final dados = doc.data();
                                       final texto = dados['comentario']
                                               ?.toString()
@@ -2351,8 +2352,6 @@ class ComentarioModal {
                                                     .toString();
                                             controllersBlocosTexto.clear();
                                             focosBlocosTexto.clear();
-                                            controllerBlocoTextoAtivo = null;
-                                            focoBlocoTextoAtivo = null;
                                             blocosComentario
                                               ..clear()
                                               ..addAll(blocosSalvos.map((e) =>
@@ -3679,13 +3678,15 @@ class ComentarioModal {
                                           context,
                                           Map<String, String>.from(campo),
                                         );
-                                        if (edited == null || !context.mounted)
+                                        if (edited == null || !context.mounted) {
                                           return;
+                                        }
                                         setConfigState(() {
                                           final current =
                                               camposEtiqueta.indexOf(campo);
-                                          if (current >= 0)
+                                          if (current >= 0) {
                                             camposEtiqueta[current] = edited;
+                                          }
                                         });
                                       },
                                       icon: Icon(
@@ -4376,30 +4377,7 @@ class ComentarioModal {
             final double paddingCard =
                 telaMuitoPequena ? 10 : (telaCompacta ? 12 : 16);
 
-            Widget botaoImagem({
-              required IconData icon,
-              required String texto,
-              required VoidCallback? onPressed,
-            }) {
-              return OutlinedButton.icon(
-                onPressed: onPressed,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppPalette.primary,
-                  side: BorderSide(color: CoresApp.borda),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: Icon(icon, size: 16, color: CoresApp.destaque),
-                label: Text(
-                  texto,
-                  style: const TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w600),
-                ),
-              );
-            }
+
 
             Widget seletorTipoComentario() {
               return SizedBox(
@@ -4416,7 +4394,7 @@ class ComentarioModal {
                   ));
             }
 
-            Widget _botaoAcaoAnexo({
+            Widget botaoAcaoAnexo({
               required BuildContext context,
               required IconData icon,
               required String texto,
@@ -4816,8 +4794,6 @@ class ComentarioModal {
                                           .toString();
                                   controllersBlocosTexto.clear();
                                   focosBlocosTexto.clear();
-                                  controllerBlocoTextoAtivo = null;
-                                  focoBlocoTextoAtivo = null;
                                   blocosComentario
                                     ..clear()
                                     ..addAll(blocosSalvos.map(
@@ -5266,8 +5242,9 @@ class ComentarioModal {
                                                         enviandoEdesk)
                                                     ? null
                                                     : (value) async {
-                                                        if (value == null)
+                                                        if (value == null) {
                                                           return;
+                                                        }
 
                                                         setDialogState(() {
                                                           etiquetaSelecionada =
@@ -6057,7 +6034,7 @@ class ComentarioModal {
                                                     const SizedBox(width: 8),
                                                     seletorImagemExcelAnexo(),
                                                     const SizedBox(width: 8),
-                                                    _botaoAcaoAnexo(
+                                                    botaoAcaoAnexo(
                                                       context: dialogContext,
                                                       icon: Icons
                                                           .content_paste_rounded,
@@ -6183,8 +6160,9 @@ class ComentarioModal {
                                                                             fonte)))
                                                                     .toList(),
                                                                 onChanged: (v) {
-                                                                  if (v == null)
+                                                                  if (v == null) {
                                                                     return;
+                                                                  }
                                                                   setDialogState(() =>
                                                                       fonteComentario =
                                                                           v);
@@ -6234,8 +6212,9 @@ class ComentarioModal {
                                                                             '${t.toInt()}')))
                                                                     .toList(),
                                                                 onChanged: (v) {
-                                                                  if (v == null)
+                                                                  if (v == null) {
                                                                     return;
+                                                                  }
                                                                   setDialogState(() =>
                                                                       tamanhoFonteComentario =
                                                                           v);
@@ -6801,8 +6780,6 @@ class ComentarioModal {
                                                                             onTap:
                                                                                 () {
                                                                               setDialogState(() {
-                                                                                controllerBlocoTextoAtivo = controllerParaBlocoTexto(bloco);
-                                                                                focoBlocoTextoAtivo = focoParaBlocoTexto(bloco);
                                                                                 fonteComentario = bloco['fonte'] ?? 'Segoe UI';
                                                                                 tamanhoFonteComentario = double.tryParse(bloco['tamanho'] ?? '') ?? 11;
                                                                                 negritoComentario = bloco['negrito'] == 'true';

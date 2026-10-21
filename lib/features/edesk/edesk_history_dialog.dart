@@ -37,8 +37,9 @@ class _EdeskHistoryDialogState extends State<EdeskHistoryDialog> {
     setState(() => busy = true);
     String accountError = '';
     try {
-      if (uid != null)
+      if (uid != null) {
         accountItems = await (widget.accountLoader ?? EdeskOperationHistory.loadAccount)(uid!);
+      }
     } catch (error) {
       accountError =
           'Histórico da conta indisponível; mostrando a cópia deste dispositivo. ';

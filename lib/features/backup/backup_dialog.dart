@@ -90,8 +90,9 @@ class _BackupDialogState extends State<BackupDialog> {
           type: FileType.custom, allowedExtensions: ['json'], withData: true);
       if (selection == null) return;
       final bytes = selection.files.single.bytes;
-      if (bytes == null || bytes.length > 50 * 1024 * 1024)
+      if (bytes == null || bytes.length > 50 * 1024 * 1024) {
         throw const FormatException('Arquivo vazio ou maior que 50 MB.');
+      }
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw StateError('Entre na sua conta.');
       final validated = validateBackup(utf8.decode(bytes), uid);
@@ -124,12 +125,13 @@ class _BackupDialogState extends State<BackupDialog> {
         return;
       }
       await service.restore(selected, progress: progress);
-      if (mounted)
+      if (mounted) {
         setState(() {
           plan = null;
           message =
               'Restauração concluída. Recarregue o app para atualizar todas as telas.';
         });
+      }
     } catch (error) {
       progress('Não foi possível concluir a restauração: $error');
     } finally {

@@ -75,8 +75,9 @@ class EdeskOperationHistory {
   /// A delayed write cannot erase a confirmation or a newer result.
   static bool shouldReplace(
       Map<String, dynamic>? remote, Map<String, dynamic> item) {
-    if (remote?['state'] == 'confirmed' && item['state'] != 'confirmed')
+    if (remote?['state'] == 'confirmed' && item['state'] != 'confirmed') {
       return false;
+    }
     final remoteTime = DateTime.tryParse(
         (remote?['updated'] ?? remote?['created'] ?? '').toString());
     final localTime = DateTime.tryParse(
@@ -120,7 +121,9 @@ class EdeskOperationHistory {
     final merged = <Object?, Map<String, dynamic>>{};
     for (final row in [...first, ...second]) {
       if (merged[row['id']]?['state'] == 'confirmed' &&
-          row['state'] != 'confirmed') continue;
+          row['state'] != 'confirmed') {
+        continue;
+      }
       merged[row['id']] = row;
     }
     final rows = merged.values.toList()
@@ -131,8 +134,9 @@ class EdeskOperationHistory {
 
   static String? begin(String? uid, String path, Map<String, dynamic>? body) {
     if (uid == null ||
-        !['horas', 'comentarios', 'fases', 'percentual'].contains(path.split('/').last))
+        !['horas', 'comentarios', 'fases', 'percentual'].contains(path.split('/').last)) {
       return null;
+    }
     final request = body?['request'] as Map? ?? {};
     final works = (request['trabalhos'] as List? ?? []).whereType<Map>();
     final projects = works

@@ -38,6 +38,7 @@ migrate_working_dir/
 /screenshots/
 /edesk_bot/logs/
 /edesk_bot/screenshots/
+/edesk_bot/debug/
 /edesk_bot/grid_debug.html
 **/__pycache__/
 *.sqlite
