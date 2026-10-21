@@ -273,6 +273,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           notice = differentEmails
               ? 'Planilha salva, mas a fórmula do Excel retornou um e-mail diferente do cadastro. Confira o cadastro de consultores no Excel; o e-mail mostrado agora é o resultado real da planilha. Backup: ${result['backup']}'
               : 'Planilha atualizada e conferida. Backup: ${result['backup']}';
+          if (result['backupCleanupWarning'] != null) {
+            notice = '$notice\n${result['backupCleanupWarning']}';
+          }
         });
       if (mounted && authorized) await remember(result);
     } catch (e) {

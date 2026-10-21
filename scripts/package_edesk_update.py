@@ -1,4 +1,4 @@
-"""Build the small folder-link-recovery-30 update for an existing full installation."""
+"""Build the small backups-comment-percentage-31 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -15,9 +15,10 @@ FILES = (
     'local_edesk/files_server.py',
     'local_edesk/excel_editor.py',
     'local_edesk/project_archive.py',
+    'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO folder-link-recovery-30 — instalação completa já existente
+README = '''ATUALIZAÇÃO backups-comment-percentage-31 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,6 +29,13 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v31: mantem os 5 backups mais recentes de cada planilha apos salvar.
+Depois de mover e conferir a pasta finalizada, exclui os backups automaticos
+dentro dela. Preserva arquivos nao reconhecidos e avisa se a limpeza falhar.
+Mantem uma pagina independente antes de salvar comentario com porcentagem,
+para continuar ao trabalho mesmo quando o E-Desk fecha as janelas anteriores.
+Verifica a porcentagem apos recarregar; nunca repete o comentario.
 
 Correcao v30: Autorizar vinculos neste PC recupera registros antigos que
 apontavam para outro caminho, mediante selecao do caminho exato. A conferencia
@@ -105,7 +113,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-vinculos-pastas-30.zip'
+    target = ROOT / 'web/downloads/atualizacao-backups-comentario-31.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

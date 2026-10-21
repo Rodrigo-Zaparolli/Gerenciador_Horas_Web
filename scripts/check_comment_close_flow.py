@@ -32,14 +32,18 @@ with tempfile.TemporaryDirectory(prefix='comment-close-', dir=ROOT / 'build') as
                     '<div id="cph1_rpvTrabalhos" style="display:none"><table id="cph1_gvwTra">'
                     '<tr><td onclick="btnSelTra()">3</td></tr></table></div>'
                     '<script>function btnSelTra(){location.href="' + work_url + '"}</script>')
-            elif path == '/Comentario.aspx':
+            elif path in ('/Comentario.aspx', '/CommentFrame.aspx'):
                 if request.method == 'POST':
                     state['comment_posts'] += 1
-                    html = '<script>window.close()</script>' if scenario == 'closed' else '|error|fixture rejection'
+                    html = ('<script>window.frameElement.remove()</script>' if scenario == 'detached_frame'
+                        else '<script>window.opener.close();window.close()</script>' if scenario == 'closed_request'
+                        else '<script>window.close()</script>' if scenario == 'closed' else '|error|fixture rejection')
                     if scenario == 'http_error':
                         return route.fulfill(status=500, body='fixture rejection')
                 else:
-                    html = '<form method="post"><button id="popC_BtAtu" name="popC$BtAtu" value="Salvar">Salvar</button></form>'
+                    html = ('<iframe src="/CommentFrame.aspx"></iframe>'
+                        if scenario == 'detached_frame' and path == '/Comentario.aspx'
+                        else '<form method="post"><button id="popC_BtAtu" name="popC$BtAtu" value="Salvar">Salvar</button></form>')
             elif path == '/Trabalho.aspx':
                 if request.method == 'POST':
                     state['percentage_posts'] += 1
@@ -60,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix='comment-close-', dir=ROOT / 'build') as
         comment.wait_for_load_state('domcontentloaded')
         save_comment_then_percentage(
             lambda: salvar_comentario(comment, comment),
-            lambda: update_percentage_after_comment(page, context, request_url, '226144', '3', 91))
+            lambda: update_percentage_after_comment(page, context, request_url, '226144', '3', 91), context=context)
         assert state == {'comment_posts': 1, 'percentage_posts': 1, 'value': '91,00'}, state
         for scenario in ['http_error', 'asp_error']:
             page.goto(request_url)
@@ -79,5 +83,50 @@ with tempfile.TemporaryDirectory(prefix='comment-close-', dir=ROOT / 'build') as
             assert state['percentage_posts'] == before
             comment.close()
         assert state['comment_posts'] == 3, 'Each manual test must click Save exactly once'
+        scenario = 'detached_frame'
+        page.goto(request_url)
+        with page.expect_popup() as opened:
+            page.get_by_text('Comment', exact=True).click()
+        comment = opened.value
+        comment.wait_for_load_state('load')
+        frame = comment.frames[1]
+        before = state['percentage_posts']
+        save_comment_then_percentage(
+            lambda: salvar_comentario(frame, comment),
+            lambda: update_percentage_after_comment(page, context, request_url, '226144', '3', 90),
+            context=context)
+        assert frame.is_detached()
+        assert state['comment_posts'] == 4
+        assert state['percentage_posts'] == before + 1
+        assert state['value'] == '90,00'
         browser.close()
-print('COMMENT_CLOSE_FLOW_OK: closed popup -> work 3 -> percentage verified; one POST each; HTTP/ASP errors block percentage')
+        # Match production: a persistent browser exits when its last tab closes.
+        # The request itself can close along with the saved comment popup.
+        context = p.chromium.launch_persistent_context(
+            str(Path(temporary) / 'persistent-profile'), headless=True,
+            executable_path=p.chromium.executable_path)
+        context.route('**/*', respond)
+        initial = context.pages[0]
+        initial.goto(request_url)
+        with initial.expect_popup() as opened:
+            initial.evaluate('(url) => window.open(url)', request_url)
+        page = opened.value
+        page.wait_for_load_state('domcontentloaded')
+        initial.close()
+        scenario = 'closed_request'
+        with page.expect_popup() as opened:
+            page.get_by_text('Comment', exact=True).click()
+        comment = opened.value
+        comment.wait_for_load_state('domcontentloaded')
+        before_comment, before_percent = state['comment_posts'], state['percentage_posts']
+        save_comment_then_percentage(
+            lambda: salvar_comentario(comment, comment),
+            lambda: update_percentage_after_comment(page, context, request_url, '226144', '3', 92),
+            context=context)
+        assert state['comment_posts'] == before_comment + 1
+        assert state['percentage_posts'] == before_percent + 1
+        assert state['value'] == '92,00'
+        assert page.is_closed() and comment.is_closed()
+        assert len(context.pages) == 1, 'Only the verified work page should remain'
+        context.close()
+print('COMMENT_CLOSE_FLOW_OK: persistent request and popup close -> work 3 -> percentage verified; one POST each; HTTP/ASP errors block percentage')

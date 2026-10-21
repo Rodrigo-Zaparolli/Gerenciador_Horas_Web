@@ -486,8 +486,11 @@ def edit(path, body):
         except PermissionError:
             raise ValueError('Feche esta planilha no Excel e tente salvar novamente. O original foi preservado.') from None
         staged = None
+        from local_edesk.backup_policy import prune_workbook_backups
+        cleanup_warning = prune_workbook_backups(path, latest_backup=backup)
         return {**checked, 'revision': revision(path), 'filename': path.name,
-                'saved': True, 'backup': str(backup), 'savedAt': datetime.now().isoformat()}
+                'saved': True, 'backup': str(backup), 'backupCleanupWarning': cleanup_warning,
+                'savedAt': datetime.now().isoformat()}
     finally:
         if staged is not None:
             staged.unlink(missing_ok=True)

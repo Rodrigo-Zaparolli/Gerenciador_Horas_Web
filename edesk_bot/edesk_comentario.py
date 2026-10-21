@@ -1973,6 +1973,13 @@ def salvar_comentario(frame, pagina):
 
     requisicoes_salvar = set()
     respostas_salvar = []
+    requisicoes_concluidas = set()
+
+    def registrar_conclusao(requisicao):
+        requisicoes_concluidas.add((requisicao.url, requisicao.post_data or ''))
+
+    def quadro_fechado():
+        return pagina.is_closed() or getattr(frame, 'is_detached', lambda: False)()
 
     def registrar_requisicao(requisicao):
         if requisicao.method != "POST":
@@ -2007,21 +2014,35 @@ def salvar_comentario(frame, pagina):
         if chave_requisicao in requisicoes_salvar:
             respostas_salvar.append(resposta)
 
-    pagina.on("request", registrar_requisicao)
-    pagina.on("response", registrar_resposta)
+    # Context listeners survive the comment frame/page being disposed by Save.
+    browser_context = pagina.context
+    def pump_browser(milliseconds):
+        waiting = next((p for p in browser_context.pages if not p.is_closed()), None)
+        if waiting is None:
+            raise RuntimeError('A sessão do navegador fechou antes de concluir o comentário.')
+        try:
+            waiting.wait_for_timeout(milliseconds)
+        except PlaywrightError:
+            if not waiting.is_closed() or not any(not p.is_closed() for p in browser_context.pages):
+                raise
+
+    browser_context.on("request", registrar_requisicao)
+    browser_context.on("response", registrar_resposta)
+    browser_context.on("requestfinished", registrar_conclusao)
     try:
-        botao_salvar.click(timeout=15000)
+        try:
+            botao_salvar.click(timeout=15000)
+        except PlaywrightError:
+            # Closing during click's navigation wait is valid ONLY if the exact
+            # Save response was observed below. Never retry the comment POST.
+            if not requisicoes_salvar:
+                raise
 
         inicio = time.time()
         while not respostas_salvar and time.time() - inicio < 20:
             # Saving may close the comment popup. Pump browser events through
             # a surviving page instead of waiting on the disposed popup.
-            waiting_page = pagina
-            if pagina.is_closed():
-                waiting_page = next((p for p in pagina.context.pages if not p.is_closed()), None)
-                if waiting_page is None:
-                    raise RuntimeError('A sessão do navegador fechou antes da resposta do comentário.')
-            waiting_page.wait_for_timeout(250)
+            pump_browser(250)
 
         if not respostas_salvar:
             raise RuntimeError(
@@ -2037,13 +2058,26 @@ def salvar_comentario(frame, pagina):
                 f"{resposta.status} ao salvar o comentário."
             )
 
+        # response.text() has no timeout in Playwright's sync API. Reading a
+        # navigation response from a detached iframe can wait indefinitely.
+        # Pump events until the body finishes OR the saved editor closes first.
+        chave = (resposta.request.url, resposta.request.post_data or '')
+        limite = time.monotonic() + 10
+        while not quadro_fechado() and chave not in requisicoes_concluidas and time.monotonic() < limite:
+            pump_browser(100)
         try:
-            texto_resposta = resposta.text()
+            if quadro_fechado():
+                texto_resposta = ''
+                log('Editor fechado após a resposta do Salvar; continuando ao percentual sem reler o quadro removido.')
+            elif chave not in requisicoes_concluidas:
+                raise RuntimeError('A resposta do Salvar não terminou. Confira o comentário antes de reenviar.')
+            else:
+                texto_resposta = resposta.text()
         except PlaywrightError:
             # A successful save response can execute window.close(), disposing
             # its body before Playwright reads it. Keep the observed exact Save
             # response; never click Save again just to retrieve that body.
-            if not pagina.is_closed():
+            if not quadro_fechado():
                 raise
             texto_resposta = ''
             log('A janela do comentário fechou após a resposta do Salvar. Continuando sem repetir o comentário.')
@@ -2062,8 +2096,9 @@ def salvar_comentario(frame, pagina):
             "do comentário."
         )
     finally:
-        pagina.remove_listener("request", registrar_requisicao)
-        pagina.remove_listener("response", registrar_resposta)
+        browser_context.remove_listener("request", registrar_requisicao)
+        browser_context.remove_listener("response", registrar_resposta)
+        browser_context.remove_listener("requestfinished", registrar_conclusao)
 
 
 # ================================================================
@@ -2477,6 +2512,7 @@ def main(*, percentage_only=False):
                 save_comment_then_percentage(
                     lambda: salvar_comentario(frame, pagina_comentario),
                     salvar_percentual,
+                    context=context if percentual is not None else None,
                 )
             except RuntimeError as error:
                 if 'EDESK_PERCENTAGE_PENDING' in str(error):

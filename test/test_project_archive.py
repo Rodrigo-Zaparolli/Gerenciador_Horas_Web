@@ -11,6 +11,36 @@ from local_edesk import local_files, project_archive
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_backups_removed_only_after_verified_move_and_recovery_is_idempotent(self):
+        backup = self.excel.parent / '.gerenciador-backups'
+        backup.mkdir()
+        (backup / 'Cliente-20261020-120000-abcdef12.xlsm').write_bytes(b'backup')
+        plan = self.prepare()
+        self.assertTrue(backup.exists())
+        with patch.object(project_archive.os, 'rename', side_effect=PermissionError('locked')):
+            with self.assertRaises(ValueError):
+                self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(backup.exists())
+        result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(result['backupCleanup']['complete'])
+        self.assertEqual(result['backupCleanup']['removed'], 1)
+        self.assertFalse((Path(result['target']) / backup.relative_to(self.source)).exists())
+        with patch.object(project_archive.os, 'rename', side_effect=AssertionError('must not move twice')):
+            self.assertEqual(self.request('project-move-commit', operation=plan['operation']), result)
+
+    def test_interrupted_cleanup_retries_without_moving_again(self):
+        backup = self.excel.parent / '.gerenciador-backups'
+        backup.mkdir()
+        (backup / 'Cliente-20261020-120000-abcdef12.xlsm').write_bytes(b'backup')
+        plan = self.prepare()
+        with patch('local_edesk.backup_policy.remove_archived_backups', side_effect=OSError('interrupted')):
+            result = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(result['moved'])
+        self.assertFalse(result['backupCleanup']['complete'])
+        with patch.object(project_archive.os, 'rename', side_effect=AssertionError('must not move twice')):
+            recovered = self.request('project-move-commit', operation=plan['operation'])
+        self.assertTrue(recovered['backupCleanup']['complete'])
+
     def test_reopening_after_failed_rename_recovers_retry_instead_of_blocking(self):
         plan = self.prepare()
         with patch.object(project_archive.os, 'rename', side_effect=PermissionError('Excel open')):

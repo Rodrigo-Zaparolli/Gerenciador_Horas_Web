@@ -124,15 +124,23 @@ def save_work_percentage(page, solicitation, work, value):
         raise RuntimeError('O percentual não foi confirmado após recarregar o trabalho.')
 
 
-def save_comment_then_percentage(save_comment, save_percentage):
-    save_comment()
+def save_comment_then_percentage(save_comment, save_percentage, context=None):
+    # A persistent Chromium context exits when its last window closes. E-Desk
+    # may close the request as well as the comment popup after Save. Reserve an
+    # independent page BEFORE clicking Save, not after the context has closed.
+    keeper = context.new_page() if context is not None else None
     try:
-        save_percentage()
-    except Exception as error:
-        raise RuntimeError(
-            'EDESK_PERCENTAGE_PENDING: O comentário recebeu resposta de salvamento, '
-            'mas o percentual não foi confirmado. Confira o E-Desk antes de reenviar.'
-        ) from error
+        save_comment()
+        try:
+            save_percentage()
+        except Exception as error:
+            raise RuntimeError(
+                'EDESK_PERCENTAGE_PENDING: O comentário recebeu resposta de salvamento, '
+                'mas o percentual não foi confirmado. Confira o E-Desk antes de reenviar.'
+            ) from error
+    finally:
+        if keeper is not None and not keeper.is_closed():
+            keeper.close()
 
 
 def update_percentage_after_comment(page, context, request_url, solicitation, work, value):

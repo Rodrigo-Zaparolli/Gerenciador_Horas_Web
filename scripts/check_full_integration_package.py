@@ -29,7 +29,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         command = archive.read(name).decode('utf-8')
         assert 'scripts\\integration_autostart.ps1' in command
         assert ('-Disable' in command) == disable
-    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'local_edesk/excel_editor.py', 'local_edesk/project_archive.py', 'local_edesk/files_server.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
+    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'local_edesk/excel_editor.py', 'local_edesk/project_archive.py', 'local_edesk/backup_policy.py', 'local_edesk/files_server.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
         assert archive.read(source) == (ROOT / source).read_bytes()
     with tempfile.TemporaryDirectory(prefix='complete package ', dir=VALIDATION) as temporary:
         extracted = Path(temporary).resolve()
@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='folder-link-recovery-30',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='backups-comment-percentage-31',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -105,7 +105,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
                 time.sleep(.25)
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
-            assert health['integrationPackageVersion'] == 'folder-link-recovery-30'
+            assert health['integrationPackageVersion'] == 'backups-comment-percentage-31'
             assert 'authorize' in health['nativeActions']
             assert 'excel-editor-preview' in health['nativeActions']
             assert health['projectRootMove'] is True

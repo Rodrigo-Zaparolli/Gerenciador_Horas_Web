@@ -246,6 +246,29 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       if (!authorized) throw StateError('A conta mudou.');
       await service.applyMove(widget.projectId, moved!);
       if (mounted && authorized) {
+        final cleanup = moved!['backupCleanup'];
+        if (cleanup is Map && cleanup['complete'] == false) {
+          setState(() => busy = false);
+          await showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Pasta movida; limpeza de backups pendente'),
+              content: SingleChildScrollView(
+                child: SelectableText(
+                  'Os vínculos foram atualizados. Alguns backups não puderam ser excluídos. '
+                  'Confira a pasta .gerenciador-backups no destino.\n\n'
+                  '${(cleanup['warnings'] as List? ?? []).join('\n')}',
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Entendi'))
+              ],
+            ),
+          );
+          if (!mounted || !authorized) return;
+        }
         setState(() => message = 'Pasta movida e vínculos atualizados.');
         Navigator.pop(context, moved);
       }
@@ -281,7 +304,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                     if (busy) const LinearProgressIndicator(),
                     if (busy) Text(activity),
                     const Text(
-                        'A pasta selecionada será movida com suas subpastas. Os vínculos serão atualizados após a conferência. Feche o Excel antes de continuar.'),
+                        'A pasta selecionada será movida com suas subpastas. Os vínculos serão atualizados após a conferência e os backups automáticos serão excluídos após a movimentação confirmada. Feche o Excel antes de continuar.'),
                     const SizedBox(height: 12),
                     SelectableText('Pasta atual: ${label(widget.folder)}'),
                     if (widget.excel.isNotEmpty)

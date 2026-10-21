@@ -1,5 +1,8 @@
 {
   "changes": [
-    "Comentários E-Desk: botão Editar campo na aba Excel para alterar o nome e o intervalo de células. Aplique a edição e clique em Salvar configurações para gravar."
+    "Planilhas: limpeza automática mantendo os 5 backups mais recentes de cada arquivo, após salvamento bem-sucedido.",
+    "Projetos finalizados: backups automáticos excluídos dentro da pasta movida somente após a movimentação conferida. Aviso quando a limpeza não puder ser concluída.",
+    "Comentário com porcentagem: mantém a sessão do navegador aberta quando o E-Desk fecha as janelas após salvar, para continuar ao trabalho e verificar o percentual.",
+    "Requer atualizar e reiniciar a integração local v31."
   ]
 }

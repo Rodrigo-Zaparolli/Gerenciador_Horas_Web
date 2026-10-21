@@ -68,6 +68,21 @@ def _reference(uid, path, kind):
     return f'desktop-{kind}://local/{quote(uid, safe="")}/{identity}/{quote(str(path), safe="")}'
 
 
+def _cleanup_backups(con, uid, operation, result):
+    from local_edesk.backup_policy import remove_archived_backups
+    # Persist the successful move BEFORE deleting anything. Recovery must not
+    # compare the original manifest after intentionally removing backups.
+    con.commit()
+    try:
+        cleanup = remove_archived_backups(Path(result['target']))
+    except (OSError, ValueError) as error:
+        cleanup = {'complete': False, 'warnings': [str(error)], 'removed': 0}
+    result = {**result, 'backupCleanup': cleanup}
+    con.execute('UPDATE project_moves SET result=? WHERE uid=? AND operation=?',
+                (json.dumps(result), uid, operation))
+    return result
+
+
 def execute(files, uid, body):
     if not LOCK.acquire(blocking=False):
         raise ValueError('Aguarde a movimentação da pasta em andamento.')
@@ -152,7 +167,8 @@ def _execute(files, uid, body):
         if state == 'moved':
             if Path(plan['source']).exists() or not Path(plan['target']).is_dir():
                 raise ValueError('As pastas mudaram após a movimentação. Confira os caminhos antes de atualizar os vínculos.')
-            return json.loads(row[2])
+            result = json.loads(row[2])
+            return result if result.get('backupCleanup', {}).get('complete') else _cleanup_backups(con, uid, operation, result)
         source, target, parent = (Path(plan[k]) for k in ('source', 'target', 'parent'))
         # Paths were resolved from native authorizations and retained server-side.
         if target.parent != parent or parent.is_relative_to(source) or source == target:
@@ -193,4 +209,4 @@ def _execute(files, uid, body):
                   'excelReference': excel_ref}
         con.execute('UPDATE project_moves SET state="moved",result=? WHERE uid=? AND operation=?',
                     (json.dumps(result), uid, operation))
-        return result
+        return _cleanup_backups(con, uid, operation, result)

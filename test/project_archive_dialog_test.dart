@@ -21,6 +21,7 @@ class FakeArchiveService extends ProjectArchiveService {
   String? prepareError;
   int checks = 0, applies = 0;
   bool failApply = false;
+  bool cleanupPending = false;
   Completer<void>? prepareWait;
   @override
   Future<ArchiveDestination?> loadDestination(String owner) async =>
@@ -59,7 +60,10 @@ class FakeArchiveService extends ProjectArchiveService {
         'alreadyMoved': false
       };
     }
-    if (action == 'project-move-commit') return {'moved': true};
+    if (action == 'project-move-commit') return {
+      'moved': true,
+      if (cleanupPending) 'backupCleanup': {'complete': false, 'warnings': ['Arquivo bloqueado']},
+    };
     throw StateError(action);
   }
 
@@ -101,6 +105,22 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
   }
+
+  testWidgets('Cleanup failure is visible after links are updated without repeating the move', (tester) async {
+    final service = FakeArchiveService()..cleanupPending = true;
+    await open(tester, service);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar e mover'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pasta movida; limpeza de backups pendente'), findsOneWidget);
+    expect(find.textContaining('Arquivo bloqueado'), findsOneWidget);
+    expect(service.applies, 1);
+    expect(service.calls.where((call) => call == 'project-move-commit').length, 1);
+    await tester.tap(find.text('Entendi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProjectArchiveDialog), findsNothing);
+  });
 
   testWidgets(
       'Whole-project recovery authorizes folder, workbook, root and destination in the same dialog',
