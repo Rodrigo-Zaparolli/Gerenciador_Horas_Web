@@ -80,4 +80,16 @@ O comando registra o resultado e o código de saída de cada etapa em `build/sys
 
 Os testes de envio usam páginas e respostas simuladas. A confirmação ponta a ponta no E-Desk real, com a conta do usuário e suas solicitações, continua dependendo de um teste no computador que executa a integração. A revisão não cadastrou horas, comentários, fases ou porcentagens reais nem movimentou uma pasta real de cliente.
 
-Para receber a correção da movimentação, é necessário atualizar e reiniciar a integração v35. As mudanças aparecem nas notas do modal de atualização do app.
+Para receber as correções, é necessário atualizar e reiniciar a integração v36. As mudanças aparecem nas notas do modal de atualização do app.
+
+## Complemento: conferência dos envios de horas (v36)
+
+A integração recarrega o retroativo e procura cada registro por data, início, fim e tipo, dentro do trabalho validado. Não usa HTTP 200, campos preenchidos ou o texto do histórico como prova de cadastro. Percorre a paginação reconhecida; tabelas ambíguas, incompletas ou filtradas não comprovam ausência.
+
+Após o envio, faz uma nova conferência de todas as horas selecionadas. Para uma hora comprovadamente ausente, faz outra leitura independente e permite uma única nova tentativa quando o POST anterior terminou ou não chegou a ser enviado. Um POST com resposta incerta não é repetido automaticamente. Horas já existentes são preservadas. A nova tentativa não acrescenta a mesma descrição novamente ao histórico.
+
+Quando todas as horas têm comprovantes, a API retorna sucesso mesmo se a limpeza final do navegador falhar. O app usa essa confirmação para apresentar o modal de sucesso. Um progresso de 100% sem comprovantes continua sem confirmar o cadastro.
+
+Validações adicionais: 142 testes Python e 26 testes Flutter do cliente E-Desk e modal de resultado. Cinco cenários Playwright usam a função real de salvamento em páginas isoladas: persistência normal, primeira gravação sem registro seguida de recuperação, fechamento da janela após salvar, tabela paginada e tabela ilegível. Asserções verificam os registros e a quantidade de POSTs para detectar duplicidade. Nenhum envio foi feito ao E-Desk real.
+
+Os instaladores agora têm o número da versão no nome efetivo do arquivo, com redirecionamento dos links antigos e cache desabilitado para downloads.

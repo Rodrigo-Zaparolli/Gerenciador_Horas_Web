@@ -75,6 +75,8 @@ String progressLabel(String? stage) => switch (stage) {
         'Aguardando login — conclua o acesso na janela do E-Desk no computador que executa a integração.',
       'preparing' => 'Localizando os trabalhos no E-Desk…',
       'sending' => 'Enviando e verificando o registro no E-Desk…',
+      'checking' => 'Conferindo as horas cadastradas no retroativo…',
+      'retrying' => 'Cadastrando novamente somente as horas comprovadamente ausentes…',
       'finished' => 'Recebendo o resultado do envio…',
       _ => 'Aguardando a integração…',
     };

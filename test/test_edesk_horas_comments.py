@@ -7,6 +7,13 @@ from edesk_horas import acrescentar_trabalho_realizado
 
 
 class TrabalhoRealizadoTest(unittest.TestCase):
+    def test_retry_preserves_history_when_later_hours_already_appended(self):
+        history = '21/10/2026: - First\n21/10/2026: - Second'
+        self.assertEqual(
+            acrescentar_trabalho_realizado(history, history, '21/10/2026', 'First', retry=True),
+            history,
+        )
+
     def test_preserva_historico_exatamente_e_acrescenta_abaixo(self):
         anterior = "07/10/2026: - Dúvidas configurador + ajustes construtor\n08/10/2026: - Planilha acabamentos  "
         resultado = acrescentar_trabalho_realizado(

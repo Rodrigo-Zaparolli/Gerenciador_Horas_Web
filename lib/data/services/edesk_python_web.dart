@@ -294,7 +294,8 @@ class EdeskWebClient {
       }
       final requiresPercentage =
           action == 'percentual' || (action == 'comentarios' && data['percentualRealizado'] != null);
-      if (requiresPercentage ||
+      final requiresHoursReceipt = action == 'horas' && enviar;
+      if (requiresPercentage || requiresHoursReceipt ||
           base.host == '127.0.0.1' ||
           base.host == 'localhost') {
         final healthResponse = await requestClient
@@ -323,6 +324,11 @@ class EdeskWebClient {
               503,
             );
           }
+          if (requiresHoursReceipt && (health is! Map || health['hoursReconciliation'] != true)) {
+            return _failure('Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.', 503);
+          }
+        } else if (requiresHoursReceipt) {
+          return _failure('A integração não confirmou o suporte à conferência de horas. Atualize e reinicie a integração v36. Nenhuma hora foi enviada.', 503);
         } else if (requiresPercentage) {
           return _failure(
               'A integra\u00e7\u00e3o n\u00e3o confirmou o suporte ao percentual. Nenhum coment\u00e1rio foi enviado.',

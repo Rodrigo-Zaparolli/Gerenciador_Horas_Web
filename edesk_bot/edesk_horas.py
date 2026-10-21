@@ -14,7 +14,8 @@ from urllib.parse import (
 )
 
 from playwright.sync_api import sync_playwright
-from send_progress import observe_log, hour_event
+from send_progress import observe_log, hour_event, stage
+from hour_receipt import read_hours, deliver_hours
 from work_selection import resolve_work_selection
 
 from config import restore_session_cookies, save_session_cookies
@@ -1542,7 +1543,7 @@ def preparar_tela_hora(page, context, numero_solicitacao, id_trabalho, referenci
     return pagina_horas
 
 
-def acrescentar_trabalho_realizado(anterior, atual, data, descritivo):
+def acrescentar_trabalho_realizado(anterior, atual, data, descritivo, retry=False):
     # Não sobrescreve uma alteração inesperada durante o postback.
     if anterior and atual and not atual.startswith(anterior):
         raise RuntimeError(
@@ -1550,22 +1551,11 @@ def acrescentar_trabalho_realizado(anterior, atual, data, descritivo):
             "Envio interrompido para preservar o trabalho realizado."
         )
     existente = atual or anterior
+    addition = f"{data}: - {descritivo}"
+    if retry and ('\n' + addition + '\n') in ('\n' + existente.replace('\r\n', '\n') + '\n'):
+        return existente
     separador = "" if not existente or existente.endswith(("\n", "\r")) else "\n"
-    return existente + separador + f"{data}: - {descritivo}"
-
-
-def contar_horas_registradas(page, data, inicio, fim):
-    """Only count an actual time-table row, never the editable input values."""
-    rows = page.locator('[id*="gvwTempos"] tr')
-    if not rows.count():
-        return None
-    count = 0
-    for index in range(rows.count()):
-        cells = rows.nth(index).locator("td")
-        values = [cells.nth(i).inner_text().strip() for i in range(cells.count())]
-        if all(value in values for value in (data, inicio, fim)):
-            count += 1
-    return count
+    return existente + separador + addition
 
 
 def salvar_hora(page, hora, indice_hora, total_horas):
@@ -1774,7 +1764,8 @@ def salvar_hora(page, hora, indice_hora, total_horas):
     # caso o E-Desk tenha limpado o campo durante a atualização do formulário.
     texto_existente = campo_rea.input_value() or trabalho_realizado_anterior
     trabalho_realizado = acrescentar_trabalho_realizado(
-        trabalho_realizado_anterior, texto_existente, data, descritivo
+        trabalho_realizado_anterior, texto_existente, data, descritivo,
+        retry=hora.get('_receiptRetry') is True
     )
     log("")
     log("CONTEÚDO DO txtRea PARA ESTE LANÇAMENTO:")
@@ -1814,23 +1805,30 @@ def salvar_hora(page, hora, indice_hora, total_horas):
     # 9. SALVAMENTO PELA INTERFACE ORIGINAL DO E-DESK
     # Trata exclusivamente a confirmação de apontamento > 4 horas.
     # ============================================================
-    quantidade_anterior = contar_horas_registradas(page, data, inicio, fim)
-    if hora.get('_retryUnconfirmed') and quantidade_anterior is not None and quantidade_anterior > 0:
-        hour_event(hora, 'confirmed')
-        log('O mesmo intervalo já aparece no E-Desk. Nenhuma nova hora foi salva.')
-        return True
     hour_event(hora, "started")
+    hora['_saveOutcome'] = 'unknown'
     log("Clicando no botão Salvar do E-Desk...")
     requisicoes_salvar = set()
+    posts_observados = set()
+    requisicoes_concluidas = set()
     respostas_salvar = []
     confirmacoes = []
+    event_source = page.context
 
     def registrar_requisicao(requisicao):
         try:
-            if (
-                "TrabalhoRetroativo.aspx" not in requisicao.url
-                or requisicao.method != "POST"
-            ):
+            if requisicao.method != 'POST':
+                return
+            key = (requisicao.url, requisicao.post_data or '')
+            try:
+                sender = requisicao.frame.page
+            except Exception:
+                posts_observados.add(key)  # Cannot safely rule out a submitted request.
+                return
+            if sender is not page:
+                return
+            posts_observados.add(key)
+            if 'TrabalhoRetroativo.aspx' not in requisicao.url:
                 return
 
             dados_post = parse_qs(
@@ -1871,6 +1869,28 @@ def salvar_hora(page, hora, indice_hora, total_horas):
         except Exception:
             log("Não foi possível associar a resposta ao POST de salvamento.")
 
+    def registrar_conclusao(requisicao):
+        key = (requisicao.url, requisicao.post_data or '')
+        if key in requisicoes_salvar:
+            requisicoes_concluidas.add(key)
+
+    def post_completed():
+        return (bool(requisicoes_salvar) and requisicoes_salvar <= requisicoes_concluidas
+                and bool(respostas_salvar) and all(response.ok for response in respostas_salvar))
+
+    def post_finished():
+        return bool(requisicoes_salvar) and requisicoes_salvar <= requisicoes_concluidas and bool(respostas_salvar)
+
+    def pump(milliseconds):
+        for candidate in [page, *event_source.pages]:
+            try:
+                if not candidate.is_closed():
+                    candidate.wait_for_timeout(milliseconds)
+                    return
+            except Exception:
+                continue
+        raise RuntimeError('O navegador fechou antes da conferência das horas.')
+
     def tratar_dialogo(dialogo):
         mensagem = dialogo.message or ""
         log(f"Diálogo do navegador: {mensagem}")
@@ -1881,8 +1901,9 @@ def salvar_hora(page, hora, indice_hora, total_horas):
             dialogo.dismiss()
             raise RuntimeError(f"Confirmação inesperada do E-Desk: {mensagem}")
 
-    page.on("request", registrar_requisicao)
-    page.on("response", registrar_resposta)
+    event_source.on("request", registrar_requisicao)
+    event_source.on("response", registrar_resposta)
+    event_source.on('requestfinished', registrar_conclusao)
     page.on("dialog", tratar_dialogo)
     try:
         botao = page.locator("#cph1_BtAtu").first
@@ -1892,9 +1913,9 @@ def salvar_hora(page, hora, indice_hora, total_horas):
         # O E-Desk pode apresentar uma confirmação Telerik em HTML.
         # Só confirmamos se o texto indicar explicitamente > 4 horas.
         for tentativa in range(60):
-            page.wait_for_timeout(300)
+            pump(300)
             confirmou = False
-            if "telerik" not in confirmacoes:
+            if "telerik" not in confirmacoes and not page.is_closed():
                 confirmou = page.evaluate("""() => {
                 const visivel = e => {
                     const s = getComputedStyle(e);
@@ -1925,8 +1946,8 @@ def salvar_hora(page, hora, indice_hora, total_horas):
                 break
 
         inicio_espera_resposta = time.time()
-        while not respostas_salvar and time.time() - inicio_espera_resposta < 20:
-            page.wait_for_timeout(250)
+        while not post_finished() and time.time() - inicio_espera_resposta < 20:
+            pump(250)
 
         if not respostas_salvar:
             raise RuntimeError(
@@ -1939,34 +1960,29 @@ def salvar_hora(page, hora, indice_hora, total_horas):
             raise RuntimeError(
                 f"E-Desk retornou HTTP {resposta.status} ao salvar a HORA {indice_hora}."
             )
-        texto = resposta.text()
-        if "|error|" in texto.lower():
-            raise RuntimeError(
-                f"E-Desk retornou erro ASP.NET na HORA {indice_hora}: {texto[:500]}"
-            )
+        if not post_completed():
+            raise RuntimeError('O POST não terminou de forma comprovada. A conferência não repetirá este envio sem segurança.')
+        # Reading a response body after E-Desk detaches/closes its frame can
+        # stall Playwright. Persisted rows, not response HTML, confirm success.
         log(f"POST do E-Desk concluído: HTTP {resposta.status}.")
         if confirmacoes:
             log("Confirmação de mais de 4 horas tratada.")
         log("ATENÇÃO: HTTP 200 não comprova, sozinho, persistência da hora.")
+        hora['_saveOutcome'] = 'completed'
     except Exception:
-        if not requisicoes_salvar:
+        if not posts_observados:
+            hora['_saveOutcome'] = 'not_submitted'
             hour_event(hora, 'not_submitted')
+        elif post_completed():
+            hora['_saveOutcome'] = 'completed'
         raise
     finally:
-        page.remove_listener("request", registrar_requisicao)
-        page.remove_listener("response", registrar_resposta)
+        event_source.remove_listener("request", registrar_requisicao)
+        event_source.remove_listener("response", registrar_resposta)
+        event_source.remove_listener('requestfinished', registrar_conclusao)
         page.remove_listener("dialog", tratar_dialogo)
 
-    if quantidade_anterior is not None:
-        for _ in range(12):
-            quantidade_atual = contar_horas_registradas(page, data, inicio, fim)
-            if quantidade_atual is not None and quantidade_atual > quantidade_anterior:
-                hour_event(hora, "confirmed")
-                break
-            page.wait_for_timeout(250)
-
-    # Mantém a tela aberta para a próxima hora do mesmo trabalho.
-    # Não recarrega a página nem exige a tabela opcional gvwTempos.
+    # Confirmation is emitted only by the independent, fresh grid read.
     log(f"HORA {indice_hora}: operação de salvamento concluída na interface.")
 
     return True
@@ -2344,6 +2360,7 @@ def main():
         # ============================================================
 
         total_trabalhos = len(trabalhos)
+        delivery_results = []
 
         for indice_trabalho, trabalho in enumerate(trabalhos, start=1):
 
@@ -2475,46 +2492,36 @@ def main():
             pagina_hora = pagina_final
             referencia_horas = pagina_final._edesk_hours_reference
 
-            for indice_hora, hora in enumerate(horas, start=1):
-                log(f"PROCESSANDO HORA {indice_hora} DE {total_horas} NO MESMO TRABALHO")
-                pagina_hora = preparar_tela_hora(
-                    pagina_hora, context, solicitacao, id_trabalho, referencia_horas
-                )
-                # ----------------------------------------------------
-                # 5. SALVA SOMENTE ESTA HORA
-                # ----------------------------------------------------
+            # Always compare persisted rows before sending and after the batch.
+            # A successful HTTP response alone is not a registration receipt.
+            horas = [{**hour, 'data': obter_data_hora(hour),
+                      'inicio': obter_inicio_hora(hour), 'fim': obter_fim_hora(hour)}
+                     for hour in horas]
 
-                log("")
-                log(
-                    f"SALVANDO HORA "
-                    f"{indice_hora} DE {total_horas}"
-                )
+            def read_fresh_hours():
+                nonlocal pagina_hora
+                pagina_hora = preparar_tela_hora(pagina_hora, context, solicitacao, id_trabalho, referencia_horas)
+                pagina_hora.goto(pagina_hora.url, wait_until='domcontentloaded', timeout=30000)
+                pagina_hora = preparar_tela_hora(pagina_hora, context, solicitacao, id_trabalho, referencia_horas)
+                pagina_hora.wait_for_timeout(300)
+                return read_hours(pagina_hora)
 
-                pagina_hora_em_processamento = pagina_hora
-                indice_hora_em_processamento = indice_hora
-                sucesso_hora = salvar_hora(
-                    pagina_hora,
-                    hora,
-                    indice_hora,
-                    total_horas
-                )
+            def submit_hour(hour, index, retry):
+                nonlocal pagina_hora, pagina_hora_em_processamento, indice_hora_em_processamento
+                hour['_saveOutcome'] = 'not_submitted'
+                hour['_receiptRetry'] = retry
+                try:
+                    pagina_hora = preparar_tela_hora(pagina_hora, context, solicitacao, id_trabalho, referencia_horas)
+                    pagina_hora_em_processamento = pagina_hora
+                    indice_hora_em_processamento = index
+                    salvar_hora(pagina_hora, hour, index, total_horas)
+                except Exception as error:
+                    log(f'Hora {index}: {error}. Conferindo a listagem antes de qualquer nova tentativa.')
+                return hour['_saveOutcome']
 
-                if not sucesso_hora:
-                    raise RuntimeError(
-                        f"Não foi possível salvar a "
-                        f"HORA {indice_hora} DE {total_horas} "
-                        f"do trabalho {id_trabalho} "
-                        f"da solicitação {solicitacao}."
-                    )
-
-                log("")
-                log("****************************************")
-                log(
-                    f"HORA {indice_hora} DE "
-                    f"{total_horas} CONCLUÍDA"
-                )
-                log("****************************************")
-                log("")
+            receipt = deliver_hours(horas, read_fresh_hours, submit_hour, hour_event, stage)
+            delivery_results.append(receipt)
+            log(receipt['message'])
 
             # Encerra páginas temporárias apenas após TODAS as horas.
             for pagina_aberta in list(context.pages):
@@ -2562,7 +2569,8 @@ def main():
 
         log("")
         log("============================================================")
-        log("PROCESSAMENTO CONCLUÍDO COM SUCESSO")
+        log("PROCESSAMENTO CONCLUÍDO COM SUCESSO" if all(item['ok'] for item in delivery_results)
+            else "PROCESSAMENTO ENCERRADO COM HORAS PENDENTES DE CONFERÊNCIA")
         log("============================================================")
         log(
             f"TRABALHOS PROCESSADOS: "
@@ -2571,7 +2579,13 @@ def main():
         log("============================================================")
         log("")
 
-        return 0
+        receipt = {'operation': 'horas', 'ok': all(item['ok'] for item in delivery_results),
+                   **{key: sum(item[key] for item in delivery_results)
+                      for key in ('total', 'verified', 'retried', 'missing', 'uncertain')}}
+        receipt['message'] = (f"{receipt['verified']} hora(s) conferidas no E-Desk. Nenhuma hora pendente. Cadastro finalizado com sucesso."
+            if receipt['ok'] else f"{receipt['verified']} de {receipt['total']} hora(s) confirmadas; {receipt['missing']} não cadastradas e {receipt['uncertain']} sem comprovação. O sistema não repetiu envios sem confirmação de ausência para evitar duplicidade.")
+        print(json.dumps(receipt, ensure_ascii=False), flush=True)
+        return 0 if receipt['ok'] else 1
 
     except Exception as erro:
         log("")

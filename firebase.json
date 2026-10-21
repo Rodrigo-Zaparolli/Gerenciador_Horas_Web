@@ -37,6 +37,15 @@
     ],
     "headers": [
       {
+        "source": "/downloads/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "**/*.@(html|js|json)",
         "headers": [
           {
@@ -53,6 +62,16 @@
       }
     ],
     "redirects": [
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v2.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v36.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows.zip",
+        "destination": "/downloads/abertura-local-windows-v36.zip",
+        "type": 302
+      },
       {
         "source": "/downloads/integracao-edesk-completa-windows-v1.zip",
         "destination": "/downloads/integracao-edesk-completa-windows-v2.zip",

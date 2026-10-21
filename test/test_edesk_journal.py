@@ -13,6 +13,41 @@ HEADERS = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bear
 
 
 class JournalTests(unittest.TestCase):
+    def test_new_uncertain_retry_is_not_erased_by_an_earlier_not_submitted_event(self):
+        _, keys, _ = journal.prepare('owner', self.data)
+        events = Path(self.directory.name) / 'events.jsonl'
+        events.write_text('\n'.join(json.dumps({'key': keys[0], 'state': state})
+            for state in ['started', 'not_submitted', 'started']))
+        self.assertEqual(journal.finish('owner', keys, events), 1)
+        self.assertEqual(journal.states('owner')[keys[0]], 'uncertain')
+
+    def test_verified_hours_are_successful_even_if_browser_cleanup_fails(self):
+        def run(*args, **kwargs):
+            data = json.loads(Path(args[0][-1]).read_text(encoding='utf-8'))
+            Path(kwargs['env']['EDESK_EVENTS_FILE']).write_text('\n'.join(
+                json.dumps({'key': h['_sendKey'], 'state': 'confirmed'})
+                for work in data['trabalhos'] for h in work['horas']))
+            return process.return_value
+        with patch('cloud_run.main.subprocess.Popen') as process:
+            process.side_effect = run
+            process.return_value.communicate.return_value = ('browser closed after verification', '')
+            process.return_value.returncode = 1
+            response = self.client.post('/api/edesk/horas', headers=HEADERS,
+                json={'request': self.data, 'enviar': True})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['confirmed'])
+        self.assertEqual(response.json['completed'], 3)
+        self.assertIn('Nenhuma hora pendente', response.json['message'])
+
+    def test_already_confirmed_selection_is_successful_without_launching_browser(self):
+        _, keys, _ = journal.prepare('owner', self.data)
+        journal.set_state('owner', keys, 'confirmed')
+        with patch('cloud_run.main.subprocess.Popen') as process:
+            response = self.client.post('/api/edesk/horas', headers=HEADERS,
+                json={'request': self.data, 'enviar': True})
+            process.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['confirmed'])
     def test_retry_clears_old_failed_states_and_preserves_confirmed_hours(self):
         _, keys, _ = journal.prepare('owner', self.data)
         journal.set_state('owner', keys[:1], 'confirmed')

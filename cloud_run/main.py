@@ -146,6 +146,7 @@ def health_check():
     return jsonify({"status": "ok", "service": "gerenciador-horas-edesk",
                     "commentPercentage": True,
                     "commentPercentageReceipt": True,
+                    "hoursReconciliation": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),
                     "mode": "central" if LOCAL_MODE and central.enabled() else "local" if LOCAL_MODE else "cloud",
@@ -485,7 +486,8 @@ def run_edesk_automation(action: str):
             except ValueError as error:
                 return _failure(str(error), 409)
             if not keys:
-                return _failure("Todas as horas selecionadas já foram confirmadas. Nenhum novo envio foi feito.", 409)
+                return jsonify({'confirmed': True, 'statusCode': 200, 'completed': skipped,
+                    'total': skipped, 'message': f'{skipped} hora(s) já confirmadas. Nenhum cadastro foi repetido. Envio finalizado com sucesso.'})
         operation_status[uid] = {"operationId": str(body.get("operationId") or uuid.uuid4()), "stage": "opening"}
         total = len(keys) if action == 'horas' else len(data.get('fases', [])) if action == 'fases' else 1
         operation_status[uid]['total'] = total
@@ -583,7 +585,24 @@ def run_edesk_automation(action: str):
                 except (OSError, ValueError):
                     pass
             uncertain = journal.finish(uid, keys, events_file) if keys else 0
-            result = _last_json_object(stdout) if action in {"fases", "percentual", "comentarios"} else None
+            result = _last_json_object(stdout) if action in {"fases", "percentual", "comentarios", "horas"} else None
+            if keys:
+                states = journal.states(uid)
+                verified = sum(states.get(key) == 'confirmed' for key in keys)
+                if verified == len(keys):
+                    # A browser cleanup/navigation error cannot undo verified
+                    # registrations. Every key still needs its persisted receipt.
+                    if process.returncode != 0:
+                        app.logger.warning('Hours confirmed; browser cleanup exited with code %s', process.returncode)
+                    message = f'{verified} hora(s) conferidas no E-Desk. Nenhuma hora pendente. Cadastro finalizado com sucesso.'
+                    if result and result.get('operation') == 'horas' and result.get('retried'):
+                        message += f" {result['retried']} hora(s) reprocessadas após conferência de ausência."
+                    if skipped:
+                        message += f' {skipped} hora(s) já confirmadas foram preservadas.'
+                    operation_status[uid].update(completed=len(keys), stage='finished')
+                    return jsonify({'confirmed': True, 'statusCode': 200, 'completed': verified + skipped,
+                        'total': len(keys) + skipped, 'message': message,
+                        'responseBody': json.dumps(result, ensure_ascii=False) if result else ''})
             if process.returncode != 0:
                 app.logger.warning(
                     "E-Desk automation failed: action=%s exit_code=%s",
@@ -591,7 +610,8 @@ def run_edesk_automation(action: str):
                     process.returncode,
                 )
                 return _failure(
-                    _automation_failure_message(stdout + "\n" + _stderr),
+                    result['message'] if action == 'horas' and result and result.get('operation') == 'horas'
+                        and isinstance(result.get('message'), str) else _automation_failure_message(stdout + "\n" + _stderr),
                     502,
                     json.dumps(result, ensure_ascii=False) if result else "",
                 )

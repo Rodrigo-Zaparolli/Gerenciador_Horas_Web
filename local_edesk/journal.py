@@ -112,7 +112,7 @@ def prepare(uid, data, retry_uncertain=False):
 
 
 def finish(uid, keys, events_file):
-    attempted, confirmed, not_submitted = set(), set(), set()
+    latest = {}
     if events_file.exists():
         for line in events_file.read_text(encoding="utf-8").splitlines():
             try:
@@ -122,14 +122,11 @@ def finish(uid, keys, events_file):
             key = event.get("key")
             if key not in keys:
                 continue
-            if event.get("state") == "started":
-                attempted.add(key)
-            elif event.get("state") == "confirmed":
-                confirmed.add(key)
-            elif event.get("state") == "not_submitted":
-                not_submitted.add(key)
-    attempted -= not_submitted
-    set_state(uid, attempted - confirmed, "uncertain")
+            if event.get('state') in {'started', 'confirmed', 'not_submitted'}:
+                latest[key] = event['state']
+    attempted = {key for key, state in latest.items() if state == 'started'}
+    confirmed = {key for key, state in latest.items() if state == 'confirmed'}
+    set_state(uid, attempted, "uncertain")
     set_state(uid, confirmed, "confirmed")
     delete(uid, set(keys) - attempted - confirmed)
-    return len(attempted - confirmed)
+    return len(attempted)

@@ -1,8 +1,12 @@
 {
   "changes": [
+    "Horas: confere os registros no retroativo ao finalizar e apresenta sucesso quando todas as horas selecionadas estiverem confirmadas.",
+    "Horas ausentes: nova tentativa automatica limitada, somente depois de comprovar a ausencia. Registros existentes e envios com resposta incerta nao sao repetidos.",
+    "Correcao do historico de trabalho realizado para preservar o texto nas novas tentativas.",
     "Revisão geral: limpeza de arquivos antigos sem uso, estados redundantes e avisos de análise do código.",
     "Movimentação de projetos: corrige a nova conferência após uma tentativa interrompida com destino vazio e respeita a seleção da pasta inteira em vez de Documentos. Destinos com arquivos continuam protegidos.",
     "Remove uma consulta de foto de perfil que não era usada pelo painel. Mantém os recursos de planilha, comentários, horas e métricas.",
-    "Atualize e reinicie a integração local v35 para receber a correção da movimentação."
+    "Downloads da integração com nome versionado e links antigos redirecionados, para evitar pacotes antigos reaproveitados pelo cache.",
+    "Atualize e reinicie a integracao local v36 para habilitar a conferencia de horas."
   ]
 }

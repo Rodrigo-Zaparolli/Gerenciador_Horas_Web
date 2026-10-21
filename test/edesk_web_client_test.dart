@@ -6,6 +6,38 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('Hours require persisted receipt support before any POST', () async {
+    final methods = <String>[];
+    final result = await EdeskWebClient(
+      apiUrl: 'http://127.0.0.1:8765',
+      tokenProvider: () async => 'token',
+      client: MockClient((request) async {
+        methods.add(request.method);
+        return http.Response('{"mode":"local"}', 200);
+      }),
+    ).execute(requestJson: '{}', enviar: true, script: 'edesk_horas.py');
+    expect(result.confirmed, false);
+    expect(result.statusCode, 503);
+    expect(methods, ['GET']);
+    expect(result.message, contains('v36'));
+  });
+
+  test('Hours propagate persisted receipt success from the integration', () async {
+    final methods = <String>[];
+    final result = await EdeskWebClient(
+      apiUrl: 'http://127.0.0.1:8765',
+      tokenProvider: () async => 'token',
+      client: MockClient((request) async {
+        methods.add(request.method);
+        return http.Response(request.method == 'GET'
+            ? '{"mode":"local","hoursReconciliation":true}'
+            : '{"confirmed":true,"message":"Cadastro finalizado com sucesso"}', 200);
+      }),
+    ).execute(requestJson: '{}', enviar: true, script: 'edesk_horas.py');
+    expect(result.confirmed, true);
+    expect(methods, ['GET', 'POST']);
+  });
+
   test('standalone percentage never posts to an old integration', () async {
     final calls = <http.Request>[];
     final result = await EdeskWebClient(apiUrl: 'http://127.0.0.1:8765',

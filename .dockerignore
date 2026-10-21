@@ -11,6 +11,7 @@
 !edesk_bot/phase_confirmation.py
 !edesk_bot/send_progress.py
 !edesk_bot/work_selection.py
+!edesk_bot/hour_receipt.py
 !local_edesk/
 !local_edesk/__init__.py
 !local_edesk/central.py

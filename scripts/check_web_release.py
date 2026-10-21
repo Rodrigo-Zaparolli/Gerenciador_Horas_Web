@@ -19,6 +19,10 @@ assert 'web-release.json' not in (root / 'flutter_service_worker.js').read_text(
 assert 'flutter_bootstrap.js?release=' in (root / 'index.html').read_text(encoding='utf-8')
 assert 'voice_recognition.js' not in (root / 'index.html').read_text(encoding='utf-8'), 'Voice must not start in this release'
 digest = hashlib.sha256(compiled).hexdigest()
+download_page = (root / 'integracao-completa.html').read_text(encoding='utf-8')
+downloads = re.findall(r'href="(/downloads/[^"?]+\.zip)"', download_page)
+for download in downloads:
+    assert (root / download.lstrip('/')).is_file(), f'Advertised download missing: {download}'
 print(f'LOCAL_RELEASE_OK: {release} SHA256={digest}')
 if args.public:
     import requests
