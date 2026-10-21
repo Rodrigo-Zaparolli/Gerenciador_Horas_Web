@@ -3,6 +3,7 @@ import 'spreadsheet_store.dart';
 import 'company_contacts.dart';
 import 'project_spreadsheet_kind.dart';
 import 'checklist_status_preview.dart';
+import 'checklist_live_preview.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../../core/config/pilot_feature_access.dart';
@@ -44,7 +45,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Map<String, dynamic>? data;
   String? error, notice, owner;
   bool busy = false;
-  DialogRoute<void>? previewRoute;
+  late final ChecklistLivePreview livePreview;
   List<CompanyContact> contacts = [];
   SpreadsheetStore? get store =>
       widget.store ??
@@ -82,13 +83,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   void initState() {
     super.initState();
     owner = uid;
+    livePreview = ChecklistLivePreview(calculate: calculateStatus);
     if (widget.uidProvider == null)
       subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
         if (mounted && !authorized) {
-          final route = previewRoute;
-          if (route != null && route.isActive) {
-            Navigator.of(context, rootNavigator: true).removeRoute(route);
-          }
+          livePreview.clear();
           setState(() {
             data = null;
             pending.clear();
@@ -105,6 +104,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   @override
   void dispose() {
     subscription?.cancel();
+    livePreview.dispose();
     super.dispose();
   }
 
@@ -196,6 +196,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       error = null;
     });
     try {
+      await livePreview.pauseAndWait();
+      if (!mounted || !authorized) return;
       final result = await request('excel-editor-read');
       if (!spreadsheetMatchesProject(result, widget.project.serviceType)) {
         throw StateError(
@@ -212,41 +214,27 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+        if (authorized && data != null) livePreview.resume(clear: true);
+      }
     }
   }
 
-  Future<void> previewStatus() async {
-    if (!authorized || busy || data == null) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      final result = await request('excel-editor-preview',
-          revision: data!['revision'] as String,
-          changes: pending.values.toList());
-      if (!mounted || !authorized) return;
-      if (result['preview'] != true ||
-          result['statusPreview'] is! Map ||
-          !spreadsheetMatchesProject(result, widget.project.serviceType)) {
-        throw StateError(
-            'A integração não confirmou a prévia deste checklist. Atualize para a v28.');
-      }
-      final route = DialogRoute<void>(
-          context: context,
-          builder: (_) => ChecklistStatusPreview(
-              data: Map<String, dynamic>.from(result['statusPreview'] as Map),
-              unsaved: pending.isNotEmpty));
-      setState(() => busy = false);
-      previewRoute = route;
-      await Navigator.of(context, rootNavigator: true).push(route);
-    } catch (e) {
-      if (mounted && authorized) setState(() => error = e.toString());
-    } finally {
-      previewRoute = null;
-      if (mounted) setState(() => busy = false);
+  Future<Map<String, dynamic>> calculateStatus() async {
+    if (!mounted || !authorized || data == null)
+      throw StateError('A conta mudou.');
+    final result = await request('excel-editor-preview',
+        revision: data!['revision'] as String,
+        changes: pending.values.toList());
+    if (!mounted || !authorized) throw StateError('A conta mudou.');
+    if (result['preview'] != true ||
+        result['statusPreview'] is! Map ||
+        !spreadsheetMatchesProject(result, widget.project.serviceType)) {
+      throw StateError(
+          'A integra\u00e7\u00e3o n\u00e3o confirmou a pr\u00e9via. Atualize e reinicie a integra\u00e7\u00e3o v29.');
     }
+    return Map<String, dynamic>.from(result['statusPreview'] as Map);
   }
 
   Future<void> save() async {
@@ -257,6 +245,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       notice = null;
     });
     try {
+      await livePreview.pauseAndWait();
+      if (!mounted || !authorized) return;
       final result = await request('excel-editor-write',
           revision: data!['revision'] as String,
           changes: pending.values.toList());
@@ -287,7 +277,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+        if (authorized && data != null) livePreview.resume(clear: true);
+      }
     }
   }
 
@@ -322,6 +315,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           };
         }
         notice = null;
+        livePreview.invalidate();
       });
 
   Future<void> close() async {
@@ -484,92 +478,85 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                 filter == 'Concluídas' && current(f) == 1 ||
                 filter == 'Pendentes' && current(f) != 1))
         .toList();
-    final progress = data!['progress'];
-    return Column(children: [
-      Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: OutlinedButton.icon(
-                  onPressed: busy || !authorized ? null : previewStatus,
-                  icon: const Icon(Icons.preview_outlined),
-                  label: Text(
-                      busy ? 'Calculando prévia…' : 'Prévia da porcentagem')))),
-      if (progress is num)
-        Padding(
-            padding: const EdgeInsets.all(12),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                  'Progresso do projeto: ${(progress * 100).toStringAsFixed(0)}%'),
-              const SizedBox(height: 6),
-              LinearProgressIndicator(value: progress.toDouble()),
-              const SizedBox(height: 4),
-              const Text(
-                  'Calculado pelo Excel na última leitura; atualizado após salvar.',
-                  style: TextStyle(fontSize: 11))
-            ])),
-      Padding(
-          padding: const EdgeInsets.all(12),
-          child: Wrap(spacing: 12, runSpacing: 8, children: [
-            SizedBox(
-                width: 260,
-                child: TextField(
-                    decoration: const InputDecoration(
-                        hintText: 'Buscar tarefa...',
-                        prefixIcon: Icon(Icons.search)),
-                    onChanged: (v) => setState(() => search = v))),
-            for (final item in ['Todas', 'Pendentes', 'Concluídas'])
-              ChoiceChip(
-                  label: Text(item),
-                  selected: filter == item,
-                  onSelected: (_) => setState(() => filter = item))
-          ])),
-      Expanded(
-          child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-            for (final group in all.map((f) => f['group'] as String).toSet())
-              Card(
-                  child: ExpansionTile(
-                      title: Text(group),
-                      subtitle: Text(
-                          '${shown.where((f) => f['group'] == group).length} tarefas neste filtro'),
+    return LayoutBuilder(
+        builder: (context, constraints) => Column(children: [
+              SizedBox(
+                  height: (constraints.maxHeight * .44).clamp(100.0, 275.0),
+                  child: ChecklistStatusPanel(
+                      controller: livePreview, unsaved: pending.isNotEmpty)),
+              Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Wrap(spacing: 12, runSpacing: 8, children: [
+                    SizedBox(
+                        width: 260,
+                        child: TextField(
+                            decoration: const InputDecoration(
+                                hintText: 'Buscar tarefa...',
+                                prefixIcon: Icon(Icons.search)),
+                            onChanged: (v) => setState(() => search = v))),
+                    for (final item in ['Todas', 'Pendentes', 'Concluídas'])
+                      ChoiceChip(
+                          label: Text(item),
+                          selected: filter == item,
+                          onSelected: (_) => setState(() => filter = item))
+                  ])),
+              Expanded(
+                  child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
-                    for (final task in shown.where((f) => f['group'] == group))
-                      ListTile(
-                          title: Text(task['label'] as String),
-                          subtitle: Text(
-                              'Estimado: ${task['estimated']}${task['note'] == '' ? '' : '\n${task['note']}'}'),
-                          trailing: SizedBox(
-                              width: 85,
-                              child: DropdownButton<double>(
-                                  isExpanded: true,
-                                  value: const [
-                                    0.0,
-                                    .25,
-                                    .5,
-                                    .75,
-                                    1.0
-                                  ].contains((current(task) as num).toDouble())
-                                      ? (current(task) as num).toDouble()
-                                      : null,
-                                  hint: Text(
-                                      '${((current(task) as num) * 100).round()}%'),
-                                  items: [
-                                    for (final v in [0.0, .25, .5, .75, 1.0])
-                                      DropdownMenuItem(
-                                          value: v,
-                                          child: Text('${(v * 100).round()}%'))
-                                  ],
-                                  onChanged: busy || !authorized
-                                      ? null
-                                      : (v) {
-                                          if (v != null) change(task, v);
-                                        })))
+                    for (final group
+                        in all.map((f) => f['group'] as String).toSet())
+                      Card(
+                          child: ExpansionTile(
+                              title: Text(group),
+                              subtitle: Text(
+                                  '${shown.where((f) => f['group'] == group).length} tarefas neste filtro'),
+                              children: [
+                            for (final task
+                                in shown.where((f) => f['group'] == group))
+                              ListTile(
+                                  title: Text(task['label'] as String),
+                                  subtitle: Text(
+                                      'Estimado: ${task['estimated']}${task['note'] == '' ? '' : '\n${task['note']}'}'),
+                                  trailing: SizedBox(
+                                      width: 85,
+                                      child: DropdownButton<double>(
+                                          isExpanded: true,
+                                          value: const [
+                                            0.0,
+                                            .25,
+                                            .5,
+                                            .75,
+                                            1.0
+                                          ].contains((current(task) as num)
+                                                  .toDouble())
+                                              ? (current(task) as num)
+                                                  .toDouble()
+                                              : null,
+                                          hint: Text(
+                                              '${((current(task) as num) * 100).round()}%'),
+                                          items: [
+                                            for (final v in [
+                                              0.0,
+                                              .25,
+                                              .5,
+                                              .75,
+                                              1.0
+                                            ])
+                                              DropdownMenuItem(
+                                                  value: v,
+                                                  child: Text(
+                                                      '${(v * 100).round()}%'))
+                                          ],
+                                          onChanged: busy || !authorized
+                                              ? null
+                                              : (v) {
+                                                  if (v != null)
+                                                    change(task, v);
+                                                })))
+                          ]))
                   ]))
-          ]))
-    ]);
+            ]));
   }
 
   @override

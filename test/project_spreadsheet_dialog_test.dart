@@ -94,11 +94,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('25%').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Prévia da porcentagem'));
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
-    expect(find.text('Progresso total: 64.0%'), findsOneWidget);
-    expect(find.textContaining('Simulação com as alterações pendentes'),
-        findsOneWidget);
+    expect(find.text('Total: 64,0%'), findsOneWidget);
+    expect(
+        find.textContaining('Prévia das alterações pendentes'), findsOneWidget);
     expect(calls.last['changes'], [
       {
         'sheet': 'Checklist-Processo',
@@ -109,8 +109,7 @@ void main() {
     ]);
     expect(calls.any((c) => c['action'] == 'excel-editor-write'), isFalse);
     expect(store.writes, writes);
-    await tester.tap(find.text('Voltar ao checklist'));
-    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('1 alteração(ões) não salva(s)'), findsOneWidget);
   });
   test('Cached checklist must match the current service type', () {
@@ -184,10 +183,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar na planilha'));
     await tester.pumpAndSettle();
-    expect(calls.last['serviceType'], 'Professional');
-    expect((calls.last['changes'] as List).single['sheet'],
-        'Maker Checklist-Processo');
-    expect((calls.last['changes'] as List).single['cell'], 'E5');
+    final write =
+        calls.singleWhere((call) => call['action'] == 'excel-editor-write');
+    expect(write['serviceType'], 'Professional');
+    expect(
+        (write['changes'] as List).single['sheet'], 'Maker Checklist-Processo');
+    expect((write['changes'] as List).single['cell'], 'E5');
     expect(store.data!['checklistSheet'], 'Maker Checklist-Processo');
   });
 

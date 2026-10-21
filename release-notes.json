@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Corrigida a recusa da conta autorizada ao abrir Prévia da porcentagem: o servidor agora repassa a identidade validada para a nova ação.",
-    "A prévia permanece restrita à conta piloto. Atualize e reinicie a integração local v29 para aplicar a correção."
+    "Checklist: a tabela Status Projeto agora permanece visível na própria tela e atualiza automaticamente após os ajustes de porcentagem, sem abrir outra janela.",
+    "A prévia agrupa alterações rápidas, aguarda o cálculo do Excel e indica quando os valores estão sendo atualizados. Respostas antigas não substituem as alterações mais recentes.",
+    "A gravação continua pelo botão Salvar na planilha. O recurso utiliza a integração v29 já disponível e permanece restrito à conta piloto."
   ]
 }

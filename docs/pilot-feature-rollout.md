@@ -129,6 +129,17 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+A prévia Status Projeto fica fixa acima das tarefas, com rolagem própria em
+telas menores. Ao abrir o checklist, calcula os valores; cada edição invalida
+a prévia e agenda recálculo após 700 ms. ChecklistLivePreview mantém apenas
+uma operação por vez, descarta respostas de gerações anteriores e calcula os
+últimos valores após uma operação em andamento. Erros mantêm os valores
+anteriores explicitamente marcados como desatualizados e permitem tentar novamente.
+Salvar/recarregar suspendem a fila e aguardam o cálculo ativo antes de acessar
+o Excel. Fechar cancela o agendamento; trocar de conta limpa os dados e invalida
+respostas pendentes. A prévia não escreve no original nem no cache Firebase.
+Utiliza excel-editor-preview da v29, sem alteração adicional da integração.
+
 Na v29, ambos os endpoints de arquivos locais repassam verified_user em todas
 as ações, sempre a partir do token Firebase validado, sem lista duplicada de
 ações privilegiadas no transporte. A autorização por ação permanece no serviço.
@@ -142,8 +153,8 @@ o original. O temporário é removido em finally. Rejeita revisão antiga.
 Enterprise usa Dados!AG5:AL11, o mesmo bloco do comentário. Maker não possui
 esse bloco ligado à sua aba: usa C (progresso de etapa), R (pesos calculados)
 e E acima do cabeçalho (total), todos calculados pelo Excel da aba Maker.
-A interface preserva alterações pendentes e cache; a prévia é explícita,
-sem recalcular a cada tecla. Fechar a prévia retorna ao checklist sem salvar.
+A interface preserva alterações pendentes e cache. O botão inicial de prévia
+foi substituído pelo painel contínuo descrito acima, sem salvar automaticamente.
 
 Na v27, quando o vínculo aponta para Documentos, a janela solicita a pasta
 principal. sourceReference é autorizado separadamente e só permite a própria
