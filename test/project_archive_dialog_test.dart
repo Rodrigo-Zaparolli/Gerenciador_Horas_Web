@@ -123,8 +123,6 @@ void main() {
     await open(tester, service);
     expect(find.textContaining('17 arquivos e 4 subpastas'), findsOneWidget);
     expect(find.textContaining('Documentos/Projeto.xlsm'), findsOneWidget);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar e mover'));
     await tester.pumpAndSettle();
     expect(service.applies, 0);
@@ -137,8 +135,6 @@ void main() {
       (tester) async {
     final service = FakeArchiveService()..cleanupPending = true;
     await open(tester, service);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar e mover'));
     await tester.pumpAndSettle();
     expect(
@@ -171,7 +167,7 @@ void main() {
       r'C:\Clientes\2261144 - Orquinare',
       r'C:\Finalizados',
     ]);
-    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     expect(service.calls.contains('project-move-commit'), isFalse);
   });
 
@@ -187,11 +183,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(service.selectedRoot, r'C:\Clientes\2261144 - Orquinare');
     expect(service.calls, ['pick-folder', 'project-move-prepare']);
-    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-        isNull);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
+        isNotNull);
     await tester.tap(find.text('Confirmar e mover'));
     await tester.pumpAndSettle();
     expect(service.calls.where((v) => v == 'project-move-commit').length, 1);
@@ -209,8 +203,11 @@ void main() {
         isNull);
     service.prepareWait!.complete();
     await tester.pumpAndSettle();
-    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     expect(service.calls, ['project-move-prepare']);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull);
+    expect(service.calls.contains('project-move-commit'), isFalse);
   });
 
   testWidgets(
@@ -222,7 +219,7 @@ void main() {
     await tester.tap(find.text('Autorizar vínculos neste PC'));
     await tester.pumpAndSettle();
     expect(service.calls.where((v) => v == 'authorize').length, 3);
-    expect(find.byType(CheckboxListTile), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     expect(service.calls.contains('project-move-commit'), isFalse);
   });
 
@@ -230,8 +227,6 @@ void main() {
       (tester) async {
     final service = FakeArchiveService()..failApply = true;
     await open(tester, service);
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirmar e mover'));
     await tester.pumpAndSettle();
     service.failApply = false;

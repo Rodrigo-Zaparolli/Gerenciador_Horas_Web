@@ -48,7 +48,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   String? destination, sourceReference, error, message;
   String activity = '';
   Map<String, dynamic>? plan, moved;
-  bool busy = false, confirmed = false;
+  bool busy = false;
   bool get authorized => service.allowed && service.uid == owner;
   bool get needsProjectRoot =>
       sourceReference == null &&
@@ -83,7 +83,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       activity = 'Carregando destino…';
       error = null;
       plan = null;
-      confirmed = false;
     });
     try {
       final value = await service.loadDestination(owner);
@@ -118,7 +117,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       setState(() {
         destination = reference;
         plan = null;
-        confirmed = false;
       });
       final value =
           ArchiveDestination.fromData({'destination': reference}, owner);
@@ -150,7 +148,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       setState(() {
         sourceReference = selected['reference'] as String;
         plan = null;
-        confirmed = false;
       });
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
@@ -167,7 +164,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       activity = 'Autorize os caminhos solicitados na janela do Windows.';
       error = null;
       plan = null;
-      confirmed = false;
+
       message = null;
     });
     try {
@@ -206,7 +203,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
       error = null;
       message = null;
       plan = null;
-      confirmed = false;
     });
     try {
       await checkCompleted();
@@ -224,8 +220,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
   }
 
   Future<void> move() async {
-    if (busy || !authorized || plan == null || !confirmed && moved == null)
-      return;
+    if (busy || !authorized || plan == null) return;
     setState(() {
       busy = true;
       activity = moved == null
@@ -347,7 +342,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                                 if (mounted && authorized && saved == true) {
                                   setState(() {
                                     plan = null;
-                                    confirmed = false;
                                   });
                                   await loadDestination();
                                 }
@@ -357,7 +351,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                     if (plan != null) ...[
                       const Divider(),
                       const Text(
-                          'Confira os caminhos abaixo e marque a confirmação para liberar o botão.'),
+                          'Confira os caminhos e os arquivos abaixo. Clique em Confirmar e mover para executar a movimentação.'),
                       SelectableText(
                           'De: ${plan!['source']}\nPara: ${plan!['target']}'),
                       if (plan!['emptyTargetIdentity'] != null)
@@ -377,16 +371,6 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                         Text(plan!['excelInside'] == true
                             ? 'A planilha está dentro da pasta e terá seu vínculo atualizado.'
                             : 'A planilha está fora da pasta e permanecerá no local atual.'),
-                      CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: confirmed,
-                          title: Text(plan!['alreadyMoved'] == true
-                              ? 'Conferi os caminhos e quero recuperar os vínculos.'
-                              : 'Conferi os caminhos e confirmo a movimentação.'),
-                          onChanged: busy || !authorized
-                              ? null
-                              : (value) =>
-                                  setState(() => confirmed = value == true)),
                     ],
                     if (error != null)
                       SelectableText(error!,
@@ -415,12 +399,7 @@ class _ProjectArchiveDialogState extends State<ProjectArchiveDialog> {
                       : prepare,
                   child: const Text('Conferir movimentação')),
             FilledButton(
-                onPressed: busy ||
-                        !authorized ||
-                        plan == null ||
-                        !confirmed && moved == null
-                    ? null
-                    : move,
+                onPressed: busy || !authorized || plan == null ? null : move,
                 child: Text(moved == null
                     ? 'Confirmar e mover'
                     : 'Atualizar vínculos')),

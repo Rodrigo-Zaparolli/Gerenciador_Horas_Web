@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Login: opção Manter conectado, marcada por padrão, para preservar a sessão neste navegador ao fechar e reiniciar o computador.",
-    "Com a opção desmarcada, o acesso fica limitado à sessão do navegador. O botão Sair continua encerrando o acesso.",
-    "Não requer atualizar a integração local E-Desk."
+    "Mover pasta: removida a caixa de confirmação adicional. O botão Confirmar e mover fica habilitado após a conferência da pasta, dos arquivos e do destino.",
+    "A movimentação continua sendo executada somente ao clicar no botão. A verificação automática não move arquivos.",
+    "Não exige nova atualização da integração local; utiliza a v32 já instalada."
   ]
 }
