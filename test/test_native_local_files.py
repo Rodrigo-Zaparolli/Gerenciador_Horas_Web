@@ -112,6 +112,64 @@ print('RESTARTED_PATHS_OK')
         with patch.dict(os.environ, {'LOCALAPPDATA': str(self.root)}, clear=True):
             self.assertEqual(local_files.database_path(), self.root / 'GerenciadorHoras' / 'integracao' / 'local-files.sqlite3')
 
+    def test_new_selections_from_an_already_imported_installation_are_recovered(self):
+        legacy = local_files.LEGACY_DB_PATH
+        legacy.parent.mkdir()
+        folder = self.root / 'Orquinare' / 'Documentos'
+        folder.mkdir(parents=True)
+        workbook = folder / 'Projeto.xlsx'
+        workbook.write_bytes(b'original workbook')
+        refs = [str(folder), str(workbook)]
+        with closing(sqlite3.connect(legacy)) as old, old:
+            old.execute('CREATE TABLE files(uid TEXT,reference TEXT,path TEXT,kind TEXT,PRIMARY KEY(uid,reference))')
+            old.execute('INSERT INTO files VALUES(?,?,?,?)', ('owner', refs[0], str(folder), 'folder'))
+        local_files.import_authorizations(legacy)
+        before = legacy.stat()
+        with closing(sqlite3.connect(legacy)) as old, old:
+            old.execute('INSERT INTO files VALUES(?,?,?,?)', ('owner', refs[1], str(workbook), 'file'))
+        os.utime(legacy, ns=(before.st_atime_ns, before.st_mtime_ns + 1000000000))
+        with patch.object(local_files, 'choose') as picker, patch.object(local_files.os, 'startfile') as opener:
+            for ref in refs:
+                self.assertTrue(local_files.execute('owner', {'action': 'open', 'reference': ref})['opened'])
+            picker.assert_not_called()
+            self.assertEqual(opener.call_count, 2)
+
+    def test_missing_database_recovers_prior_native_grants_without_picker(self):
+        folder = self.root / 'Orquinare' / 'Documentos'
+        folder.mkdir(parents=True)
+        workbook = folder / 'Projeto.xlsx'
+        workbook.write_bytes(b'original workbook')
+        refs = []
+        for action, path in [('pick-folder', folder), ('pick-file', workbook)]:
+            with patch.object(local_files, 'choose', return_value=str(path)):
+                refs.append(local_files.execute('owner', {'action': action})['reference'])
+        self.assertTrue(local_files._recovery_path().exists())
+        local_files.DB_PATH.unlink()
+        with patch.object(local_files, 'choose') as picker, patch.object(local_files.os, 'startfile') as opener:
+            for ref, path in zip(refs, [folder, workbook]):
+                local_files.execute('owner', {'action': 'open', 'reference': ref})
+                self.assertEqual(opener.call_args.args, (str(path.resolve()),))
+            picker.assert_not_called()
+        with self.assertRaises(ValueError):
+            local_files.execute('other', {'action': 'read', 'reference': refs[1]})
+        with self.assertRaises(ValueError):
+            local_files.execute('other', {'action': 'read', 'reference': str(workbook)})
+
+    def test_original_once_only_migration_marker_is_upgraded_and_rechecked(self):
+        legacy = local_files.LEGACY_DB_PATH
+        legacy.parent.mkdir()
+        folder = self.root / 'Documentos'
+        folder.mkdir()
+        with closing(sqlite3.connect(legacy)) as old, old:
+            old.execute('CREATE TABLE files(uid TEXT,reference TEXT,path TEXT,kind TEXT,PRIMARY KEY(uid,reference))')
+            old.execute('INSERT INTO files VALUES(?,?,?,?)', ('owner', str(folder), str(folder), 'folder'))
+        with closing(sqlite3.connect(local_files.DB_PATH)) as current, current:
+            current.execute('CREATE TABLE imported_file_databases(source TEXT PRIMARY KEY)')
+            current.execute('INSERT INTO imported_file_databases VALUES(?)', (str(legacy.resolve()),))
+        with patch.object(local_files, 'choose') as picker, patch.object(local_files.os, 'startfile'):
+            self.assertTrue(local_files.execute('owner', {'action': 'open', 'reference': str(folder)})['opened'])
+            picker.assert_not_called()
+
     def test_old_links_migrate_and_survive_another_extraction_and_restart(self):
         folder = self.root / 'Orquinare' / 'Documentos'
         folder.mkdir(parents=True)

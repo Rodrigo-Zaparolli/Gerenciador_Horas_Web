@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Mover pasta: removida a caixa de confirmação adicional. O botão Confirmar e mover fica habilitado após a conferência da pasta, dos arquivos e do destino.",
-    "A movimentação continua sendo executada somente ao clicar no botão. A verificação automática não move arquivos.",
-    "Não exige nova atualização da integração local; utiliza a v32 já instalada."
+    "Pasta e planilha: alterações de etapa, status e finalização preservam os vínculos mais recentes. Campos não alterados no editor deixam de sobrescrever caminhos atualizados em outra tela.",
+    "Integração: recupera novas autorizações das instalações anteriores após a primeira migração e mantém cópia local de recuperação dos vínculos já autorizados.",
+    "Requer atualizar e reiniciar a integração local v33 para aplicar a recuperação. A cópia permanece no perfil do Windows, fora da pasta extraída."
   ]
 }

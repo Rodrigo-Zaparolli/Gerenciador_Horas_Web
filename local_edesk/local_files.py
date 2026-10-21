@@ -1,5 +1,6 @@
 """User-selected Windows paths, scoped to Firebase UID, never supplied to startfile by HTTP."""
 import base64
+import logging
 import os
 import re
 import sqlite3
@@ -23,7 +24,8 @@ def database_path():
 DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
-PROTOCOL_VERSION = 'persistent-file-links-5'
+recovery_lock = threading.Lock()
+PROTOCOL_VERSION = 'persistent-file-links-6'
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 PROJECT_ROOT_MOVE = True
 VERIFIED_PROJECT_MOVE = True
@@ -109,31 +111,89 @@ def _connection():
     con = sqlite3.connect(DB_PATH, timeout=10)
     try:
         with con:
+            had_files = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='files'").fetchone()
             con.execute('CREATE TABLE IF NOT EXISTS files(uid TEXT, reference TEXT, path TEXT, kind TEXT, PRIMARY KEY(uid,reference))')
+            if not had_files:
+                _restore_authorizations(con)
             _import_legacy(con)
             yield con
+        if con.total_changes or not _recovery_path().exists():
+            _backup_authorizations(con)
     finally:
         con.close()
+
+
+def _recovery_path():
+    return DB_PATH.with_name(DB_PATH.name + '.authorizations.sqlite3')
+
+
+def _restore_authorizations(con):
+    recovery = _recovery_path()
+    if not recovery.is_file():
+        return
+    try:
+        with closing(sqlite3.connect(recovery.resolve().as_uri() + '?mode=ro', uri=True, timeout=10)) as saved:
+            rows = saved.execute('SELECT uid,reference,path,kind FROM files').fetchall()
+        con.executemany('INSERT OR IGNORE INTO files VALUES(?,?,?,?)', rows)
+    except sqlite3.DatabaseError:
+        logging.getLogger(__name__).warning('A copia local de autorizacoes nao pode ser recuperada.')
+
+
+def _backup_authorizations(con):
+    # Only native grants already committed for this Windows user are copied.
+    # Never rebuild permissions from a path supplied by a web request.
+    recovery = _recovery_path()
+    temporary = recovery.with_name(recovery.name + '.' + uuid.uuid4().hex + '.tmp')
+    try:
+        with recovery_lock:
+            rows = con.execute('SELECT uid,reference,path,kind FROM files').fetchall()
+            with closing(sqlite3.connect(temporary)) as saved:
+                with saved:
+                    saved.execute('CREATE TABLE files(uid TEXT,reference TEXT,path TEXT,kind TEXT,PRIMARY KEY(uid,reference))')
+                    saved.executemany('INSERT INTO files VALUES(?,?,?,?)', rows)
+            os.replace(temporary, recovery)
+    except (OSError, sqlite3.DatabaseError):
+        logging.getLogger(__name__).warning('Autorizacoes salvas; a copia de recuperacao local ficou pendente.')
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            logging.getLogger(__name__).warning('Arquivo temporario da recuperacao local ainda esta em uso.')
 
 
 def _import_legacy(con, source_path=None):
     """Merge authorizations from this extraction without replacing other links.
 
     The stable database survives extracting a new package into another folder.
-    Each old database is imported once, including when the destination already
-    contains links from another extraction. The original is never modified.
+    Reimport a legacy database when it changes: an older installation may
+    have received new native selections after the first migration.
     """
     legacy = Path(source_path or LEGACY_DB_PATH).resolve()
     if legacy == DB_PATH.resolve() or not legacy.is_file():
         return
     con.execute('CREATE TABLE IF NOT EXISTS imported_file_databases(source TEXT PRIMARY KEY)')
+    columns = {row[1] for row in con.execute('PRAGMA table_info(imported_file_databases)')}
+    if 'fingerprint' not in columns:
+        try:
+            con.execute('ALTER TABLE imported_file_databases ADD COLUMN fingerprint TEXT')
+        except sqlite3.OperationalError as error:
+            if 'duplicate column' not in str(error).lower():
+                raise
     source = str(legacy)
-    if con.execute('SELECT 1 FROM imported_file_databases WHERE source=?', (source,)).fetchone():
+    fingerprints = []
+    for file in (legacy, legacy.with_name(legacy.name + '-wal')):
+        if file.exists():
+            info = file.stat()
+            fingerprints.append((info.st_size, info.st_mtime_ns, info.st_ino))
+    fingerprint = repr(fingerprints)
+    imported = con.execute('SELECT fingerprint FROM imported_file_databases WHERE source=?', (source,)).fetchone()
+    if imported and imported[0] == fingerprint:
         return
     with closing(sqlite3.connect(legacy.as_uri() + '?mode=ro', uri=True, timeout=10)) as old:
         rows = old.execute('SELECT uid,reference,path,kind FROM files').fetchall()
     con.executemany('INSERT OR IGNORE INTO files(uid,reference,path,kind) VALUES(?,?,?,?)', rows)
-    con.execute('INSERT OR IGNORE INTO imported_file_databases(source) VALUES(?)', (source,))
+    con.execute('INSERT INTO imported_file_databases(source,fingerprint) VALUES(?,?) '
+                'ON CONFLICT(source) DO UPDATE SET fingerprint=excluded.fingerprint', (source, fingerprint))
 
 
 def import_authorizations(source):

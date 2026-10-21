@@ -9,6 +9,7 @@ import 'package:gerenciador_horas/domain/models/project_model.dart';
 import 'package:gerenciador_horas/domain/models/work_format_model.dart';
 import 'project_reference_upgrade.dart';
 import 'project_move_patch.dart';
+import 'project_reference_save.dart';
 
 class FirebaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -394,6 +395,7 @@ URL: ${task.edeskUrl}
   Future<void> saveProject(
     ProjectModel project, [
     String? docId,
+    ProjectReferenceChanges? referenceChanges,
   ]) async {
     final String targetDocId = (docId != null && docId.trim().isNotEmpty)
         ? docId.trim()
@@ -478,6 +480,7 @@ URL: ${task.edeskUrl}
       await finalizarProjeto(
         project,
         docId: targetDocId,
+        referenceChanges: referenceChanges,
       );
 
       return;
@@ -524,10 +527,18 @@ URL: ${task.edeskUrl}
     // SALVAR
     // ============================================================
 
-    await _projectsRef.doc(targetDocId).set(
-          data,
-          SetOptions(merge: true),
-        );
+    final uid = _userId;
+    final reference = _projectsRef.doc(targetDocId);
+    final saved = await _db.runTransaction((transaction) async {
+      final current = await transaction.get(reference);
+      if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou.');
+      final merged =
+          projectReferenceSave(data, current.data(), changes: referenceChanges);
+      transaction.set(reference, merged, SetOptions(merge: true));
+      return merged;
+    });
+    project.folderPath = saved['folderPath'] as String?;
+    project.excelLink = saved['excelLink'] as String?;
 
     debugPrint(
       'Projeto $targetDocId salvo com sucesso no Firestore.',
@@ -778,6 +789,7 @@ URL: ${task.edeskUrl}
   Future<void> finalizarProjeto(
     ProjectModel project, {
     String? docId,
+    ProjectReferenceChanges? referenceChanges,
   }) async {
     final String projectId = (docId != null && docId.trim().isNotEmpty)
         ? docId.trim()
@@ -813,25 +825,20 @@ URL: ${task.edeskUrl}
       projectId,
     );
 
-    final WriteBatch batch = _db.batch();
-
-    batch.set(
-      completedProjectRef,
-      completedData,
-      SetOptions(merge: true),
-    );
-
-    batch.delete(
-      activeProjectRef,
-    );
-
-    await batch.commit();
-
-    final activeCheck = await activeProjectRef.get();
-
-    if (activeCheck.exists) {
-      await activeProjectRef.delete();
-    }
+    final uid = _userId;
+    final saved = await _db.runTransaction((transaction) async {
+      final active = await transaction.get(activeProjectRef);
+      final completed = await transaction.get(completedProjectRef);
+      if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou.');
+      final merged = projectReferenceSave(
+          completedData, active.data() ?? completed.data(),
+          changes: referenceChanges);
+      transaction.set(completedProjectRef, merged, SetOptions(merge: true));
+      transaction.delete(activeProjectRef);
+      return merged;
+    });
+    project.folderPath = saved['folderPath'] as String?;
+    project.excelLink = saved['excelLink'] as String?;
   }
 
   // ============================================================

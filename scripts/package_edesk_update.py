@@ -1,4 +1,4 @@
-"""Build the small verified-project-move-32 update for an existing full installation."""
+"""Build the small persistent-file-links-33 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -18,7 +18,7 @@ FILES = (
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO verified-project-move-32 — instalação completa já existente
+README = '''ATUALIZAÇÃO persistent-file-links-33 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -29,6 +29,12 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Correcao v33: reimporta novas autorizacoes de instalacoes anteriores, mesmo
+quando a migracao inicial ja havia ocorrido. Guarda copia local dos vinculos
+autorizados, fora da pasta extraida, e recupera quando o banco principal
+precisa ser recriado. Preserva os vinculos por usuario e pelo caminho exato.
+Nao autoriza caminhos novos apenas pelo texto enviado pelo navegador.
 
 Novidade v32: confere arquivos, subpastas, tamanhos e identidade da pasta.
 Mostra a quantidade e exemplos de arquivos antes de confirmar. Bloqueia
@@ -119,7 +125,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-mover-pasta-completa-32.zip'
+    target = ROOT / 'web/downloads/atualizacao-vinculos-persistentes-33.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

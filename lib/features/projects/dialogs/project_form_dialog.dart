@@ -3,6 +3,7 @@ import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import '../widgets/edesk_phase_send_button.dart';
 import 'package:gerenciador_horas/core/platform/local_files.dart';
 import 'package:gerenciador_horas/data/services/project_file_service.dart';
+import 'package:gerenciador_horas/data/services/project_reference_save.dart';
 import 'package:gerenciador_horas/data/services/browser_local_files_service.dart';
 import '../widgets/project_reference_field.dart';
 import 'package:gerenciador_horas/core/config/web_config.dart';
@@ -81,6 +82,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
   final TextEditingController _leaderController = TextEditingController();
   final TextEditingController _excelLinkController = TextEditingController();
   final TextEditingController _folderPathController = TextEditingController();
+  late final String? _initialFolderReference, _initialExcelReference;
 
   final EdeskService _edeskService = EdeskService();
 
@@ -128,6 +130,8 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
     super.initState();
 
     final project = widget.projectToEdit;
+    _initialFolderReference = project?.folderPath;
+    _initialExcelReference = project?.excelLink;
 
     // ----------------------------------------------------------
     // VALORES DO PROJETO
@@ -1735,11 +1739,11 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
     try {
       final excelLink = ProjectFileService.editedReference(
         _excelLinkController.text,
-        widget.projectToEdit?.excelLink,
+        _initialExcelReference,
       );
       final folderPath = ProjectFileService.editedReference(
         _folderPathController.text,
-        widget.projectToEdit?.folderPath,
+        _initialFolderReference,
       );
 
       final ProjectModel savedProject = ProjectModel(
@@ -1768,6 +1772,10 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
       await _firebaseService.saveProject(
         savedProject,
         savedProject.id,
+        ProjectReferenceChanges(
+          previousFolder: _initialFolderReference,
+          previousExcel: _initialExcelReference,
+        ),
       );
 
       if (!mounted || !context.mounted) {
