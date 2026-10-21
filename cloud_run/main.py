@@ -193,9 +193,7 @@ def local_files_action():
         return jsonify({'message': 'Solicitação local inválida.'}), 400
     try:
         from local_edesk.local_files import execute
-        if body.get('action') in {'excel-editor-read', 'excel-editor-write', 'project-move-prepare', 'project-move-commit'}:
-            return jsonify(execute(user['sub'], body, verified_user=user))
-        return jsonify(execute(user['sub'], body))
+        return jsonify(execute(user['sub'], body, verified_user=user))
     except PermissionError as error:
         return jsonify({'message': str(error)}), 403
     except (ValueError, FileNotFoundError) as error:

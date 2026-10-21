@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Checklist da planilha: novo botão Prévia da porcentagem considera as alterações pendentes, calculadas pelo Excel em uma cópia temporária, sem salvar no arquivo original.",
-    "Enterprise usa o mesmo bloco Status Projeto do comentário, com etapas, realizado, datas, peso e previsão. Maker usa os resultados calculados da própria aba Maker, sem reutilizar o resumo Enterprise.",
-    "A prévia não salva nem envia ao E-Desk. Para confirmar as alterações, use Salvar na planilha. Requer integração local v28 e permanece restrita à conta piloto."
+    "Corrigida a recusa da conta autorizada ao abrir Prévia da porcentagem: o servidor agora repassa a identidade validada para a nova ação.",
+    "A prévia permanece restrita à conta piloto. Atualize e reinicie a integração local v29 para aplicar a correção."
   ]
 }

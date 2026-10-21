@@ -14,6 +14,32 @@ os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
+    def test_preview_receives_verified_claims_in_both_http_servers(self):
+        from urllib.parse import quote
+        from cloud_run.main import app
+        from local_edesk.files_server import app as files_app
+        headers = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bearer fake'}
+        owner = {'sub': 'owner', 'email': 'rodrigozaparolli79@gmail.com'}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'Project.xlsm'
+            path.write_bytes(b'fixture')
+            reference = 'desktop-file://local/owner/12345678-1234-1234-1234-123456789012/' + quote(str(path), safe='')
+            with patch.object(local_files, 'DB_PATH', Path(directory) / 'files.sqlite3'), patch('cloud_run.main.LOCAL_MODE', True):
+                local_files._save('owner', reference, path, 'file')
+                for server, verifier in [(app, 'local_edesk.authentication.verify_token'), (files_app, 'local_edesk.files_server.verify_token')]:
+                    with self.subTest(server=server.name):
+                        with patch(verifier, return_value=owner), patch('local_edesk.excel_editor.edit', return_value={'preview': True}) as editor:
+                            response = server.test_client().post('/api/local-files', headers=headers,
+                                json={'action': 'excel-editor-preview', 'reference': reference, 'revision': 'test', 'changes': []})
+                            self.assertEqual(response.status_code, 200, response.json)
+                            self.assertTrue(response.json['preview'])
+                            editor.assert_called_once()
+                        with patch(verifier, return_value={**owner, 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
+                            response = server.test_client().post('/api/local-files', headers=headers,
+                                json={'action': 'excel-editor-preview', 'reference': reference, 'email': owner['email']})
+                            self.assertEqual(response.status_code, 403)
+                            editor.assert_not_called()
+
     def test_project_kind_selects_only_the_requested_checklist(self):
         for kind in [None, '', 'Enterprise', 'Promob Enterprise']:
             self.assertEqual(checklist_sheet(kind), 'Checklist-Processo')

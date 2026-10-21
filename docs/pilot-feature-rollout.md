@@ -129,6 +129,12 @@ no OneDrive do usuário nem movimentação de uma pasta real de cliente.
 
 ## Checklist por tipo de projeto (v25)
 
+Na v29, ambos os endpoints de arquivos locais repassam verified_user em todas
+as ações, sempre a partir do token Firebase validado, sem lista duplicada de
+ações privilegiadas no transporte. A autorização por ação permanece no serviço.
+Um teste HTTP reproduziu o erro 403 da prévia nos dois servidores antes da
+correção e verifica acesso da conta piloto e recusa de outra conta após o ajuste.
+
 Na v28, excel-editor-preview valida revisão e campos permitidos, aplica os
 valores pendentes em cópia temporária e executa CalculateFull com macros
 desativadas. Retorna somente o resumo; não salva, cria backup nem substitui

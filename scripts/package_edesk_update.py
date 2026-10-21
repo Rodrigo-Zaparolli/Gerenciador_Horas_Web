@@ -1,4 +1,4 @@
-"""Build the small checklist-status-preview-28 update for an existing full installation."""
+"""Build the small checklist-preview-auth-29 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,7 +17,7 @@ FILES = (
     'local_edesk/project_archive.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO checklist-status-preview-28 — instalação completa já existente
+README = '''ATUALIZAÇÃO checklist-preview-auth-29 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -28,6 +28,10 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Correcao v29: repassa a identidade validada do Firebase para a previa do
+checklist, corrigindo a recusa da propria conta autorizada. A restricao a
+conta piloto permanece ativa; nao aceita identidade informada pelo cliente.
 
 Novidade v28: previa da porcentagem no checklist, calculada pelo Excel em
 copia temporaria com as alteracoes pendentes, sem salvar no original.
@@ -96,7 +100,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-previa-checklist-28.zip'
+    target = ROOT / 'web/downloads/atualizacao-previa-autorizacao-29.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

@@ -305,7 +305,7 @@ print('RESTARTED_PATHS_OK')
         with patch('local_edesk.authentication.verify_token', return_value={'sub':'owner'}), patch.object(local_files,'execute', return_value={'opened':True}) as execute:
             result = self.client.post('/api/local-files', json={'action':'open','reference':'test'}, headers=self.headers)
             self.assertEqual(result.status_code,200)
-            execute.assert_called_once_with('owner', {'action':'open','reference':'test'})
+            execute.assert_called_once_with('owner', {'action':'open','reference':'test'}, verified_user={'sub': 'owner'})
 
 
 if __name__ == '__main__':
