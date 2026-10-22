@@ -112,7 +112,7 @@ class ComentarioModal {
     final Map<Map<String, String>, FocusNode> focosBlocosTexto = {};
 
     // Formatação do bloco de texto atualmente em edição.
-    String fonteComentario = 'Segoe UI';
+    String fonteComentario = 'Roboto';
     double tamanhoFonteComentario = 11;
     bool negritoComentario = false;
     bool italicoComentario = false;
@@ -235,7 +235,7 @@ class ComentarioModal {
           resultado.add({
             'tipo': 'texto',
             'valor': inserir,
-            'fonte': atributos['font']?.toString() ?? 'Segoe UI',
+            'fonte': atributos['font']?.toString() ?? 'Roboto',
             'tamanho': tamanhoFonteQuill(atributos['size']),
             'negrito': (atributos['bold'] == true).toString(),
             'italico': (atributos['italic'] == true).toString(),
@@ -289,7 +289,7 @@ class ComentarioModal {
             if (bloco['italico'] == 'true') 'italic': true,
             if (bloco['sublinhado'] == 'true') 'underline': true,
             if (bloco['tachado'] == 'true') 'strike': true,
-            if ((bloco['fonte'] ?? 'Segoe UI') != 'Segoe UI')
+            if ((bloco['fonte'] ?? 'Roboto') != 'Roboto')
               'font': bloco['fonte'],
             if ((bloco['alinhamento'] ?? 'left') != 'left')
               'align': bloco['alinhamento'],
@@ -411,7 +411,7 @@ class ComentarioModal {
           controller.selection =
               TextSelection(baseOffset: 0, extentOffset: texto.length);
           controller.aplicarFormatacaoNaSelecao(
-            fonte: bloco['fonte'] ?? 'Segoe UI',
+            fonte: bloco['fonte'] ?? 'Roboto',
             tamanho: double.tryParse(bloco['tamanho'] ?? '') ?? 11,
             negrito: bloco['negrito'] == 'true',
             italico: bloco['italico'] == 'true',
@@ -433,7 +433,7 @@ class ComentarioModal {
       return TextStyle(
         color: corDoBloco(bloco),
         fontSize: double.tryParse(bloco['tamanho'] ?? '') ?? 11,
-        fontFamily: bloco['fonte'] ?? 'Segoe UI',
+        fontFamily: bloco['fonte'] ?? 'Roboto',
         fontWeight:
             bloco['negrito'] == 'true' ? FontWeight.bold : FontWeight.normal,
         fontStyle:
@@ -834,7 +834,7 @@ class ComentarioModal {
       if (texto.isEmpty) return '';
 
       final linhas = texto.replaceAll('<br>', '\n').split('\n');
-      final fonte = escaparHtmlComentario(bloco['fonte'] ?? 'Segoe UI');
+      final fonte = escaparHtmlComentario(bloco['fonte'] ?? 'Roboto');
       final tamanho = double.tryParse(bloco['tamanho'] ?? '') ?? 11;
       final negrito = bloco['negrito'] == 'true' ? 'bold' : 'normal';
       final italico = bloco['italico'] == 'true' ? 'italic' : 'normal';
@@ -6124,51 +6124,11 @@ class ComentarioModal {
                                                           children: [
                                                             SizedBox(
                                                               width: 135,
-                                                              child:
-                                                                  DropdownButton<
-                                                                      String>(
-                                                                value:
-                                                                    fonteComentario,
-                                                                isExpanded:
-                                                                    true,
-                                                                isDense: true,
-                                                                underline:
-                                                                    const SizedBox
-                                                                        .shrink(),
-                                                                dropdownColor:
-                                                                    CoresTelas
-                                                                        .fundoModal,
-                                                                style: TextStyle(
-                                                                    color: CoresApp
-                                                                        .textoPrincipal,
-                                                                    fontSize:
-                                                                        11),
-                                                                items: const [
-                                                                  'Segoe UI',
-                                                                  'Arial',
-                                                                  'Calibri',
-                                                                  'Verdana',
-                                                                  'Tahoma',
-                                                                  'Times New Roman',
-                                                                  'Georgia',
-                                                                  'Courier New'
-                                                                ]
-                                                                    .map((fonte) => DropdownMenuItem(
-                                                                        value:
-                                                                            fonte,
-                                                                        child: Text(
-                                                                            fonte)))
-                                                                    .toList(),
-                                                                onChanged: (v) {
-                                                                  if (v == null) {
-                                                                    return;
-                                                                  }
-                                                                  setDialogState(() =>
-                                                                      fonteComentario =
-                                                                          v);
-                                                                  aplicarFormatacaoNaSelecao();
-                                                                  focarEditorRicoAtivo();
-                                                                },
+                                                              child: CommentFontPicker(
+                                                                value: fonteComentario,
+                                                                controller: editorController,
+                                                                editorFocus: editorFocusNode,
+                                                                onChanged: (font) => setDialogState(() => fonteComentario = font),
                                                               ),
                                                             ),
                                                             const SizedBox(
@@ -6780,7 +6740,7 @@ class ComentarioModal {
                                                                             onTap:
                                                                                 () {
                                                                               setDialogState(() {
-                                                                                fonteComentario = bloco['fonte'] ?? 'Segoe UI';
+                                                                                fonteComentario = bloco['fonte'] ?? 'Roboto';
                                                                                 tamanhoFonteComentario = double.tryParse(bloco['tamanho'] ?? '') ?? 11;
                                                                                 negritoComentario = bloco['negrito'] == 'true';
                                                                                 italicoComentario = bloco['italico'] == 'true';

@@ -123,6 +123,43 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
 
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+    - family: Lato
+      fonts:
+        - asset: assets/fonts/Lato-Regular.ttf
+        - asset: assets/fonts/Lato-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Lato-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Lato-BoldItalic.ttf
+          weight: 700
+          style: italic
+    - family: Noto Serif
+      fonts:
+        - asset: assets/fonts/NotoSerif.ttf
+        - asset: assets/fonts/NotoSerif.ttf
+          weight: 700
+        - asset: assets/fonts/NotoSerif-Italic.ttf
+          style: italic
+        - asset: assets/fonts/NotoSerif-Italic.ttf
+          weight: 700
+          style: italic
+    - family: Roboto Mono
+      fonts:
+        - asset: assets/fonts/RobotoMono.ttf
+        - asset: assets/fonts/RobotoMono.ttf
+          weight: 700
+        - asset: assets/fonts/RobotoMono-Italic.ttf
+          style: italic
+        - asset: assets/fonts/RobotoMono-Italic.ttf
+          weight: 700
+          style: italic
+
   assets:
     - assets/fonts/
     - assets/images/Logo_H.png

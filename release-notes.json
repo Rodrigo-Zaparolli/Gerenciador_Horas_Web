@@ -1,12 +1,7 @@
 {
   "changes": [
-    "Horas: confere os registros no retroativo ao finalizar e apresenta sucesso quando todas as horas selecionadas estiverem confirmadas.",
-    "Horas ausentes: nova tentativa automatica limitada, somente depois de comprovar a ausencia. Registros existentes e envios com resposta incerta nao sao repetidos.",
-    "Correcao do historico de trabalho realizado para preservar o texto nas novas tentativas.",
-    "Revisão geral: limpeza de arquivos antigos sem uso, estados redundantes e avisos de análise do código.",
-    "Movimentação de projetos: corrige a nova conferência após uma tentativa interrompida com destino vazio e respeita a seleção da pasta inteira em vez de Documentos. Destinos com arquivos continuam protegidos.",
-    "Remove uma consulta de foto de perfil que não era usada pelo painel. Mantém os recursos de planilha, comentários, horas e métricas.",
-    "Downloads da integração com nome versionado e links antigos redirecionados, para evitar pacotes antigos reaproveitados pelo cache.",
-    "Atualize e reinicie a integracao local v36 para habilitar a conferencia de horas."
+    "Comentários: corrige a troca de fonte no editor web. Roboto, Lato, Noto Serif e Roboto Mono agora estão incluídas no app e aparecem com estilos distintos.",
+    "A fonte escolhida vale para o trecho selecionado ou para a próxima digitação, preservando as demais formatações. A prévia utiliza as mesmas fontes.",
+    "Comentários antigos continuam disponíveis com suas configurações salvas. Esta atualização não exige reinstalar a integração local."
   ]
 }
