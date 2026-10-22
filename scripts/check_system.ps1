@@ -16,7 +16,7 @@ $auditChecks = @(
     @{ Name = 'javascript'; Command = 'node'; Arguments = @('--test', 'test/edesk_extension_core_test.mjs') }
 )
 if ($Browser) {
-    foreach ($auditFixture in @('work_audit_flow', 'hours_receipt_flow', 'hours_cold_start', 'hours_batch_flow', 'comment_close_flow', 'comment_percentage_flow', 'browser_local_files')) {
+    foreach ($auditFixture in @('received_grid_flow', 'work_audit_flow', 'hours_receipt_flow', 'hours_cold_start', 'hours_batch_flow', 'comment_close_flow', 'comment_percentage_flow', 'browser_local_files')) {
         $auditChecks += @{ Name = $auditFixture; Command = $auditPython; Arguments = @("scripts/check_$auditFixture.py") }
     }
 }

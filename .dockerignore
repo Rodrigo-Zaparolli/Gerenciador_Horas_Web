@@ -19,3 +19,5 @@
 **/__pycache__/
 
 !edesk_bot/edesk_conferencia.py
+
+!edesk_bot/edesk_recebidos.py

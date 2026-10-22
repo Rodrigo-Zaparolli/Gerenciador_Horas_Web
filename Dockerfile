@@ -22,6 +22,7 @@ COPY edesk_bot/send_progress.py /app/edesk_bot/send_progress.py
 COPY edesk_bot/work_selection.py /app/edesk_bot/work_selection.py
 COPY edesk_bot/hour_receipt.py /app/edesk_bot/hour_receipt.py
 COPY edesk_bot/edesk_conferencia.py /app/edesk_bot/edesk_conferencia.py
+COPY edesk_bot/edesk_recebidos.py /app/edesk_bot/edesk_recebidos.py
 COPY local_edesk/__init__.py /app/local_edesk/__init__.py
 COPY local_edesk/central.py /app/local_edesk/central.py
 COPY local_edesk/journal.py /app/local_edesk/journal.py

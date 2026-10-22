@@ -253,13 +253,14 @@ class EdeskWebClient {
   }) async {
     const actions = {
       'edesk_conferencia.py': 'conferencia',
+      'edesk_recebidos.py': 'recebidos',
       'edesk_comentario.py': 'comentarios',
       'edesk_percentual.py': 'percentual',
       'edesk_fases.py': 'fases',
       'edesk_horas.py': 'horas',
     };
     final action = actions[script];
-    if (action == 'conferencia' && enviar) {
+    if ((action == 'conferencia' || action == 'recebidos') && enviar) {
       return _failure('A conferência permite somente consulta.', 400);
     }
     if (action == null) {
@@ -299,7 +300,7 @@ class EdeskWebClient {
       final requiresPercentage =
           action == 'percentual' || (action == 'comentarios' && data['percentualRealizado'] != null);
       final requiresHoursReceipt = action == 'horas' && enviar;
-      if (requiresPercentage || requiresHoursReceipt || action == 'conferencia' ||
+      if (requiresPercentage || requiresHoursReceipt || action == 'conferencia' || action == 'recebidos' ||
           base.host == '127.0.0.1' ||
           base.host == 'localhost') {
         final healthResponse = await requestClient
@@ -309,6 +310,9 @@ class EdeskWebClient {
             .timeout(const Duration(seconds: 12));
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
+          if (action == 'recebidos' && (health is! Map || health['workInbox'] != true)) {
+            return _failure('Atualize e reinicie a integração v38 para buscar os trabalhos da Minha Grid.', 503);
+          }
           if (action == 'conferencia' && (health is! Map || health['workAudit'] != true)) {
             return _failure('Atualize e reinicie a integração local v37 para conferir os trabalhos. Nenhuma consulta foi iniciada.', 503);
           }
@@ -334,6 +338,8 @@ class EdeskWebClient {
           if (requiresHoursReceipt && (health is! Map || health['hoursReconciliation'] != true)) {
             return _failure('Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.', 503);
           }
+        } else if (action == 'recebidos') {
+          return _failure('A integração não confirmou o suporte a trabalhos recebidos. Atualize para v38.', 503);
         } else if (action == 'conferencia') {
           return _failure('A integração não confirmou o suporte à conferência. Atualize e reinicie a integração v37.', 503);
         } else if (requiresHoursReceipt) {

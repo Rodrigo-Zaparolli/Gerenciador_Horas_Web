@@ -1,8 +1,8 @@
 {
   "changes": [
-    "Conferência E-Desk em teste para a conta autorizada: consulte todos os projetos ativos, projetos selecionados ou uma solicitação informada.",
-    "Novo modal mostra diferenças por trabalho em nome, situação e datas. Percentual e horas podem ser consultados; campos indisponíveis não são marcados como conferidos.",
-    "A consulta não salva alterações no app nem no E-Desk. Atualize e reinicie a integração local v37 para utilizar o recurso.",
-    "Mantidas as correções de fontes do editor e de conferência dos envios de horas."
+    "Trabalhos recebidos em teste: busca a Minha Grid do E-Desk e permite conferir os dados antes de cadastrar no app.",
+    "Cliente, tipo, horas e líder são preenchidos quando identificados. Campos ausentes precisam ser conferidos; não há cadastro sem confirmação.",
+    "A importação acrescenta apenas etapas novas, preserva os dados existentes e bloqueia projetos finalizados. A gravação possui controle de duplicidade mesmo após falha de conexão.",
+    "Recurso restrito à conta piloto. Atualize e reinicie a integração v38. A busca é manual nesta primeira versão e não altera o E-Desk."
   ]
 }

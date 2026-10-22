@@ -31,6 +31,7 @@ SCRIPTS = {
     "comentarios": "edesk_comentario.py",
     "percentual": "edesk_percentual.py",
     "conferencia": "edesk_conferencia.py",
+    "recebidos": "edesk_recebidos.py",
 }
 DEFAULT_ORIGINS = {
     "https://gerenciador-horas.web.app",
@@ -149,6 +150,7 @@ def health_check():
                     "commentPercentageReceipt": True,
                     "hoursReconciliation": True,
                     "workAudit": True,
+                    "workInbox": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),
                     "mode": "central" if LOCAL_MODE and central.enabled() else "local" if LOCAL_MODE else "cloud",
@@ -354,7 +356,10 @@ def _validate_automation_request(action: str, data: object, send: object):
         ):
             return "A automação só pode acessar os domínios oficiais do E-Desk."
 
-    if action == "conferencia":
+    if action == 'recebidos':
+        if send:
+            return 'A busca de trabalhos recebidos permite somente consulta.'
+    elif action == "conferencia":
         if send:
             return 'A conferencia permite somente consulta, sem envio.'
         targets = data.get('solicitacoes')
@@ -473,7 +478,7 @@ def run_edesk_automation(action: str):
     if auth_error is not None:
         return auth_error
 
-    if action == 'conferencia' and str(_user.get('email') or '').strip().lower() != 'rodrigozaparolli79@gmail.com':
+    if action in {'conferencia', 'recebidos'} and str(_user.get('email') or '').strip().lower() != 'rodrigozaparolli79@gmail.com':
         return _failure('Conferencia em teste disponivel apenas para a conta autorizada.', 403)
 
     try:
@@ -604,7 +609,7 @@ def run_edesk_automation(action: str):
                 except (OSError, ValueError):
                     pass
             uncertain = journal.finish(uid, keys, events_file) if keys else 0
-            result = _last_json_object(stdout) if action in {"fases", "percentual", "comentarios", "horas", "conferencia"} else None
+            result = _last_json_object(stdout) if action in {"fases", "percentual", "comentarios", "horas", "conferencia", "recebidos"} else None
             if keys:
                 states = journal.states(uid)
                 verified = sum(states.get(key) == 'confirmed' for key in keys)
@@ -629,7 +634,7 @@ def run_edesk_automation(action: str):
                     process.returncode,
                 )
                 return _failure(
-                    result['message'] if action in {'horas', 'conferencia'} and result and result.get('operation') == action
+                    result['message'] if action in {'horas', 'conferencia', 'recebidos'} and result and result.get('operation') == action
                         and isinstance(result.get('message'), str) else _automation_failure_message(stdout + "\n" + _stderr),
                     502,
                     json.dumps(result, ensure_ascii=False) if result else "",
@@ -644,10 +649,11 @@ def run_edesk_automation(action: str):
                 return _failure('A integração não confirmou a porcentagem. Confira o comentário no E-Desk e use Enviar só % para não duplicá-lo.',
                     502, json.dumps(result, ensure_ascii=False) if result else '')
 
-            if action in {"fases", "percentual", "conferencia"} and (
+            if action in {"fases", "percentual", "conferencia", "recebidos"} and (
                 result is None or result.get("ok") is not True
                 or (action == 'percentual' and result.get('operation') != 'percentual')
                 or (action == 'conferencia' and (result.get('operation') != 'conferencia' or not isinstance(result.get('rows'), list)))
+                or (action == 'recebidos' and (result.get('operation') != 'recebidos' or not isinstance(result.get('rows'), list)))
             ):
                 message = (
                     result.get("message")

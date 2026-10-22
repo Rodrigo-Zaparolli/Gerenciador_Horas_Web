@@ -6,6 +6,18 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('Received works require native support and always use a read-only request', () async {
+    var supported=false;
+    final client=EdeskWebClient(apiUrl:'http://127.0.0.1:8765',tokenProvider:()async=>'token',client:MockClient((request)async{
+      if(request.method=='GET')return http.Response(jsonEncode({'workInbox':supported}),200);
+      expect(request.url.path,'/api/edesk/recebidos');expect(jsonDecode(request.body)['enviar'],false);
+      return http.Response(jsonEncode({'confirmed':true,'responseBody':jsonEncode({'rows':[],'complete':true})}),200);
+    }));
+    expect((await client.execute(requestJson:'{}',enviar:false,script:'edesk_recebidos.py')).statusCode,503);
+    expect((await client.execute(requestJson:'{}',enviar:true,script:'edesk_recebidos.py')).statusCode,400);
+    supported=true;
+    expect((await client.execute(requestJson:'{}',enviar:false,script:'edesk_recebidos.py')).confirmed,true);
+  });
   test('Audit is read-only and requires the new native capability', () async {
     final calls = <String>[];
     final client = EdeskWebClient(apiUrl: 'http://127.0.0.1:8765', tokenProvider: () async => 'token',

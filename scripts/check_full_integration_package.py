@@ -29,7 +29,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         command = archive.read(name).decode('utf-8')
         assert 'scripts\\integration_autostart.ps1' in command
         assert ('-Disable' in command) == disable
-    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'local_edesk/excel_editor.py', 'local_edesk/project_archive.py', 'local_edesk/backup_policy.py', 'local_edesk/files_server.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/hour_receipt.py', 'edesk_bot/edesk_conferencia.py', 'local_edesk/journal.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
+    for source in ['scripts/integration_autostart.ps1', 'scripts/start_integration_background.ps1', 'local_edesk/local_files.py', 'local_edesk/excel_editor.py', 'local_edesk/project_archive.py', 'local_edesk/backup_policy.py', 'local_edesk/files_server.py', 'scripts/migrate_integration_data.py', 'scripts/start_local_files.ps1', 'edesk_bot/edesk_horas.py', 'edesk_bot/hour_receipt.py', 'edesk_bot/edesk_conferencia.py', 'edesk_bot/edesk_recebidos.py', 'local_edesk/journal.py', 'edesk_bot/work_selection.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/config.py', 'scripts/start_full_integration.ps1', 'cloud_run/main.py']:
         assert archive.read(source) == (ROOT / source).read_bytes()
     with tempfile.TemporaryDirectory(prefix='complete package ', dir=VALIDATION) as temporary:
         extracted = Path(temporary).resolve()
@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='work-audit-37',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='work-inbox-38',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -90,6 +90,10 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             cwd=extracted, env=env, capture_output=True, text=True, timeout=150)
         assert audit_check.returncode == 0, audit_check.stderr
         print(audit_check.stdout.strip(), flush=True)
+        inbox_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_received_grid_flow.py'), str(extracted / 'edesk_bot')],
+            cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
+        assert inbox_check.returncode == 0, inbox_check.stderr
+        print(inbox_check.stdout.strip(), flush=True)
         receipt_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_hours_receipt_flow.py'), str(extracted / 'edesk_bot')],
             cwd=extracted, env=env, capture_output=True, text=True, timeout=180)
         assert receipt_check.returncode == 0, receipt_check.stderr
@@ -115,7 +119,8 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             assert health['mode'] == 'local' and health['status'] == 'ok'
             assert health['hoursReconciliation'] is True
             assert health['workAudit'] is True
-            assert health['integrationPackageVersion'] == 'work-audit-37'
+            assert health['workInbox'] is True
+            assert health['integrationPackageVersion'] == 'work-inbox-38'
             assert health['verifiedProjectMove'] is True
             assert health['nativeSpreadsheetSheetNames'] is True
             assert 'excel-editor-sheets' in health['nativeActions']

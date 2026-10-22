@@ -1,4 +1,4 @@
-"""Build the small work-audit-37 update for an existing full installation."""
+"""Build the small work-inbox-38 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = (
     'edesk_bot/edesk_horas.py',
     'edesk_bot/hour_receipt.py',
-    'edesk_bot/edesk_conferencia.py',
+    'edesk_bot/edesk_conferencia.py', 'edesk_bot/edesk_recebidos.py',
     'local_edesk/journal.py',
     'edesk_bot/work_selection.py',
     'edesk_bot/edesk_comentario.py',
@@ -21,7 +21,7 @@ FILES = (
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO work-audit-37 — instalação completa já existente
+README = '''ATUALIZAÇÃO work-inbox-38 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -32,6 +32,10 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v38: busca a Minha Grid para a caixa Trabalhos recebidos do app.
+Nao cria nem altera trabalhos no E-Desk. O cadastro no app depende de
+conferencia e confirmacao no navegador, com controle de duplicidade.
 
 Novidade v37: conferencia somente de leitura de solicitacoes e trabalhos.
 Recurso em teste restrito a conta autorizada. Nao salva dados no E-Desk.
@@ -149,7 +153,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-conferencia-trabalhos-37.zip'
+    target = ROOT / 'web/downloads/atualizacao-trabalhos-recebidos-38.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

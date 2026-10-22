@@ -31,7 +31,10 @@ READ_FIELDS = r'''() => {
     status:['situacao','situacaodotrabalho','status','statusdotrabalho'],
     start:['inicioajustado','datadeinicioajustada','datainicialajustada','inicioprevisto','datainicialprevista'],
     end:['terminoajustado','datafinalajustada','datadeterminoajustada','terminoprevisto','datafinalprevista'],
-    percentage:['%realizado','percentualrealizado','percentualdeconclusao']};
+    percentage:['%realizado','percentualrealizado','percentualdeconclusao'],
+    estimatedHours:['horasprevistas','horasestimadas','tempoprevisto','tempoestimado','horasprevistashhmm','horasestimadashhmm','tempoprevistohhmm','tempoestimadohhmm'],
+    leader:['lider','liderdoprojeto','liderprojeto'],
+    serviceType:['tipodeservico','servico','produto'],client:['cliente','empresa','razaosocial','nomedocliente','clienteempresa']};
   const values={};
   for(const [field,labels] of Object.entries(aliases)){
     const found=new Set();
