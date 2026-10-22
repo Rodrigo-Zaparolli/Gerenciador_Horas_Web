@@ -292,6 +292,10 @@ class EdeskWebClient {
       if (data is! Map<String, dynamic>) {
         return _failure('Os dados da automação devem ser um objeto JSON.', 400);
       }
+      if ((action == 'conferencia' || action == 'recebidos') &&
+          (data['url'] == null || data['url'] is String && (data['url'] as String).trim().isEmpty)) {
+        data['url'] = 'https://promob.e-desk.com.br';
+      }
       final token = await tokenProvider();
       if (token == null || token.isEmpty) {
         return _failure(

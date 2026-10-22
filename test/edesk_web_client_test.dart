@@ -6,6 +6,24 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('Read-only queries supply the required portal URL and preserve an explicit URL', () async {
+    for (final action in ['conferencia', 'recebidos']) {
+      for (final url in [null, '', 'https://promob.e-desk.com.br/Portal/']) {
+        final result = await EdeskWebClient(
+          apiUrl: 'http://127.0.0.1:8765', tokenProvider: () async => 'token',
+          client: MockClient((request) async {
+            if (request.method == 'GET') return http.Response('{"workAudit":true,"workInbox":true}', 200);
+            final body = jsonDecode(request.body);
+            expect(body['request']['url'], url == null || url.isEmpty ? 'https://promob.e-desk.com.br' : url);
+            expect(body['enviar'], false);
+            return http.Response('{"confirmed":true,"responseBody":"{}"}', 200);
+          }),
+        ).execute(requestJson: jsonEncode({'url': url}), enviar: false,
+          script: action == 'conferencia' ? 'edesk_conferencia.py' : 'edesk_recebidos.py');
+        expect(result.confirmed, true);
+      }
+    }
+  });
   test('Received works require native support and always use a read-only request', () async {
     var supported=false;
     final client=EdeskWebClient(apiUrl:'http://127.0.0.1:8765',tokenProvider:()async=>'token',client:MockClient((request)async{
