@@ -1,5 +1,6 @@
 {
   "changes": [
+    "Conferência E-Desk: o resumo agora sinaliza leitura parcial, campos não consultados e divergências, sem apresentar consultas incompletas como concluídas.",
     "Correção da conferência E-Desk e Trabalhos recebidos: envia o endereço obrigatório do portal, evitando encerrar a consulta antes do login.",
     "Planilha do projeto: senhas de Orçamentos, Margens e Configurador visíveis ao abrir, com botão para ocultar ou mostrar cada valor.",
     "Trabalhos recebidos em teste: busca a Minha Grid do E-Desk e permite conferir os dados antes de cadastrar no app.",

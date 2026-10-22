@@ -98,6 +98,26 @@ class AuditFieldResult {
   final String field, app, edesk, state;
 }
 
+String auditSummary(Iterable<List<AuditFieldResult>> rows,
+    {required bool hasErrors, required bool interrupted}) {
+  if (interrupted) {
+    return 'Conferência interrompida. Resultados já obtidos foram mantidos.';
+  }
+  final fields = rows.expand((row) => row).toList();
+  final missing = fields.where((field) => field.state == 'Não consultado').length;
+  if (hasErrors || fields.isEmpty || missing > 0) {
+    return 'Conferência parcial: há dados que não puderam ser consultados. '
+        'Confira os avisos de cada trabalho. Nenhum dado foi alterado.';
+  }
+  if (fields.any((field) =>
+      field.state != 'Igual' && field.state != 'Somente consulta')) {
+    return 'Consulta concluída com divergências ou dados para revisar. '
+        'Nenhum dado foi alterado.';
+  }
+  return 'Consulta concluída: todos os campos selecionados foram lidos. '
+      'Nenhum dado foi alterado.';
+}
+
 List<AuditFieldResult> compareAuditWork(Map<String, String> expected,
         Map<String, dynamic> actual, Set<String> fields) =>
     [

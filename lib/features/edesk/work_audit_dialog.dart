@@ -182,9 +182,10 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
         setState(() {});
       }
       if (mounted && FirebaseAuth.instance.currentUser?.uid == owner?.uid) {
-        setState(() => _message = _stop
-            ? 'Conferência interrompida. Resultados já obtidos foram mantidos.'
-            : 'Conferência concluída. Nenhum dado foi alterado.');
+        setState(() => _message = auditSummary(
+            _results.map((result) => result.fields),
+            hasErrors: _results.any((result) => result.error != null),
+            interrupted: _stop));
       }
     } catch (_) {
       if (mounted) {
