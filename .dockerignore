@@ -17,3 +17,5 @@
 !local_edesk/central.py
 !local_edesk/journal.py
 **/__pycache__/
+
+!edesk_bot/edesk_conferencia.py

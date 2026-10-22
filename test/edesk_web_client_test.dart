@@ -6,6 +6,30 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('Audit is read-only and requires the new native capability', () async {
+    final calls = <String>[];
+    final client = EdeskWebClient(apiUrl: 'http://127.0.0.1:8765', tokenProvider: () async => 'token',
+      client: MockClient((request) async {
+        calls.add(request.method);
+        return http.Response('{"mode":"local"}',200);
+      }));
+    final rejected = await client.execute(requestJson:'{}',enviar:true,script:'edesk_conferencia.py');
+    expect(rejected.statusCode,400);
+    expect(calls,isEmpty);
+    final outdated = await client.execute(requestJson:'{}',enviar:false,script:'edesk_conferencia.py');
+    expect(outdated.statusCode,503);
+    expect(calls,['GET']);
+  });
+  test('Audit posts a read-only request to its dedicated endpoint', () async {
+    final result = await EdeskWebClient(apiUrl:'http://127.0.0.1:8765',tokenProvider:() async=>'token',
+      client:MockClient((request) async {
+        if(request.method=='GET') return http.Response('{"workAudit":true,"mode":"local"}',200);
+        expect(request.url.path,'/api/edesk/conferencia');
+        expect(jsonDecode(request.body)['enviar'],false);
+        return http.Response(jsonEncode({'confirmed':true, 'responseBody':jsonEncode({'ok':true,'operation':'conferencia','rows':[]})}),200);
+      })).execute(requestJson:'{}',enviar:false,script:'edesk_conferencia.py');
+    expect(result.confirmed,true);
+  });
   test('Hours require persisted receipt support before any POST', () async {
     final methods = <String>[];
     final result = await EdeskWebClient(

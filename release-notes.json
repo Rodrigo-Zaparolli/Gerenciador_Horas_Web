@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Comentários: corrige a troca de fonte no editor web. Roboto, Lato, Noto Serif e Roboto Mono agora estão incluídas no app e aparecem com estilos distintos.",
-    "A fonte escolhida vale para o trecho selecionado ou para a próxima digitação, preservando as demais formatações. A prévia utiliza as mesmas fontes.",
-    "Comentários antigos continuam disponíveis com suas configurações salvas. Esta atualização não exige reinstalar a integração local."
+    "Conferência E-Desk em teste para a conta autorizada: consulte todos os projetos ativos, projetos selecionados ou uma solicitação informada.",
+    "Novo modal mostra diferenças por trabalho em nome, situação e datas. Percentual e horas podem ser consultados; campos indisponíveis não são marcados como conferidos.",
+    "A consulta não salva alterações no app nem no E-Desk. Atualize e reinicie a integração local v37 para utilizar o recurso.",
+    "Mantidas as correções de fontes do editor e de conferência dos envios de horas."
   ]
 }

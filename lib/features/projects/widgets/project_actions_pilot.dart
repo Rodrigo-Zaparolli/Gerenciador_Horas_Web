@@ -11,7 +11,8 @@ class ProjectActionsPilot extends StatelessWidget {
       required this.onEditWork,
       required this.onChecklist,
       required this.onComment,
-      required this.onEmail});
+      required this.onEmail, this.onAudit});
+  final VoidCallback? onAudit;
   final bool hasFolder, hasExcel;
   final VoidCallback onFolder,
       onExcel,
@@ -40,6 +41,7 @@ class ProjectActionsPilot extends StatelessWidget {
             'check': onChecklist,
             'comment': onComment,
             'email': onEmail,
+            if (onAudit != null) 'audit': onAudit!,
           };
           actions[value]?.call();
         },
@@ -75,6 +77,8 @@ class ProjectActionsPilot extends StatelessWidget {
           const PopupMenuItem(
               value: 'email',
               child: _ActionMenuLabel(Icons.mail_outline_rounded, 'E-mails')),
+          if (onAudit != null) const PopupMenuItem(value:'audit',
+            child:_ActionMenuLabel(Icons.fact_check_outlined, 'Conferir este projeto no E-Desk')),
         ],
       );
 }

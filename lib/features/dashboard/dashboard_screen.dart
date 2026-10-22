@@ -8,6 +8,8 @@ import 'package:gerenciador_horas/data/services/project_update_service.dart';
 import 'package:gerenciador_horas/data/services/project_status_update.dart';
 import '../projects/dialogs/project_archive_dialog.dart';
 import 'widgets/dashboard_alerts_modal.dart';
+import '../../core/config/pilot_feature_access.dart';
+import '../edesk/work_audit_dialog.dart';
 import '../../domain/models/deadline_alert.dart';
 import 'comentario/comentario_modal.dart';
 import 'package:gerenciador_horas/core/platform/timer_session_storage.dart';
@@ -4097,8 +4099,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
+            if (PilotFeatureAccess.allows(uid: FirebaseAuth.instance.currentUser?.uid, email: FirebaseAuth.instance.currentUser?.email))
+              Align(alignment: Alignment.centerRight, child: Padding(padding: const EdgeInsets.only(bottom:8),
+                child: OutlinedButton.icon(onPressed: () => WorkAuditDialog.show(context, _projects),
+                  icon: const Icon(Icons.fact_check_outlined), label: const Text('Conferir no E-Desk')))),
             TabelaProjetosWidget(
               projects: filteredProjects,
+              auditProjects: _projects,
               statusList: _statusList,
               expandedProjectIds: _expandedProjectIds,
               selectedTargetId: _selectedTargetId,

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
 import '../../../core/config/pilot_feature_access.dart';
 import '../../projects/widgets/project_actions_pilot.dart';
+import '../../edesk/work_audit_dialog.dart';
 import '../../projects/dialogs/project_spreadsheet_dialog.dart';
 import 'package:gerenciador_horas/features/project_emails/project_email_modal.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
@@ -104,6 +105,7 @@ class _ProjectEmailIconPainter extends CustomPainter {
 
 class TabelaProjetosWidget extends StatefulWidget {
   final List<ProjectModel> projects;
+  final List<ProjectModel>? auditProjects;
   final List<String> statusList;
   final Set<String> expandedProjectIds;
   final String? selectedTargetId;
@@ -148,6 +150,7 @@ class TabelaProjetosWidget extends StatefulWidget {
   const TabelaProjetosWidget({
     super.key,
     required this.projects,
+    this.auditProjects,
     required this.statusList,
     required this.expandedProjectIds,
     required this.selectedTargetId,
@@ -4083,7 +4086,8 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
         onEditWork: () => run(() => _showLinksDialog(project)),
         onChecklist: () => run(() => _showCheckListDialog(project)),
         onComment: () => run(() { ComentarioModal.show(context, project); }),
-        onEmail: () => run(() { ProjectEmailModal.show(context, project); }));
+        onEmail: () => run(() { ProjectEmailModal.show(context, project); }),
+        onAudit: () => run(() { WorkAuditDialog.show(context, widget.auditProjects ?? widget.projects, selectedProject: project); }));
     }
 
     return Container(

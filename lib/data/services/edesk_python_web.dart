@@ -252,12 +252,16 @@ class EdeskWebClient {
     bool retryUncertain = false,
   }) async {
     const actions = {
+      'edesk_conferencia.py': 'conferencia',
       'edesk_comentario.py': 'comentarios',
       'edesk_percentual.py': 'percentual',
       'edesk_fases.py': 'fases',
       'edesk_horas.py': 'horas',
     };
     final action = actions[script];
+    if (action == 'conferencia' && enviar) {
+      return _failure('A conferência permite somente consulta.', 400);
+    }
     if (action == null) {
       return _failure('Automação E-Desk não reconhecida.', 400);
     }
@@ -295,7 +299,7 @@ class EdeskWebClient {
       final requiresPercentage =
           action == 'percentual' || (action == 'comentarios' && data['percentualRealizado'] != null);
       final requiresHoursReceipt = action == 'horas' && enviar;
-      if (requiresPercentage || requiresHoursReceipt ||
+      if (requiresPercentage || requiresHoursReceipt || action == 'conferencia' ||
           base.host == '127.0.0.1' ||
           base.host == 'localhost') {
         final healthResponse = await requestClient
@@ -305,6 +309,9 @@ class EdeskWebClient {
             .timeout(const Duration(seconds: 12));
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
+          if (action == 'conferencia' && (health is! Map || health['workAudit'] != true)) {
+            return _failure('Atualize e reinicie a integração local v37 para conferir os trabalhos. Nenhuma consulta foi iniciada.', 503);
+          }
           if (action == 'comentarios' && requiresPercentage &&
               (health is! Map || health['commentPercentageReceipt'] != true)) {
             return _failure('Atualize e reinicie a integração no computador que executa o E-Desk. Esta versão não confirma o comentário e a porcentagem separadamente. Nenhum comentário foi enviado.', 503);
@@ -327,6 +334,8 @@ class EdeskWebClient {
           if (requiresHoursReceipt && (health is! Map || health['hoursReconciliation'] != true)) {
             return _failure('Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.', 503);
           }
+        } else if (action == 'conferencia') {
+          return _failure('A integração não confirmou o suporte à conferência. Atualize e reinicie a integração v37.', 503);
         } else if (requiresHoursReceipt) {
           return _failure('A integração não confirmou o suporte à conferência de horas. Atualize e reinicie a integração v36. Nenhuma hora foi enviada.', 503);
         } else if (requiresPercentage) {
