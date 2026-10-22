@@ -2,6 +2,7 @@
 import json
 import re
 import sys
+import time
 from urllib.parse import parse_qs
 
 from config import HEADLESS, PROFILE_DIR, restore_session_cookies, save_session_cookies
@@ -62,15 +63,47 @@ READ_FIELDS = r'''() => {
 }'''
 
 
+class AuditLookupError(RuntimeError):
+    MESSAGES = {
+        'grid': 'Nao foi possivel abrir a Minha Grid do E-Desk.',
+        'search_request': 'Nao foi possivel localizar a solicitacao na Minha Grid.',
+        'open_request': 'A solicitacao nao terminou de abrir no E-Desk.',
+        'work_tab': 'A solicitacao abriu, mas a aba Trabalhos nao ficou disponivel.',
+        'work_table': 'A aba Trabalhos foi acionada, mas a tabela de etapas nao carregou.',
+        'work_pagination': 'A lista de trabalhos esta paginada. A importacao foi interrompida para nao omitir etapas.',
+        'work_numbers': 'Nenhum numero real de trabalho foi reconhecido na tabela da solicitacao.',
+    }
+
+    def __init__(self, code):
+        self.code = code
+        super().__init__(self.MESSAGES[code])
+
+
 def show_works(page):
-    panel = page.locator('#cph1_rpvTrabalhos')
-    if not panel.count() or not panel.first.is_visible():
-        tabs = [tab for tab in page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$')).all() if tab.is_visible()]
+    page.wait_for_load_state('domcontentloaded', timeout=15000)
+    page.wait_for_function("() => !window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.()", timeout=15000)
+    table = page.locator('#cph1_gvwTra')
+    # A visible container can still contain an inactive/hidden Telerik tab.
+    # Only the actual work table proves that the tab has finished opening.
+    if not table.count() or not table.first.is_visible():
+        deadline = time.monotonic() + 15
+        tabs = []
+        while time.monotonic() < deadline:
+            tabs = [tab for tab in page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$')).all() if tab.is_visible()]
+            if tabs:
+                break
+            page.wait_for_timeout(100)
         if len(tabs) != 1:
-            raise RuntimeError('Aba Trabalhos ausente ou ambigua.')
-        tabs[0].click(timeout=15000)
-    page.locator('#cph1_gvwTra').wait_for(state='visible', timeout=15000)
-    page.wait_for_function("() => !window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.()")
+            raise AuditLookupError('work_tab')
+        try:
+            tabs[0].click(timeout=15000)
+        except Exception as error:
+            raise AuditLookupError('work_tab') from error
+    try:
+        table.wait_for(state='visible', timeout=15000)
+        page.wait_for_function("() => !window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.()", timeout=15000)
+    except Exception as error:
+        raise AuditLookupError('work_table') from error
 
 
 def work_numbers(page):
@@ -78,7 +111,7 @@ def work_numbers(page):
     # Unknown pagination must never be reported as a complete request.
     table = page.locator('#cph1_gvwTra')
     if table.locator('a[href*="Page$"],.rgPager').count():
-        raise RuntimeError('Solicitacao paginada: selecione um projeto com os numeros dos trabalhos cadastrados no app.')
+        raise AuditLookupError('work_pagination')
     return table.evaluate(r'''table => {
       const ids=[];
       for(const row of table.rows){
@@ -99,13 +132,21 @@ def audit_request(context, grid, target, guid, include_hours=False):
     from edesk_horas import abrir_trabalho_na_solicitacao, validar_tela_trabalho, abrir_trabalho_retroativo, extrair_dados_url
     from hour_receipt import read_hours
     solicitation = target['solicitacao']
-    acessar_minha_grid(grid, guid)
-    page, row, opened = localizar_solicitacao_validada(grid, context, solicitation)
-    request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
-    request_url = request_page.url
-    numbers = target.get('trabalhos') or work_numbers(request_page)
+    phase = 'grid'
+    try:
+        acessar_minha_grid(grid, guid)
+        phase = 'search_request'
+        page, row, opened = localizar_solicitacao_validada(grid, context, solicitation)
+        phase = 'open_request'
+        request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
+        request_url = request_page.url
+        numbers = target.get('trabalhos') or work_numbers(request_page)
+    except AuditLookupError:
+        raise
+    except Exception as error:
+        raise AuditLookupError(phase) from error
     if not numbers:
-        raise RuntimeError('Nenhum numero de trabalho foi identificado na solicitacao.')
+        raise AuditLookupError('work_numbers')
     rows = []
     for number in numbers:
         result = {'solicitacao': solicitation, 'idTrabalho': str(number), 'values': {}}
@@ -113,6 +154,7 @@ def audit_request(context, grid, target, guid, include_hours=False):
             if request_page.is_closed():
                 request_page = context.new_page()
             request_page.goto(request_url, wait_until='domcontentloaded', timeout=30000)
+            show_works(request_page)
             work = abrir_trabalho_na_solicitacao(request_page, context, solicitation, number)
             if work is None or not validar_tela_trabalho(work, solicitation, number):
                 raise RuntimeError('O trabalho solicitado nao foi localizado com sua chave exata.')
@@ -135,6 +177,8 @@ def audit_request(context, grid, target, guid, include_hours=False):
                         result['hoursError'] = 'A listagem de horas nao foi lida integralmente.'
                 except Exception:
                     result['hoursError'] = 'Nao foi possivel consultar todas as horas do retroativo.'
+        except AuditLookupError as error:
+            result.update(error=str(error), errorCode=error.code)
         except Exception:
             result['error'] = 'Nao foi possivel abrir e conferir este trabalho. Confira o vinculo e o acesso no E-Desk.'
         rows.append(result)
@@ -170,6 +214,9 @@ def main():
                     if grid.is_closed():
                         grid = context.new_page()
                     rows.extend(audit_request(context, grid, target, guid, data.get('includeHours') is True))
+                except AuditLookupError as error:
+                    rows.append({'solicitacao': target['solicitacao'], 'idTrabalho': '', 'values': {},
+                        'error': str(error), 'errorCode': error.code})
                 except Exception:
                     rows.append({'solicitacao': target['solicitacao'], 'idTrabalho': '', 'values': {},
                         'error': 'Solicitacao nao consultada. Confira o acesso, o numero e a janela do E-Desk.'})

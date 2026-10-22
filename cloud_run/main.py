@@ -150,6 +150,7 @@ def health_check():
                     "commentPercentageReceipt": True,
                     "hoursReconciliation": True,
                     "workAudit": True,
+                    "workEnumeration": True,
                     "workInbox": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),

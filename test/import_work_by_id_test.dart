@@ -82,7 +82,7 @@ void main() {
     });
   }
 
-  for (final mode in ['empty', 'other', 'failed']) {
+  for (final mode in ['empty', 'other', 'failed', 'unread', 'partial']) {
     testWidgets('Import by ID never offers registration for $mode query',
         (tester) async {
       var saves = 0;
@@ -96,9 +96,25 @@ void main() {
           return {
             'rows': mode == 'empty'
                 ? []
-                : [
-                    {'solicitacao': '999', 'idTrabalho': '3', 'values': {}}
-                  ]
+                : mode == 'unread' || mode == 'partial'
+                    ? [
+                        if (mode == 'partial')
+                          {
+                            'solicitacao': '2265173',
+                            'idTrabalho': '3',
+                            'values': {'name': 'Etapa'}
+                          },
+                        {
+                          'solicitacao': '2265173',
+                          'idTrabalho': '',
+                          'values': {},
+                          'error':
+                              'A solicitação abriu, mas a aba Trabalhos não ficou disponível.'
+                        }
+                      ]
+                    : [
+                        {'solicitacao': '999', 'idTrabalho': '3', 'values': {}}
+                      ]
           };
         },
         loadTypes: () async => ['Enterprise'],

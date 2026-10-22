@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(sys.argv[1]).resolve() if len(sys.argv)>1 else ROOT/'edesk_bot'))
 from playwright.sync_api import sync_playwright
-from edesk_conferencia import audit_request, protect_read_only
+from edesk_conferencia import audit_request, protect_read_only, work_numbers
 
 base='https://fixture.invalid'
 request_url=base+'/Solicitacao.aspx?solicitacao=226144'
@@ -22,7 +22,7 @@ def fixture(route):
         return route.fulfill(body='Saved')
     path=urlparse(request.url).path
     if path.endswith('Solicitacao.aspx'):
-        body='<div id="cph1_rpvTrabalhos"><table id="cph1_gvwTra"><tr><th>Número</th><th>Trabalho</th></tr>'
+        body='<button id="workTab" onclick="document.querySelector(\'#cph1_gvwTra\').style.display=\'table\'">Trabalhos</button><div id="cph1_rpvTrabalhos" style="min-height:20px"><table id="cph1_gvwTra" style="display:none"><tr><th>Número</th><th>Trabalho</th></tr>'
         for number in ['1','3','6']:
             url=base+f'/Trabalho.aspx?solicitacao=226144&id_trabalho={number}'
             body+=f'<tr><td><a href="#" onclick="/*btnSelTra*/window.open(\'{url}\');return false;">{number}</a></td><td>Etapa {number}</td></tr>'
@@ -48,6 +48,14 @@ with sync_playwright() as p:
     context.route('**/*',fixture)
     context.route('**/*',protect_read_only)
     page=context.new_page();page.goto(request_url)
+    # Visible Telerik container, inactive table: the actual tab must be clicked.
+    assert page.locator('#cph1_rpvTrabalhos').is_visible()
+    assert not page.locator('#cph1_gvwTra').is_visible()
+    assert set(work_numbers(page)) == {'1', '3', '6'}
+    assert page.locator('#cph1_gvwTra').is_visible()
+    page.goto(request_url)
+    page.evaluate("const tab=document.querySelector('#workTab');tab.remove();setTimeout(()=>document.body.prepend(tab),150)")
+    assert set(work_numbers(page)) == {'1', '3', '6'}
     with patch('edesk_comentario.acessar_minha_grid'), patch('edesk_comentario.localizar_solicitacao_validada',return_value=(page,None,page)), patch('edesk_comentario.abrir_solicitacao_para_comentario',return_value=page):
         result=audit_request(context,page,{'solicitacao':'226144','trabalhos':['3']},'test')
         assert len(result)==1 and result[0]['idTrabalho']=='3',result

@@ -19,14 +19,19 @@ Future<EdeskPythonResult> executarPythonEdesk({
   String script = 'edesk_comentario.py',
   bool speakResult = false,
 }) async =>
-    EdeskActivity.track(() => _executar(requestJson: requestJson, enviar: enviar, script: script, speakResult: speakResult));
+    EdeskActivity.track(() => _executar(
+        requestJson: requestJson,
+        enviar: enviar,
+        script: script,
+        speakResult: speakResult));
 
 Future<EdeskPythonResult> executarPythonEdeskBackground({
   required String requestJson,
   required bool enviar,
   String script = 'edesk_fases.py',
 }) async =>
-    EdeskActivity.track(() => _executar(requestJson: requestJson, enviar: enviar, script: script));
+    EdeskActivity.track(() =>
+        _executar(requestJson: requestJson, enviar: enviar, script: script));
 
 EdeskPythonResult _failure(String message, int statusCode) => EdeskPythonResult(
       confirmed: false,
@@ -70,10 +75,15 @@ Future<EdeskPythonResult> _executar({
   final historyUid = FirebaseAuth.instance.currentUser?.uid;
   String? historyId;
   try {
-    historyId = EdeskOperationHistory.begin(historyUid,
+    historyId = EdeskOperationHistory.begin(
+        historyUid,
         '/api/edesk/${script == 'edesk_horas.py' ? 'horas' : script == 'edesk_fases.py' ? 'fases' : script == 'edesk_percentual.py' ? 'percentual' : 'comentarios'}',
-        {'request': jsonDecode(requestJson), 'enviar': enviar, 'operationId': operationId});
-  } catch (_) { /* History cannot interfere with a send. */ }
+        {
+          'request': jsonDecode(requestJson),
+          'enviar': enviar,
+          'operationId': operationId
+        });
+  } catch (_) {/* History cannot interfere with a send. */}
   DialogRoute<void>? route;
   Timer? timer;
   bool polling = false;
@@ -96,7 +106,8 @@ Future<EdeskPythonResult> _executar({
           final total = status['total'];
           final completed = status['completed'];
           if (total is int && total > 0 && completed is int && completed >= 0) {
-            edeskProgressCounts.value = (completed: completed.clamp(0, total), total: total);
+            edeskProgressCounts.value =
+                (completed: completed.clamp(0, total), total: total);
           }
         }
       } catch (_) {
@@ -111,12 +122,15 @@ Future<EdeskPythonResult> _executar({
   }
   EdeskPythonResult result;
   try {
-    final requiresPercentage = script == 'edesk_percentual.py' || (script == 'edesk_comentario.py' &&
-        (jsonDecode(requestJson) as Map)['percentualRealizado'] != null);
+    final requiresPercentage = script == 'edesk_percentual.py' ||
+        (script == 'edesk_comentario.py' &&
+            (jsonDecode(requestJson) as Map)['percentualRealizado'] != null);
     final configuredUrl = hoursApiUrl ?? await EdeskIntegrationApi.currentUrl();
     final host = Uri.parse(configuredUrl).host;
     final localIntegration = host == '127.0.0.1' || host == 'localhost';
-    var useExtension = !requiresPercentage && !localIntegration && await edeskExtensionAvailable();
+    var useExtension = !requiresPercentage &&
+        !localIntegration &&
+        await edeskExtensionAvailable();
     if (useExtension) {
       try {
         final response = await http
@@ -139,9 +153,8 @@ Future<EdeskPythonResult> _executar({
       result = await _executeExtension(
           requestJson, enviar, script, operationId, decision.retryUncertain);
     } else {
-      result = await EdeskWebClient(
-              apiUrl: hoursApiUrl ?? configuredUrl)
-          .execute(
+      result =
+          await EdeskWebClient(apiUrl: hoursApiUrl ?? configuredUrl).execute(
         requestJson: requestJson,
         enviar: enviar,
         script: script,
@@ -166,13 +179,18 @@ Future<EdeskPythonResult> _executar({
     await showDialog<void>(
         context: context,
         builder: (context) => EdeskResultDialog(
-          confirmed: result.confirmed, message: result.message,
-          operation: EdeskOperation.fromScript(script),
-          includesPercentage: script == 'edesk_comentario.py' && deliveryData['percentualRealizado'] != null,
-          completeProgress: edeskProgressCounts.value.total > 0 &&
-              edeskProgressCounts.value.completed == edeskProgressCounts.value.total,
-          spokenHoursResult: speakResult && script == 'edesk_horas.py',
-          canSpeak: () => historyUid != null && FirebaseAuth.instance.currentUser?.uid == historyUid));
+            confirmed: result.confirmed,
+            message: result.message,
+            operation: EdeskOperation.fromScript(script),
+            includesPercentage: script == 'edesk_comentario.py' &&
+                deliveryData['percentualRealizado'] != null,
+            completeProgress: edeskProgressCounts.value.total > 0 &&
+                edeskProgressCounts.value.completed ==
+                    edeskProgressCounts.value.total,
+            spokenHoursResult: speakResult && script == 'edesk_horas.py',
+            canSpeak: () =>
+                historyUid != null &&
+                FirebaseAuth.instance.currentUser?.uid == historyUid));
   }
   return result;
 }
@@ -293,7 +311,9 @@ class EdeskWebClient {
         return _failure('Os dados da automação devem ser um objeto JSON.', 400);
       }
       if ((action == 'conferencia' || action == 'recebidos') &&
-          (data['url'] == null || data['url'] is String && (data['url'] as String).trim().isEmpty)) {
+          (data['url'] == null ||
+              data['url'] is String &&
+                  (data['url'] as String).trim().isEmpty)) {
         data['url'] = 'https://promob.e-desk.com.br';
       }
       final token = await tokenProvider();
@@ -301,10 +321,13 @@ class EdeskWebClient {
         return _failure(
             'Entre novamente na sua conta para utilizar o E-Desk.', 401);
       }
-      final requiresPercentage =
-          action == 'percentual' || (action == 'comentarios' && data['percentualRealizado'] != null);
+      final requiresPercentage = action == 'percentual' ||
+          (action == 'comentarios' && data['percentualRealizado'] != null);
       final requiresHoursReceipt = action == 'horas' && enviar;
-      if (requiresPercentage || requiresHoursReceipt || action == 'conferencia' || action == 'recebidos' ||
+      if (requiresPercentage ||
+          requiresHoursReceipt ||
+          action == 'conferencia' ||
+          action == 'recebidos' ||
           base.host == '127.0.0.1' ||
           base.host == 'localhost') {
         final healthResponse = await requestClient
@@ -314,18 +337,37 @@ class EdeskWebClient {
             .timeout(const Duration(seconds: 12));
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
-          if (action == 'recebidos' && (health is! Map || health['workInbox'] != true)) {
-            return _failure('Atualize e reinicie a integração v38 para buscar os trabalhos da Minha Grid.', 503);
+          if (action == 'conferencia' &&
+              data['requireWorkEnumeration'] == true &&
+              (health is! Map || health['workEnumeration'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v40 para importar as etapas pelo ID. Esta versão corrige a abertura da aba Trabalhos. Nenhum cadastro foi realizado.',
+                503);
           }
-          if (action == 'conferencia' && (health is! Map || health['workAudit'] != true)) {
-            return _failure('Atualize e reinicie a integração local v37 para conferir os trabalhos. Nenhuma consulta foi iniciada.', 503);
+          if (action == 'recebidos' &&
+              (health is! Map || health['workInbox'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v38 para buscar os trabalhos da Minha Grid.',
+                503);
           }
-          if (action == 'comentarios' && requiresPercentage &&
+          if (action == 'conferencia' &&
+              (health is! Map || health['workAudit'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração local v37 para conferir os trabalhos. Nenhuma consulta foi iniciada.',
+                503);
+          }
+          if (action == 'comentarios' &&
+              requiresPercentage &&
               (health is! Map || health['commentPercentageReceipt'] != true)) {
-            return _failure('Atualize e reinicie a integração no computador que executa o E-Desk. Esta versão não confirma o comentário e a porcentagem separadamente. Nenhum comentário foi enviado.', 503);
+            return _failure(
+                'Atualize e reinicie a integração no computador que executa o E-Desk. Esta versão não confirma o comentário e a porcentagem separadamente. Nenhum comentário foi enviado.',
+                503);
           }
-          if (action == 'percentual' && (health is! Map || health['standalonePercentage'] != true)) {
-            return _failure('Atualize a integração local para enviar somente a porcentagem. Nenhum comentário foi enviado.', 503);
+          if (action == 'percentual' &&
+              (health is! Map || health['standalonePercentage'] != true)) {
+            return _failure(
+                'Atualize a integração local para enviar somente a porcentagem. Nenhum comentário foi enviado.',
+                503);
           }
           if (requiresPercentage &&
               (health is! Map || health['commentPercentage'] != true)) {
@@ -339,15 +381,24 @@ class EdeskWebClient {
               503,
             );
           }
-          if (requiresHoursReceipt && (health is! Map || health['hoursReconciliation'] != true)) {
-            return _failure('Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.', 503);
+          if (requiresHoursReceipt &&
+              (health is! Map || health['hoursReconciliation'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.',
+                503);
           }
         } else if (action == 'recebidos') {
-          return _failure('A integração não confirmou o suporte a trabalhos recebidos. Atualize para v38.', 503);
+          return _failure(
+              'A integração não confirmou o suporte a trabalhos recebidos. Atualize para v38.',
+              503);
         } else if (action == 'conferencia') {
-          return _failure('A integração não confirmou o suporte à conferência. Atualize e reinicie a integração v37.', 503);
+          return _failure(
+              'A integração não confirmou o suporte à conferência. Atualize e reinicie a integração v37.',
+              503);
         } else if (requiresHoursReceipt) {
-          return _failure('A integração não confirmou o suporte à conferência de horas. Atualize e reinicie a integração v36. Nenhuma hora foi enviada.', 503);
+          return _failure(
+              'A integração não confirmou o suporte à conferência de horas. Atualize e reinicie a integração v36. Nenhuma hora foi enviada.',
+              503);
         } else if (requiresPercentage) {
           return _failure(
               'A integra\u00e7\u00e3o n\u00e3o confirmou o suporte ao percentual. Nenhum coment\u00e1rio foi enviado.',
@@ -380,7 +431,8 @@ class EdeskWebClient {
       final total = result['total'];
       final completed = result['completed'];
       if (total is int && total > 0 && completed is int && completed >= 0) {
-        edeskProgressCounts.value = (completed: completed.clamp(0, total), total: total);
+        edeskProgressCounts.value =
+            (completed: completed.clamp(0, total), total: total);
       }
       return EdeskPythonResult(
         confirmed: response.statusCode == 200 && result['confirmed'] == true,

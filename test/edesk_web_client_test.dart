@@ -6,59 +6,140 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test('Read-only queries supply the required portal URL and preserve an explicit URL', () async {
+  test(
+      'ID import requires the fixed work-tab reader before starting the browser',
+      () async {
+    for (final supported in [false, true]) {
+      var posts = 0;
+      final result = await EdeskWebClient(
+        apiUrl: 'http://127.0.0.1:8765',
+        tokenProvider: () async => 'token',
+        client: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(
+                jsonEncode({'workAudit': true, 'workEnumeration': supported}),
+                200);
+          }
+          posts++;
+          expect(jsonDecode(request.body)['enviar'], false);
+          return http.Response('{"confirmed":true,"responseBody":"{}"}', 200);
+        }),
+      ).execute(
+          requestJson: '{"requireWorkEnumeration":true}',
+          enviar: false,
+          script: 'edesk_conferencia.py');
+      expect(posts, supported ? 1 : 0);
+      expect(result.confirmed, supported);
+      if (!supported) expect(result.message, contains('v40'));
+    }
+  });
+  test(
+      'Read-only queries supply the required portal URL and preserve an explicit URL',
+      () async {
     for (final action in ['conferencia', 'recebidos']) {
       for (final url in [null, '', 'https://promob.e-desk.com.br/Portal/']) {
         final result = await EdeskWebClient(
-          apiUrl: 'http://127.0.0.1:8765', tokenProvider: () async => 'token',
+          apiUrl: 'http://127.0.0.1:8765',
+          tokenProvider: () async => 'token',
           client: MockClient((request) async {
-            if (request.method == 'GET') return http.Response('{"workAudit":true,"workInbox":true}', 200);
+            if (request.method == 'GET') {
+              return http.Response('{"workAudit":true,"workInbox":true}', 200);
+            }
             final body = jsonDecode(request.body);
-            expect(body['request']['url'], url == null || url.isEmpty ? 'https://promob.e-desk.com.br' : url);
+            expect(
+                body['request']['url'],
+                url == null || url.isEmpty
+                    ? 'https://promob.e-desk.com.br'
+                    : url);
             expect(body['enviar'], false);
             return http.Response('{"confirmed":true,"responseBody":"{}"}', 200);
           }),
-        ).execute(requestJson: jsonEncode({'url': url}), enviar: false,
-          script: action == 'conferencia' ? 'edesk_conferencia.py' : 'edesk_recebidos.py');
+        ).execute(
+            requestJson: jsonEncode({'url': url}),
+            enviar: false,
+            script: action == 'conferencia'
+                ? 'edesk_conferencia.py'
+                : 'edesk_recebidos.py');
         expect(result.confirmed, true);
       }
     }
   });
-  test('Received works require native support and always use a read-only request', () async {
-    var supported=false;
-    final client=EdeskWebClient(apiUrl:'http://127.0.0.1:8765',tokenProvider:()async=>'token',client:MockClient((request)async{
-      if(request.method=='GET')return http.Response(jsonEncode({'workInbox':supported}),200);
-      expect(request.url.path,'/api/edesk/recebidos');expect(jsonDecode(request.body)['enviar'],false);
-      return http.Response(jsonEncode({'confirmed':true,'responseBody':jsonEncode({'rows':[],'complete':true})}),200);
-    }));
-    expect((await client.execute(requestJson:'{}',enviar:false,script:'edesk_recebidos.py')).statusCode,503);
-    expect((await client.execute(requestJson:'{}',enviar:true,script:'edesk_recebidos.py')).statusCode,400);
-    supported=true;
-    expect((await client.execute(requestJson:'{}',enviar:false,script:'edesk_recebidos.py')).confirmed,true);
+  test(
+      'Received works require native support and always use a read-only request',
+      () async {
+    var supported = false;
+    final client = EdeskWebClient(
+        apiUrl: 'http://127.0.0.1:8765',
+        tokenProvider: () async => 'token',
+        client: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(jsonEncode({'workInbox': supported}), 200);
+          }
+          expect(request.url.path, '/api/edesk/recebidos');
+          expect(jsonDecode(request.body)['enviar'], false);
+          return http.Response(
+              jsonEncode({
+                'confirmed': true,
+                'responseBody': jsonEncode({'rows': [], 'complete': true})
+              }),
+              200);
+        }));
+    expect(
+        (await client.execute(
+                requestJson: '{}', enviar: false, script: 'edesk_recebidos.py'))
+            .statusCode,
+        503);
+    expect(
+        (await client.execute(
+                requestJson: '{}', enviar: true, script: 'edesk_recebidos.py'))
+            .statusCode,
+        400);
+    supported = true;
+    expect(
+        (await client.execute(
+                requestJson: '{}', enviar: false, script: 'edesk_recebidos.py'))
+            .confirmed,
+        true);
   });
   test('Audit is read-only and requires the new native capability', () async {
     final calls = <String>[];
-    final client = EdeskWebClient(apiUrl: 'http://127.0.0.1:8765', tokenProvider: () async => 'token',
-      client: MockClient((request) async {
-        calls.add(request.method);
-        return http.Response('{"mode":"local"}',200);
-      }));
-    final rejected = await client.execute(requestJson:'{}',enviar:true,script:'edesk_conferencia.py');
-    expect(rejected.statusCode,400);
-    expect(calls,isEmpty);
-    final outdated = await client.execute(requestJson:'{}',enviar:false,script:'edesk_conferencia.py');
-    expect(outdated.statusCode,503);
-    expect(calls,['GET']);
+    final client = EdeskWebClient(
+        apiUrl: 'http://127.0.0.1:8765',
+        tokenProvider: () async => 'token',
+        client: MockClient((request) async {
+          calls.add(request.method);
+          return http.Response('{"mode":"local"}', 200);
+        }));
+    final rejected = await client.execute(
+        requestJson: '{}', enviar: true, script: 'edesk_conferencia.py');
+    expect(rejected.statusCode, 400);
+    expect(calls, isEmpty);
+    final outdated = await client.execute(
+        requestJson: '{}', enviar: false, script: 'edesk_conferencia.py');
+    expect(outdated.statusCode, 503);
+    expect(calls, ['GET']);
   });
   test('Audit posts a read-only request to its dedicated endpoint', () async {
-    final result = await EdeskWebClient(apiUrl:'http://127.0.0.1:8765',tokenProvider:() async=>'token',
-      client:MockClient((request) async {
-        if(request.method=='GET') return http.Response('{"workAudit":true,"mode":"local"}',200);
-        expect(request.url.path,'/api/edesk/conferencia');
-        expect(jsonDecode(request.body)['enviar'],false);
-        return http.Response(jsonEncode({'confirmed':true, 'responseBody':jsonEncode({'ok':true,'operation':'conferencia','rows':[]})}),200);
-      })).execute(requestJson:'{}',enviar:false,script:'edesk_conferencia.py');
-    expect(result.confirmed,true);
+    final result = await EdeskWebClient(
+            apiUrl: 'http://127.0.0.1:8765',
+            tokenProvider: () async => 'token',
+            client: MockClient((request) async {
+              if (request.method == 'GET') {
+                return http.Response('{"workAudit":true,"mode":"local"}', 200);
+              }
+              expect(request.url.path, '/api/edesk/conferencia');
+              expect(jsonDecode(request.body)['enviar'], false);
+              return http.Response(
+                  jsonEncode({
+                    'confirmed': true,
+                    'responseBody': jsonEncode(
+                        {'ok': true, 'operation': 'conferencia', 'rows': []})
+                  }),
+                  200);
+            }))
+        .execute(
+            requestJson: '{}', enviar: false, script: 'edesk_conferencia.py');
+    expect(result.confirmed, true);
   });
   test('Hours require persisted receipt support before any POST', () async {
     final methods = <String>[];
@@ -76,16 +157,19 @@ void main() {
     expect(result.message, contains('v36'));
   });
 
-  test('Hours propagate persisted receipt success from the integration', () async {
+  test('Hours propagate persisted receipt success from the integration',
+      () async {
     final methods = <String>[];
     final result = await EdeskWebClient(
       apiUrl: 'http://127.0.0.1:8765',
       tokenProvider: () async => 'token',
       client: MockClient((request) async {
         methods.add(request.method);
-        return http.Response(request.method == 'GET'
-            ? '{"mode":"local","hoursReconciliation":true}'
-            : '{"confirmed":true,"message":"Cadastro finalizado com sucesso"}', 200);
+        return http.Response(
+            request.method == 'GET'
+                ? '{"mode":"local","hoursReconciliation":true}'
+                : '{"confirmed":true,"message":"Cadastro finalizado com sucesso"}',
+            200);
       }),
     ).execute(requestJson: '{}', enviar: true, script: 'edesk_horas.py');
     expect(result.confirmed, true);
@@ -94,27 +178,48 @@ void main() {
 
   test('standalone percentage never posts to an old integration', () async {
     final calls = <http.Request>[];
-    final result = await EdeskWebClient(apiUrl: 'http://127.0.0.1:8765',
-      tokenProvider: () async => 'token', client: MockClient((request) async {
-        calls.add(request);
-        return http.Response('{"commentPercentage":true}', 200);
-      })).execute(requestJson: '{"percentualRealizado":25}', enviar: true, script: 'edesk_percentual.py');
-    expect(result.confirmed, false); expect(result.statusCode, 503);
+    final result = await EdeskWebClient(
+            apiUrl: 'http://127.0.0.1:8765',
+            tokenProvider: () async => 'token',
+            client: MockClient((request) async {
+              calls.add(request);
+              return http.Response('{"commentPercentage":true}', 200);
+            }))
+        .execute(
+            requestJson: '{"percentualRealizado":25}',
+            enviar: true,
+            script: 'edesk_percentual.py');
+    expect(result.confirmed, false);
+    expect(result.statusCode, 503);
     expect(calls.every((request) => request.method == 'GET'), true);
   });
-  test('standalone percentage uses its own endpoint without comment content', () async {
+  test('standalone percentage uses its own endpoint without comment content',
+      () async {
     final calls = <http.Request>[];
-    final result = await EdeskWebClient(apiUrl: 'http://127.0.0.1:8765',
-      tokenProvider: () async => 'token', client: MockClient((request) async {
-        calls.add(request);
-        if (request.method == 'GET') return http.Response('{"standalonePercentage":true,"commentPercentage":true}', 200);
-        expect(request.url.path, '/api/edesk/percentual');
-        final data = jsonDecode(request.body)['request'] as Map;
-        expect(data.containsKey('texto'), false); expect(data.containsKey('imagemBase64'), false);
-        return http.Response('{"confirmed":true,"message":"Porcentagem confirmada"}', 200);
-      })).execute(requestJson: '{"solicitacao":"226144","idTrabalho":"6","percentualRealizado":0}',
-          enviar: true, script: 'edesk_percentual.py');
-    expect(result.confirmed, true); expect(calls.where((request) => request.method == 'POST'), hasLength(1));
+    final result = await EdeskWebClient(
+            apiUrl: 'http://127.0.0.1:8765',
+            tokenProvider: () async => 'token',
+            client: MockClient((request) async {
+              calls.add(request);
+              if (request.method == 'GET') {
+                return http.Response(
+                    '{"standalonePercentage":true,"commentPercentage":true}',
+                    200);
+              }
+              expect(request.url.path, '/api/edesk/percentual');
+              final data = jsonDecode(request.body)['request'] as Map;
+              expect(data.containsKey('texto'), false);
+              expect(data.containsKey('imagemBase64'), false);
+              return http.Response(
+                  '{"confirmed":true,"message":"Porcentagem confirmada"}', 200);
+            }))
+        .execute(
+            requestJson:
+                '{"solicitacao":"226144","idTrabalho":"6","percentualRealizado":0}',
+            enviar: true,
+            script: 'edesk_percentual.py');
+    expect(result.confirmed, true);
+    expect(calls.where((request) => request.method == 'POST'), hasLength(1));
   });
   test(
       'Old integration cannot silently ignore the percentage or save the comment',
@@ -146,7 +251,11 @@ void main() {
               calls.add(request);
               return http.Response(
                   jsonEncode(request.method == 'GET'
-                      ? {'mode': 'local', 'commentPercentage': true, 'commentPercentageReceipt': true}
+                      ? {
+                          'mode': 'local',
+                          'commentPercentage': true,
+                          'commentPercentageReceipt': true
+                        }
                       : {'confirmed': true, 'message': 'ok'}),
                   200);
             }))

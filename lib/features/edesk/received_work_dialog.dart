@@ -153,6 +153,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     });
     try {
       final receipt = await _query('edesk_conferencia.py', {
+        'requireWorkEnumeration': (row['works'] as Set<String>).isEmpty,
         'solicitacoes': [
           {
             'solicitacao': row['solicitacao'],
@@ -177,6 +178,14 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
           detail['solicitacao']?.toString() != row['solicitacao'])) {
         throw StateError(
             'A consulta retornou outra solicitação. Nenhum cadastro foi realizado.');
+      }
+      final failed = details.where((detail) =>
+          detail['error'] != null ||
+          !RegExp(r'^\d+$').hasMatch(detail['idTrabalho']?.toString() ?? ''));
+      if (failed.isNotEmpty) {
+        throw StateError(
+            '${failed.first['error'] ?? 'A consulta não identificou os números reais das etapas.'} '
+            'Não foi possível importar as etapas. Nenhum cadastro foi realizado.');
       }
       final existing =
           await (widget.loadExisting?.call(row['solicitacao'] as String) ??

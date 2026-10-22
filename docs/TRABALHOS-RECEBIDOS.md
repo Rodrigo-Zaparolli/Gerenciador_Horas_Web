@@ -18,7 +18,7 @@ Ao lado de **Novo trabalho**, o botão **Importar do E-Desk pelo ID** abre um ca
 
 A busca não grava projetos. Ela abre a mesma revisão de etapas, cliente, tipo, líder, datas e horas. Campos que o E-Desk não retornar ficam para preenchimento manual; nenhum nome ou número de etapa é inventado. Lista vazia, solicitação diferente e falhas não oferecem cadastro. Fechar ou cancelar não grava; somente **Cadastrar no app** confirma a importação.
 
-Usa a integração existente (v39 para Maiquel). Mantém transações, preservação de projetos existentes, bloqueio de finalizados e controle de duplicidade. Ao fechar a janela, o painel recarrega os projetos do usuário. A leitura completa dos campos na estrutura real do E-Desk continua dependendo da validação no PC da integração.
+A importação pelo ID exige integração v40, que verifica a tabela visível e aciona a aba Trabalhos mesmo quando o contêiner já está visível. Antes de cada etapa, reabre a aba após recarregar a solicitação. O app verifica a capacidade `workEnumeration` antes da consulta. Etapas com erro ou sem número real impedem a abertura da confirmação, inclusive em respostas parcialmente preenchidas. Mantém transações, preservação de projetos existentes, bloqueio de finalizados e controle de duplicidade. Ao fechar a janela, o painel recarrega os projetos do usuário. A leitura completa dos campos na estrutura real do E-Desk continua dependendo da validação no PC da integração.
 
 ## Duplicidade e falhas
 
