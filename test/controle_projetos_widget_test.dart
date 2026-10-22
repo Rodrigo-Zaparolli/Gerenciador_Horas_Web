@@ -11,6 +11,7 @@ void main() {
     DateTime? end = DateTime(2026, 10, 9);
     var filters = 0;
     var created = 0;
+    var imported = 0;
     var synchronized = 0;
     final expanded = <String>{'projeto'};
     await tester.pumpWidget(MaterialApp(
@@ -31,6 +32,7 @@ void main() {
             dataFim: end,
             expandedProjectIds: expanded,
             onNewProject: () => created++,
+            onImportById: () => imported++,
             onSynchronize: () => synchronized++,
             onFilter: () => filters++,
             onManual: () {},
@@ -63,8 +65,12 @@ void main() {
     await tester.pump();
     expect(service, isNull);
     await tester.tap(find.text('Novo trabalho'));
+    await tester.tap(find.text('Importar do E-Desk pelo ID'));
     await tester.tap(find.byTooltip('Sincronizar'));
     expect(created, 1);
+    expect(imported, 1);
+    expect(tester.getCenter(find.text('Importar do E-Desk pelo ID')).dx,
+        greaterThan(tester.getCenter(find.text('Novo trabalho')).dx));
     expect(synchronized, 1);
     expect(expanded, isEmpty);
     expect(tester.takeException(), isNull);

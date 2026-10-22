@@ -1,6 +1,6 @@
 # Trabalhos recebidos — piloto E-Desk → app
 
-Disponível para `rodrigozaparolli79@gmail.com`. A API valida a identidade pelo token Firebase. A importação usa exclusivamente o espaço do usuário autenticado no Firestore. Não altera trabalhos no E-Desk.
+Disponível para `rodrigozaparolli79@gmail.com` e `maiquel.elste@cyncly.com`. A API valida a identidade pelo token Firebase. A importação usa exclusivamente o espaço do usuário autenticado no Firestore. Não altera trabalhos no E-Desk.
 
 Em Projetos, clique **Trabalhos recebidos → Buscar na Minha Grid**. A integração v38 precisa estar iniciada. Esta versão busca mediante clique; não monitora o E-Desk em segundo plano nem recebe eventos com o computador desligado.
 
@@ -11,6 +11,14 @@ A origem é a Minha Grid do login E-Desk configurado. O usuário confirmou que e
 O status das etapas novas é Inicial, conforme informado na revisão. A data de recebimento vem explicitamente no formulário; datas previstas só são importadas quando reconhecidas e válidas. Os campos do trabalho podem ser conferidos antes de **Cadastrar no app**.
 
 Para um projeto novo, cria o cadastro com as etapas selecionadas e a soma das horas previstas. Para um projeto existente, apenas acrescenta etapas ainda ausentes, recalculando a estimativa; preserva cliente, tipo, líder, horas realizadas, caminhos, checklist e tarefas anteriores. Etapas existentes ficam desmarcadas e bloqueadas na revisão.
+
+## Importar pelo ID
+
+Ao lado de **Novo trabalho**, o botão **Importar do E-Desk pelo ID** abre um campo de solicitação. Aceita somente números e consulta diretamente os trabalhos daquela solicitação pelo leitor de conferência; não depende da leitura prévia da Minha Grid. O acesso ainda usa a sessão e as permissões E-Desk do usuário.
+
+A busca não grava projetos. Ela abre a mesma revisão de etapas, cliente, tipo, líder, datas e horas. Campos que o E-Desk não retornar ficam para preenchimento manual; nenhum nome ou número de etapa é inventado. Lista vazia, solicitação diferente e falhas não oferecem cadastro. Fechar ou cancelar não grava; somente **Cadastrar no app** confirma a importação.
+
+Usa a integração existente (v39 para Maiquel). Mantém transações, preservação de projetos existentes, bloqueio de finalizados e controle de duplicidade. Ao fechar a janela, o painel recarrega os projetos do usuário. A leitura completa dos campos na estrutura real do E-Desk continua dependendo da validação no PC da integração.
 
 ## Duplicidade e falhas
 

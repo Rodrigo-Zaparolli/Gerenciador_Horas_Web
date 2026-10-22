@@ -24,6 +24,7 @@ class ControleProjetosWidget extends StatefulWidget {
   final Set<String>? expandedProjectIds;
 
   final VoidCallback onNewProject;
+  final VoidCallback? onImportById;
   final VoidCallback onSynchronize;
   final VoidCallback onFilter;
   final VoidCallback? onReset;
@@ -54,6 +55,7 @@ class ControleProjetosWidget extends StatefulWidget {
     this.dataFim,
     this.expandedProjectIds,
     required this.onNewProject,
+    this.onImportById,
     required this.onSynchronize,
     required this.onFilter,
     this.onReset,
@@ -544,6 +546,7 @@ class _ControleProjetosWidgetState extends State<ControleProjetosWidget> {
             const SizedBox(height: 4),
             Row(children: [
               Expanded(
+                  flex: 2,
                   child: SizedBox(
                       height: AppVisuals.buttonHeight,
                       child: ElevatedButton.icon(
@@ -555,13 +558,36 @@ class _ControleProjetosWidgetState extends State<ControleProjetosWidget> {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8))),
-                        icon: const Icon(Icons.add, size: 19),
+                        icon: widget.onImportById == null
+                            ? const Icon(Icons.add, size: 19)
+                            : null,
                         label: const Text('Novo trabalho',
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w700)),
                       ))),
+              if (widget.onImportById != null) ...[
+                const SizedBox(width: 6),
+                Expanded(
+                    flex: 3,
+                    child: SizedBox(
+                        height: AppVisuals.buttonHeight,
+                        child: OutlinedButton(
+                            onPressed: widget.onImportById,
+                            style: OutlinedButton.styleFrom(
+                                foregroundColor: _accent,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                minimumSize: Size.zero),
+                            child: const Text('Importar do E-Desk pelo ID',
+                                textAlign: TextAlign.center,
+                                maxLines: 3,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    height: 1.05,
+                                    fontWeight: FontWeight.w600))))),
+              ],
               const SizedBox(width: 8),
               SizedBox(
                   width: 32,

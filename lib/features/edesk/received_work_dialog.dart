@@ -18,8 +18,22 @@ void _closeReceivedRoute(BuildContext context) {
 }
 
 class ReceivedWorkDialog extends StatefulWidget {
-  const ReceivedWorkDialog({super.key});
-  static Future<void> show(BuildContext context) {
+  const ReceivedWorkDialog(
+      {super.key,
+      this.importById = false,
+      this.auth,
+      this.query,
+      this.loadTypes,
+      this.loadExisting,
+      this.importProject});
+  final bool importById;
+  final FirebaseAuth? auth;
+  final Future<Map<String, dynamic>> Function(
+      String script, Map<String, dynamic> data)? query;
+  final Future<List<String>> Function()? loadTypes;
+  final Future<ProjectModel?> Function(String request)? loadExisting;
+  final Future<int> Function(ProjectModel project)? importProject;
+  static Future<void> show(BuildContext context, {bool importById = false}) {
     final user = FirebaseAuth.instance.currentUser;
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
       return Future.value();
@@ -27,7 +41,7 @@ class ReceivedWorkDialog extends StatefulWidget {
     return showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const ReceivedWorkDialog());
+        builder: (_) => ReceivedWorkDialog(importById: importById));
   }
 
   @override
@@ -35,6 +49,8 @@ class ReceivedWorkDialog extends StatefulWidget {
 }
 
 class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
+  FirebaseAuth get _session => widget.auth ?? FirebaseAuth.instance;
+  final _requestId = TextEditingController();
   List<Map<String, dynamic>> _rows = [];
   final _imported = <String>{};
   bool _busy = false;
@@ -45,8 +61,12 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
   @override
   void initState() {
     super.initState();
-    _owner = FirebaseAuth.instance.currentUser?.uid;
-    _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
+    _owner = _session.currentUser?.uid;
+    if (widget.importById) {
+      _message =
+          'Informe o ID da solicitação para buscar as etapas no E-Desk. Confira os dados antes de cadastrar no app.';
+    }
+    _auth = _session.authStateChanges().listen((user) {
       if (user?.uid != _owner && mounted) {
         setState(() => _rows.clear());
         _closeReceivedRoute(context);
@@ -57,14 +77,20 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
   @override
   void dispose() {
     _auth?.cancel();
+    _requestId.dispose();
     super.dispose();
   }
 
   bool get _sameOwner =>
-      mounted && FirebaseAuth.instance.currentUser?.uid == _owner;
+      mounted &&
+      _session.currentUser?.uid == _owner &&
+      PilotFeatureAccess.allows(
+          uid: _session.currentUser?.uid, email: _session.currentUser?.email);
 
   Future<Map<String, dynamic>> _query(
       String script, Map<String, dynamic> data) async {
+    if (!_sameOwner) throw StateError('A conta mudou.');
+    if (widget.query != null) return widget.query!(script, data);
     final credentials = await EdeskCredentialsService().ler();
     if (credentials == null) {
       throw StateError('Configure suas credenciais E-Desk antes de buscar.');
@@ -119,6 +145,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
   }
 
   Future<void> _review(Map<String, dynamic> row) async {
+    if (_busy || !_sameOwner) return;
     setState(() {
       _busy = true;
       _message =
@@ -133,13 +160,27 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
           }
         ]
       });
-      final formats = await FirebaseService().getWorkFormats();
+      final types = widget.loadTypes != null
+          ? await widget.loadTypes!()
+          : (await FirebaseService().getWorkFormats())
+              .map((f) => f.name)
+              .toList();
       if (!mounted || !_sameOwner) return;
       final details = (receipt['rows'] as List)
           .map((value) => Map<String, dynamic>.from(value as Map))
           .toList();
+      if (details.isEmpty) {
+        throw StateError(
+            'Nenhum trabalho foi encontrado nesta solicitação. Nenhum cadastro foi realizado.');
+      }
+      if (details.any((detail) =>
+          detail['solicitacao']?.toString() != row['solicitacao'])) {
+        throw StateError(
+            'A consulta retornou outra solicitação. Nenhum cadastro foi realizado.');
+      }
       final existing =
-          await ReceivedWorkStore().loadExisting(row['solicitacao'] as String);
+          await (widget.loadExisting?.call(row['solicitacao'] as String) ??
+              ReceivedWorkStore().loadExisting(row['solicitacao'] as String));
       if (!mounted || !_sameOwner) return;
       setState(() => _busy = false);
       final added = await showDialog<int>(
@@ -148,8 +189,10 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
           builder: (_) => ReceivedWorkReview(
               summary: row,
               details: details,
-              types: formats.map((f) => f.name).toList(),
-              existing: existing));
+              types: types,
+              existing: existing,
+              auth: widget.auth,
+              importProject: widget.importProject));
       if (!mounted || !_sameOwner) return;
       if (added != null) {
         setState(() {
@@ -170,6 +213,17 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     }
   }
 
+  Future<void> _searchById() async {
+    if (_busy) return;
+    final number = _requestId.text.trim();
+    if (!RegExp(r'^\d+$').hasMatch(number)) {
+      setState(
+          () => _message = 'Informe apenas os números do ID da solicitação.');
+      return;
+    }
+    await _review({'solicitacao': number, 'works': <String>{}});
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
       canPop: !_busy,
@@ -182,11 +236,26 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('Trabalhos recebidos',
+                        Text(
+                            widget.importById
+                                ? 'Importar do E-Desk pelo ID'
+                                : 'Trabalhos recebidos',
                             style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 8),
-                        const Text(
-                            'E-Desk → app · Minha Grid da sua conta · Piloto com conferência antes de cadastrar. A integração local precisa estar iniciada.'),
+                        Text(widget.importById
+                            ? 'Busque a solicitação e confira as etapas, horas e dados do projeto antes de cadastrar. A integração local precisa estar iniciada.'
+                            : 'E-Desk → app · Minha Grid da sua conta · Piloto com conferência antes de cadastrar. A integração local precisa estar iniciada.'),
+                        if (widget.importById) ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                              controller: _requestId,
+                              enabled: !_busy,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                  labelText: 'ID da solicitação',
+                                  hintText: 'Ex.: 2265173'),
+                              onSubmitted: (_) => _searchById()),
+                        ],
                         const SizedBox(height: 12),
                         SelectableText(_message),
                         const SizedBox(height: 12),
@@ -226,10 +295,16 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
                                       : () => Navigator.pop(context),
                                   child: const Text('Fechar')),
                               FilledButton.icon(
-                                  onPressed: _busy ? null : _search,
+                                  onPressed: _busy
+                                      ? null
+                                      : widget.importById
+                                          ? _searchById
+                                          : _search,
                                   icon:
                                       const Icon(Icons.move_to_inbox_outlined),
-                                  label: const Text('Buscar na Minha Grid'))
+                                  label: Text(widget.importById
+                                      ? 'Buscar no E-Desk'
+                                      : 'Buscar na Minha Grid'))
                             ]),
                       ])))));
 }

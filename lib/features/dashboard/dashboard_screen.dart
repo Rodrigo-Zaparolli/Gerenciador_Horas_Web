@@ -2915,6 +2915,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 // CRIAR NOVO PROJETO
 // ============================================================
 
+  Future<void> _importWorkById() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    await ReceivedWorkDialog.show(context, importById: true);
+    if (mounted && FirebaseAuth.instance.currentUser?.uid == uid) {
+      await _loadDataFromFirebase(showLoader: false);
+    }
+  }
+
   Future<void> _createNewProject() async {
     final ProjectModel? newProject = await showDialog<ProjectModel>(
       context: context,
@@ -3743,6 +3751,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _filtroApenasAtivos,
                   expandedProjectIds: _expandedProjectIds,
                   onNewProject: _createNewProject,
+                  onImportById: PilotFeatureAccess.allows(
+                          uid: FirebaseAuth.instance.currentUser?.uid,
+                          email: FirebaseAuth.instance.currentUser?.email)
+                      ? _importWorkById
+                      : null,
                   onSynchronize: () {
                     _loadDataFromFirebase(
                       showLoader: false,
@@ -3867,6 +3880,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         _dataFimFiltro != null,
                     expandedProjectIds: _expandedProjectIds,
                     onNewProject: _createNewProject,
+                    onImportById: PilotFeatureAccess.allows(
+                            uid: FirebaseAuth.instance.currentUser?.uid,
+                            email: FirebaseAuth.instance.currentUser?.email)
+                        ? _importWorkById
+                        : null,
                     onSynchronize: () {
                       _loadDataFromFirebase(
                         showLoader: false,
