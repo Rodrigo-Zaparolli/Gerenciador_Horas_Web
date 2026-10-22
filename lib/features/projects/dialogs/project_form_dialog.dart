@@ -599,54 +599,8 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
   // TRABALHO - OBTER NOME
   // ============================================================
 
-  String _getWorkName(
-    dynamic rawStep,
-    int index,
-  ) {
-    if (rawStep is String) {
-      final String value = rawStep.trim();
-
-      if (value.isNotEmpty) {
-        return value;
-      }
-    }
-
-    if (rawStep is Map) {
-      final dynamic name = rawStep['name'];
-
-      if (name != null && name.toString().trim().isNotEmpty) {
-        return name.toString().trim();
-      }
-
-      final dynamic stage = rawStep['stage'];
-
-      if (stage != null && stage.toString().trim().isNotEmpty) {
-        return stage.toString().trim();
-      }
-
-      final dynamic title = rawStep['title'];
-
-      if (title != null && title.toString().trim().isNotEmpty) {
-        return title.toString().trim();
-      }
-
-      final dynamic description = rawStep['description'];
-
-      if (description != null && description.toString().trim().isNotEmpty) {
-        return description.toString().trim();
-      }
-    }
-
-    if (rawStep != null) {
-      final String value = rawStep.toString().trim();
-
-      if (value.isNotEmpty && value != 'null') {
-        return value;
-      }
-    }
-
-    return 'Etapa ${index + 1}';
-  }
+  String _getWorkName(dynamic rawStep, int index) =>
+      workStepName(rawStep, index);
 
   // ============================================================
   // DATAS
@@ -1119,7 +1073,6 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
           if (existingTask.subId.trim().isNotEmpty) {
             subId = existingTask.subId.trim();
           }
-
         }
 
         stepStart = _onlyDate(stepStart);

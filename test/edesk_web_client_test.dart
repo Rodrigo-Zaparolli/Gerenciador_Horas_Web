@@ -157,6 +157,25 @@ void main() {
     expect(result.message, contains('v36'));
   });
 
+  test(
+      'Hours stop before POST when the integration lacks real Timesheet support',
+      () async {
+    final methods = <String>[];
+    final result = await EdeskWebClient(
+      apiUrl: 'http://127.0.0.1:8765',
+      tokenProvider: () async => 'token',
+      client: MockClient((request) async {
+        methods.add(request.method);
+        return http.Response(
+            '{"mode":"local","hoursReconciliation":true}', 200);
+      }),
+    ).execute(requestJson: '{}', enviar: true, script: 'edesk_horas.py');
+    expect(result.confirmed, false);
+    expect(result.statusCode, 503);
+    expect(result.message, contains('v42'));
+    expect(methods, ['GET']);
+  });
+
   test('Hours propagate persisted receipt success from the integration',
       () async {
     final methods = <String>[];
@@ -167,7 +186,7 @@ void main() {
         methods.add(request.method);
         return http.Response(
             request.method == 'GET'
-                ? '{"mode":"local","hoursReconciliation":true}'
+                ? '{"mode":"local","hoursReconciliation":true,"hoursTimesheet":true}'
                 : '{"confirmed":true,"message":"Cadastro finalizado com sucesso"}',
             200);
       }),

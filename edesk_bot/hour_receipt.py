@@ -30,7 +30,9 @@ def time_value(value):
 
 def type_value(value):
     value = normalized(value)
-    return {'interno': '0', 'externo': '1', 'padrao': '3', 'padrao (interno)': '4'}.get(value, value)
+    return {'interno': '0', 'externo': '1', 'padrao': '3', 'padrao (interno)': '4',
+            't': '0', 'tempo trabalhado': '0',
+            'registrar somente um tempo trabalhado': '0'}.get(value, value)
 
 
 def presence(snapshot, hour):
@@ -39,7 +41,8 @@ def presence(snapshot, hour):
     if None in target:
         return 'unknown'
     matches = [row for row in snapshot.get('rows', [])
-               if (date_value(row.get('data')), time_value(row.get('inicio')), time_value(row.get('fim'))) == target]
+               if (date_value(row.get('data')), time_value(row.get('inicio')), time_value(row.get('fim'))) == target
+               and (not row.get('dataFim') or date_value(row['dataFim']) == target[0])]
     expected_type = type_value(hour.get('tipo') or '0')
     if any(row.get('tipo') is None or type_value(row['tipo']) == expected_type for row in matches):
         return 'present'
@@ -54,23 +57,28 @@ GRID_SCRIPT = r'''() => {
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .toLowerCase().replace(/[^a-z0-9]/g,'');
   const visible = e => !!(e && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+  const editable='input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="image"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),textarea,select';
   const aliases = {
     data:['data','datadolancamento','dataderegistro','dataregistro','dataapontamento','datadoapontamento'],
-    inicio:['inicio','horainicio','horainicial','horariodeinicio','horarioinicial','entrada'],
-    fim:['fim','horafim','horafinal','horariodefim','horariofinal','saida','termino'],
+    inicio:['inicio','horainicio','horadeinicio','horainicial','horariodeinicio','horarioinicial','entrada'],
+    fim:['fim','horafim','horadefim','horafinal','horariodefim','horariofinal','saida','termino','horatermino','horadetermino','horariodetermino'],
     tipo:['tipo','tipoderegistro','tiporegistro','tipodetempo','tipoapontamento','tipodeapontamento']
   };
   const candidates=[];
   for(const table of document.querySelectorAll('table')) {
     if(!visible(table)) continue;
     const rows=[...table.rows].filter(r=>r.closest('table')===table);
-    let header=null, columns=null;
+    let header=null, columns=null, combined=false;
     for(const row of rows) {
       const cells=[...row.cells];
-      if(!cells.length || cells.some(c=>c.querySelector('input:not([type="hidden"]),textarea,select'))) continue;
+      if(!cells.length || cells.some(c=>c.querySelector(editable))) continue;
       const names=cells.map(c=>norm(c.innerText));
       const map=Object.fromEntries(Object.entries(aliases).map(([key,values])=>[key,names.findIndex(n=>values.includes(n))]));
-      if(['data','inicio','fim'].every(key=>map[key]>=0)) {header=row;columns=map;break;}
+      const separated=['data','inicio','fim'].every(key=>map[key]>=0);
+      // The real retroactive Timesheet has no separate Date column:
+      // Atendente | Inicio (date + time) | Termino (date + time) | Tempo | ...
+      const timesheet=map.inicio>=0 && map.fim>=0 && names.includes('atendente') && names.includes('tempo');
+      if(separated || timesheet) {header=row;columns=map;combined=!separated;break;}
     }
     if(!header) continue;
     const result={rows:[],complete:true,grid:table.id||'',pager:false,index:null,next:null,first:null};
@@ -108,9 +116,17 @@ GRID_SCRIPT = r'''() => {
         if(!/nenhum|naoha|naoexist|semregistro|semapontamento|semitens|norecord|noitem|nodata/.test(norm(cells.map(c=>c.innerText).join(' '))))result.complete=false;
         continue;
       }
-      if(cells.some(c=>c.querySelector('input:not([type="hidden"]),textarea,select'))) {result.complete=false;continue;}
-      result.rows.push({data:cells[columns.data].innerText.trim(),inicio:cells[columns.inicio].innerText.trim(),
-        fim:cells[columns.fim].innerText.trim(),tipo:columns.tipo>=0?cells[columns.tipo]?.innerText.trim():null});
+      if(cells.some(c=>c.querySelector(editable))) {result.complete=false;continue;}
+      const kind=columns.tipo>=0?cells[columns.tipo]?.innerText.trim():null;
+      if(combined) {
+        const moment=cell => cell.innerText.trim().match(/^(\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2}))\s+(\d{1,2}:\d{2}(?::00)?)$/);
+        const start=moment(cells[columns.inicio]), end=moment(cells[columns.fim]);
+        if(!start || !end) {result.complete=false;continue;}
+        result.rows.push({data:start[1],inicio:start[2],dataFim:end[1],fim:end[2],tipo:kind});
+      } else {
+        result.rows.push({data:cells[columns.data].innerText.trim(),inicio:cells[columns.inicio].innerText.trim(),
+          fim:cells[columns.fim].innerText.trim(),tipo:kind});
+      }
     }
     const total=Number(table.getAttribute('aria-rowcount'));
     if(total>result.rows.length+1 && !result.pager)result.complete=false;
@@ -140,7 +156,7 @@ def read_hours(page, max_pages=100):
             return {'rows': collected, 'complete': False, 'reason': 'A paginacao nao avancou.'}
         visited.add(identity)
         for row in data.get('rows', []):
-            if not all((date_value(row.get('data')), time_value(row.get('inicio')), time_value(row.get('fim')))):
+            if not all((date_value(row.get('data')), time_value(row.get('inicio')), time_value(row.get('fim')))) or (row.get('dataFim') and not date_value(row['dataFim'])):
                 data['complete'] = False
         collected.extend(data.get('rows', []))
         if data.get('complete') is not True:
@@ -159,12 +175,18 @@ def deliver_hours(hours, read_fresh, submit, emit, stage=lambda _: None):
     never automatically repeated, even if a later read does not show its row.
     """
     outcomes, retried, errors = {}, set(), []
+    unreadable = False
 
     def inspect():
+        nonlocal unreadable
         stage('checking')
         try:
-            return read_fresh()
+            snapshot = read_fresh()
+            if snapshot.get('complete') is not True:
+                unreadable = True
+            return snapshot
         except Exception as error:
+            unreadable = True
             errors.append(str(error))
             return {'rows': [], 'complete': False}
 
@@ -215,6 +237,11 @@ def deliver_hours(hours, read_fresh, submit, emit, stage=lambda _: None):
                f'{len(confirmed)} de {len(hours)} hora(s) confirmadas; {len(missing)} nao cadastradas e '
                f'{len(uncertain)} sem comprovacao. Somente ausencias comprovadas foram tentadas novamente; '
                'os demais envios nao foram repetidos para evitar duplicidade.')
+    if not ok and not outcomes and unreadable:
+        message = ('Nenhuma hora foi enviada: a listagem de horas no retroativo nao foi reconhecida '
+                   'ou nao pode ser lida por completo. O cadastro foi interrompido antes de clicar em Salvar. '
+                   'Os registros locais foram liberados para nova tentativa; confira o diagnostico da integracao.')
     return {'operation': 'horas', 'ok': ok, 'total': len(hours), 'verified': len(confirmed),
             'retried': len(retried), 'missing': len(missing), 'uncertain': len(uncertain),
+            'attempted': len(outcomes),
             'message': message, 'details': errors[-3:]}

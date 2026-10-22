@@ -30,6 +30,7 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                 busy = state['cold'] and state['case'] == 'initial_busy'
                 ajax = state['cold'] and state['case'] == 'ajax_tab'
                 hidden = state['case'] == 'hidden_controls'
+                hidden_table = state['case'] == 'visible_panel_hidden_table'
                 hidden_control = '<a style="display:none" onclick="btnSelTraWrong()">6</a>' if hidden else ''
                 row = '<tr><td>6</td><td>' + hidden_control + '<button id="select-work" onclick="btnSelTra()">Implantação</button></td></tr>'
                 if hidden:
@@ -37,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                 action = f'window.open({work_url!r},"_blank")' if state['popup'] else f'location.assign({work_url!r})'
                 html = f'''<a style="display:none">Trabalhos (2)</a>
                   <a role="tab" onclick="openTab()">Trabalhos (2)</a>
-                  <div id="cph1_rpvTrabalhos" style="display:none"><table id="cph1_gvwTra">
+                  <div id="cph1_rpvTrabalhos" style="{'min-height:20px' if hidden_table else 'display:none'}"><table id="cph1_gvwTra" style="{'display:none' if hidden_table else ''}">
                   <tr><th>ID</th><th>Descrição</th></tr>{row}</table></div>
                   <script>
                   window.busy={str(busy).lower()}; window.premature=false;
@@ -45,6 +46,7 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                   function openTab(){{
                     if(window.busy){{window.premature=true;return;}}
                     document.querySelector('#cph1_rpvTrabalhos').style.display='block';
+                    document.querySelector('#cph1_gvwTra').style.display='table';
                     if({str(ajax).lower()}){{window.busy=true;document.querySelector('#select-work').disabled=true;
                       setTimeout(()=>{{window.busy=false;document.querySelector('#select-work').disabled=false}},350);}}
                   }}
@@ -62,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
 
         context.route('**/*', respond)
         with patch.object(hours, 'log'):
-            for case in ['initial_busy', 'ajax_tab', 'hidden_controls']:
+            for case in ['initial_busy', 'ajax_tab', 'hidden_controls', 'visible_panel_hidden_table']:
                 for popup in [False, True]:
                     for cold in [True, False]:
                         state.update(case=case, popup=popup, cold=cold)
@@ -77,4 +79,4 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                         for opened in list(context.pages):
                             opened.close()
         browser.close()
-print('HOURS_COLD_START_OK: 12 cold/warm/Ajax/hidden-control/popup cases; correct work and retroactive form; no POSTs')
+print('HOURS_COLD_START_OK: 16 cold/warm/Ajax/hidden-control/hidden-table/popup cases; correct work and retroactive form; no POSTs')

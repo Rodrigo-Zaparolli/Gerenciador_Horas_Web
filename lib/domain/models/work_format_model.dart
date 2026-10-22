@@ -1,3 +1,15 @@
+/// Stage labels shared by manual registration and E-Desk import.
+String workStepName(dynamic rawStep, int index) {
+  if (rawStep is Map) {
+    for (final key in ['name', 'stage', 'title', 'description']) {
+      final value = rawStep[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+  }
+  final value = rawStep?.toString().trim() ?? '';
+  return value.isNotEmpty && value != 'null' ? value : 'Etapa ${index + 1}';
+}
+
 class WorkFormat {
   final String id;
   final String name;

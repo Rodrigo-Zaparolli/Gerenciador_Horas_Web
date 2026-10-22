@@ -17,9 +17,14 @@ class HourReceiptTests(unittest.TestCase):
     def test_presence_matches_type_and_never_treats_unknown_or_other_type_as_absent(self):
         item = hour()
         self.assertEqual(presence({'rows': [hour(kind='Interno')], 'complete': True}, item), 'present')
+        self.assertEqual(presence({'rows': [hour(kind='T')], 'complete': True}, item), 'present')
         self.assertEqual(presence({'rows': [hour(kind='Externo')], 'complete': True}, item), 'occupied')
         self.assertEqual(presence({'rows': [], 'complete': False}, item), 'unknown')
         self.assertEqual(presence({'rows': [], 'complete': True}, item), 'absent')
+
+    def test_combined_timesheet_end_date_cannot_confirm_another_day(self):
+        row = {**hour(), 'dataFim': '22/10/2026'}
+        self.assertEqual(presence({'rows': [row], 'complete': True}, hour()), 'absent')
 
     def run_delivery(self, items, read, save):
         events, stages = [], []
@@ -92,6 +97,15 @@ class HourReceiptTests(unittest.TestCase):
                 lambda *args: calls.append(args) or 'completed')
             self.assertFalse(result['ok'])
             self.assertEqual(calls, [])
+
+    def test_unreadable_preflight_explains_that_no_save_was_attempted(self):
+        result, events, _ = self.run_delivery([hour()],
+            lambda: {'rows': [], 'complete': False},
+            lambda *args: self.fail('Preflight must stop before Save'))
+        self.assertEqual(result['attempted'], 0)
+        self.assertIn('Nenhuma hora foi enviada', result['message'])
+        self.assertIn('antes de clicar em Salvar', result['message'])
+        self.assertEqual(events, [])
 
     def test_pre_submission_failure_can_be_retried_without_a_second_initial_save(self):
         records, calls = [], []

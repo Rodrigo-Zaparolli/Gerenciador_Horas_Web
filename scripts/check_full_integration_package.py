@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='durable-links-41',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='timesheet-import-42',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -95,7 +95,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
         assert inbox_check.returncode == 0, inbox_check.stderr
         print(inbox_check.stdout.strip(), flush=True)
         receipt_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_hours_receipt_flow.py'), str(extracted / 'edesk_bot')],
-            cwd=extracted, env=env, capture_output=True, text=True, timeout=180)
+            cwd=extracted, env=env, capture_output=True, text=True, timeout=240)
         assert receipt_check.returncode == 0, receipt_check.stderr
         print(receipt_check.stdout.strip(), flush=True)
         with socket.socket() as listener:
@@ -118,10 +118,11 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             health = response.json()
             assert health['mode'] == 'local' and health['status'] == 'ok'
             assert health['hoursReconciliation'] is True
+            assert health['hoursTimesheet'] is True
             assert health['workAudit'] is True
             assert health['workEnumeration'] is True
             assert health['workInbox'] is True
-            assert health['integrationPackageVersion'] == 'durable-links-41'
+            assert health['integrationPackageVersion'] == 'timesheet-import-42'
             assert health['verifiedProjectMove'] is True
             assert health['nativeSpreadsheetSheetNames'] is True
             assert 'excel-editor-sheets' in health['nativeActions']

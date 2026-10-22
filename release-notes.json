@@ -1,5 +1,7 @@
 {
   "changes": [
+    "Horas E-Desk: corrigida a leitura do Timesheet real, com data e hora juntas nas colunas Início e Término e botões Excluir nas linhas. Confere o cadastro sem duplicar horas existentes e repete somente ausências comprovadas. Atualize e reinicie a integração v42.",
+    "Importar pelo ID agora utiliza os tipos de serviço e as etapas de Novo trabalho. Confira as associações aos números reais do E-Desk, horas e datas antes de cadastrar. Etapas sem correspondência precisam de seleção manual; projetos existentes são preservados.",
     "Pastas e planilhas: seleção sempre pela integração local, com vínculos persistentes por conta e caminho. A v41 recupera autorizações mesmo após perda do índice local. Corrigida a gravação em cadastros antigos e preservados os dados carregados da planilha. Atualize e reinicie a integração v41.",
     "Importação pelo ID: a integração v40 aciona a aba Trabalhos verificando a tabela real. O app bloqueia a confirmação quando etapas não foram consultadas, em vez de abrir um cadastro vazio. Atualize e reinicie a integração local.",
     "Novo botão Importar do E-Desk pelo ID ao lado de Novo trabalho: informe a solicitação, confira as etapas e confirme o cadastro no app. Preserva os números reais e acrescenta apenas etapas novas. Campos não lidos precisam ser preenchidos na prévia.",

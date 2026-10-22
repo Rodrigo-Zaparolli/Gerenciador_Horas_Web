@@ -945,8 +945,8 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
 
     try:
         wait_work_ui_ready()
-        panel = page.locator('#cph1_rpvTrabalhos')
-        if not panel.count() or not panel.first.is_visible():
+        table = page.locator('#cph1_gvwTra')
+        if not table.count() or not table.first.is_visible():
             tabs = page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$'))
             deadline = time.monotonic() + 15
             visible_tabs = []
@@ -959,6 +959,7 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
                 raise RuntimeError('Aba Trabalhos ausente ou ambígua.')
             visible_tabs[0].click(timeout=15000)
         wait_work_ui_ready()
+        table.first.wait_for(state='visible', timeout=15000)
     except Exception as error:
         raise RuntimeError('EDESK_WORK_TAB_NOT_OPENED') from error
 
@@ -2522,6 +2523,16 @@ def main():
             receipt = deliver_hours(horas, read_fresh_hours, submit_hour, hour_event, stage)
             delivery_results.append(receipt)
             log(receipt['message'])
+            if not receipt['ok']:
+                # A refused preflight is a normal receipt, not an exception.
+                # Preserve the actual DOM for diagnosis before cleanup closes it.
+                diagnostic_id = f"{time.strftime('%Y%m%d_%H%M%S')}_{indice_trabalho}"
+                try:
+                    pagina_hora.screenshot(path=str(LOGS_PATH / f'edesk_horas_pendentes_{diagnostic_id}.png'), full_page=True, timeout=15000)
+                    (LOGS_PATH / f'edesk_horas_pendentes_{diagnostic_id}.html').write_text(pagina_hora.content(), encoding='utf-8')
+                    log(f'Diagnostico da listagem preservado em: {LOGS_PATH}')
+                except Exception:
+                    log('Nao foi possivel preservar a tela de conferencia.')
 
             # Encerra páginas temporárias apenas após TODAS as horas.
             for pagina_aberta in list(context.pages):
@@ -2584,6 +2595,10 @@ def main():
                       for key in ('total', 'verified', 'retried', 'missing', 'uncertain')}}
         receipt['message'] = (f"{receipt['verified']} hora(s) conferidas no E-Desk. Nenhuma hora pendente. Cadastro finalizado com sucesso."
             if receipt['ok'] else f"{receipt['verified']} de {receipt['total']} hora(s) confirmadas; {receipt['missing']} não cadastradas e {receipt['uncertain']} sem comprovação. O sistema não repetiu envios sem confirmação de ausência para evitar duplicidade.")
+        if not receipt['ok']:
+            explanations = list(dict.fromkeys(item['message'] for item in delivery_results if not item['ok'] and item.get('attempted') == 0))
+            if explanations:
+                receipt['message'] += ' ' + ' '.join(explanations)
         print(json.dumps(receipt, ensure_ascii=False), flush=True)
         return 0 if receipt['ok'] else 1
 

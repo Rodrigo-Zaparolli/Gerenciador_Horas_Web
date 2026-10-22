@@ -150,6 +150,7 @@ def health_check():
                     "commentPercentage": True,
                     "commentPercentageReceipt": True,
                     "hoursReconciliation": True,
+                    "hoursTimesheet": True,
                     "workAudit": True,
                     "workEnumeration": True,
                     "workInbox": True,

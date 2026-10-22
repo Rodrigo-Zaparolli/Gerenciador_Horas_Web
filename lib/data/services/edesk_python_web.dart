@@ -387,6 +387,12 @@ class EdeskWebClient {
                 'Atualize e reinicie a integração v36 no computador que executa o E-Desk para conferir e recuperar horas pendentes sem repetir cadastros. Nenhuma hora foi enviada nesta tentativa.',
                 503);
           }
+          if (requiresHoursReceipt &&
+              (health is! Map || health['hoursTimesheet'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v42 no computador que executa o E-Desk. Ela corrige a leitura do Timesheet no retroativo, com data e hora juntas. Nenhuma hora foi enviada nesta tentativa.',
+                503);
+          }
         } else if (action == 'recebidos') {
           return _failure(
               'A integração não confirmou o suporte a trabalhos recebidos. Atualize para v38.',
