@@ -13,6 +13,29 @@ HEADERS = {'Origin': 'https://gerenciador-horas.web.app', 'Authorization': 'Bear
 
 
 class JournalTests(unittest.TestCase):
+    def test_local_diagnostic_directory_survives_request_cleanup_and_is_user_scoped(self):
+        import hashlib
+        root = Path(self.directory.name) / 'integration'
+        temporary_requests = []
+        def run(*args, **kwargs):
+            request_path = Path(args[0][-1])
+            temporary_requests.append(request_path)
+            diagnostics = Path(kwargs['env']['EDESK_DIAGNOSTICS_DIR'])
+            self.assertEqual(diagnostics, root / '.edesk-local' / 'diagnosticos' / hashlib.sha256(b'owner').hexdigest())
+            diagnostics.mkdir(parents=True)
+            (diagnostics / 'diagnostico-horas.json').write_text('{"tabela":{"tables":[]}}', encoding='utf-8')
+            return process.return_value
+        with patch('cloud_run.main.APP_ROOT', root), patch('cloud_run.main.subprocess.Popen') as process:
+            process.side_effect = run
+            process.return_value.communicate.return_value = (json.dumps({'operation': 'horas', 'ok': False, 'message': 'Listagem incompleta.'}), '')
+            process.return_value.returncode = 1
+            response = self.client.post('/api/edesk/horas', headers=HEADERS, json={'request': self.data, 'enviar': True})
+        self.assertEqual(response.status_code, 502)
+        self.assertTrue(all(not p.exists() for p in temporary_requests))
+        artifacts = list(root.rglob('diagnostico-horas.json'))
+        self.assertEqual(len(artifacts), 1)
+        self.assertEqual(json.loads(artifacts[0].read_text())['tabela'], {'tables': []})
+
     def test_new_uncertain_retry_is_not_erased_by_an_earlier_not_submitted_event(self):
         _, keys, _ = journal.prepare('owner', self.data)
         events = Path(self.directory.name) / 'events.jsonl'

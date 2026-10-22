@@ -15,7 +15,7 @@ from urllib.parse import (
 
 from playwright.sync_api import sync_playwright
 from send_progress import observe_log, hour_event, stage
-from hour_receipt import read_hours, deliver_hours
+from hour_receipt import read_hours, deliver_hours, GRID_DIAGNOSTIC_SCRIPT
 from work_selection import resolve_work_selection
 
 from config import restore_session_cookies, save_session_cookies
@@ -1050,7 +1050,7 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
 
                 if eh_trabalho(url_atual) and (pagina_nova or pagina_atual_navegou):
                     if not validar_tela_trabalho(
-                        pagina, numero_solicitacao, id_trabalho
+                        pagina, numero_solicitacao, id_trabalho, selecao_confirmada=True
                     ):
                         continue
 
@@ -1070,7 +1070,7 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
 
         try:
             if eh_trabalho(page.url) and validar_tela_trabalho(
-                page, numero_solicitacao, id_trabalho
+                page, numero_solicitacao, id_trabalho, selecao_confirmada=True
             ):
                 return page
         except Exception:
@@ -1084,7 +1084,7 @@ def abrir_trabalho_na_solicitacao(page, context, numero_solicitacao, id_trabalho
     log(f"URL atual: {page.url}")
     return None
 
-def validar_tela_trabalho(pagina, numero_solicitacao, id_trabalho):
+def validar_tela_trabalho(pagina, numero_solicitacao, id_trabalho, *, selecao_confirmada=False):
     """
     Confirma que Trabalho.aspx corresponde exatamente à chave
     Solicitação/Trabalho recebida do Flutter (ex.: 2265173/4).
@@ -1125,13 +1125,43 @@ def validar_tela_trabalho(pagina, numero_solicitacao, id_trabalho):
         corpo_compacto = re.sub(r"\s+", " ", corpo or "")
         padrao = re.compile(
             rf"Solicita[cç][aã]o\s*/\s*Trabalho\s*:?\s*"
-            rf"{re.escape(numero_solicitacao)}\s*/\s*{re.escape(id_trabalho)}",
+            rf"{re.escape(numero_solicitacao)}\s*/\s*{re.escape(id_trabalho)}(?!\d)",
             re.IGNORECASE,
         )
 
         if padrao.search(corpo_compacto):
             log(f"Trabalho.aspx validado pelo texto da tela: {referencia_esperada}")
             return True
+
+        # The original selected row may identify the stage by Ordem, while the
+        # opened work displays another human-readable work reference. Accept
+        # this mapping only following that exact row selection, in a fresh page
+        # from the click, with matching request and a unique labeled Ordem.
+        shown = re.search(r'Solicita[cç][aã]o\s*/\s*Trabalho\s*:?\s*(\d+)\s*/\s*(\d+)(?!\d)',
+                          corpo_compacto, re.IGNORECASE)
+        previous = getattr(pagina, '_edesk_validated_selection', None)
+        actual_id = str(extrair_dados_url_trabalho(pagina.url).get('id_trabalho', '') or '')
+        identity = (numero_solicitacao, id_trabalho, shown[2] if shown else '', actual_id)
+        if shown and actual_id and shown[1] == numero_solicitacao and (selecao_confirmada or previous == identity):
+            orders = pagina.evaluate(r'''() => {
+              const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+              const visible = e => !!(e && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden');
+              const values=[];
+              for(const label of document.querySelectorAll('label,td,span')) {
+                if(!visible(label) || norm(label.textContent)!=='ordem')continue;
+                const control=label.control;
+                if(control && visible(control)) { values.push(control.value.trim()); continue; }
+                const scope=label.closest('tr');
+                if(!scope)continue;
+                const inputs=[...scope.querySelectorAll('input:not([type="hidden"]):not([type="button"]):not([type="submit"]),select')].filter(visible);
+                if(inputs.length===1)values.push(inputs[0].value.trim());
+              }
+              return [...new Set(values)];
+            }''')
+            if orders == [id_trabalho]:
+                pagina._edesk_validated_selection = identity
+                log(f'Trabalho validado pela linha selecionada e Ordem {id_trabalho}; referencia exibida {shown[1]}/{shown[2]}.')
+                return True
     except Exception as erro:
         log(f"Aviso ao validar Solicitação/Trabalho na tela: {erro}")
 
@@ -2527,6 +2557,22 @@ def main():
                 # A refused preflight is a normal receipt, not an exception.
                 # Preserve the actual DOM for diagnosis before cleanup closes it.
                 diagnostic_id = f"{time.strftime('%Y%m%d_%H%M%S')}_{indice_trabalho}"
+                persistent_diagnostics = os.environ.get('EDESK_DIAGNOSTICS_DIR')
+                if persistent_diagnostics:
+                    try:
+                        destination = Path(persistent_diagnostics)
+                        destination.mkdir(parents=True, exist_ok=True, mode=0o700)
+                        artifact = {'solicitacao': solicitacao, 'trabalho': id_trabalho,
+                                    'data': time.strftime('%Y-%m-%dT%H:%M:%S'),
+                                    'tabela': pagina_hora.evaluate(GRID_DIAGNOSTIC_SCRIPT)}
+                        target = destination / 'diagnostico-horas.json'
+                        temporary = destination / 'diagnostico-horas.tmp'
+                        temporary.write_text(json.dumps(artifact, ensure_ascii=False, indent=2), encoding='utf-8')
+                        temporary.chmod(0o600)
+                        temporary.replace(target)
+                        log('Diagnostico persistente salvo em .edesk-local/diagnosticos da integracao.')
+                    except Exception:
+                        log('Nao foi possivel preservar o diagnostico persistente da tabela.')
                 try:
                     pagina_hora.screenshot(path=str(LOGS_PATH / f'edesk_horas_pendentes_{diagnostic_id}.png'), full_page=True, timeout=15000)
                     (LOGS_PATH / f'edesk_horas_pendentes_{diagnostic_id}.html').write_text(pagina_hora.content(), encoding='utf-8')

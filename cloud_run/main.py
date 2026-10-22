@@ -552,6 +552,7 @@ def run_edesk_automation(action: str):
                                    PYTHONUNBUFFERED="1")
             if LOCAL_MODE:
                 environment['EDESK_PROFILE_DIR'] = _local_browser_profile(uid, data)
+                environment['EDESK_DIAGNOSTICS_DIR'] = str(APP_ROOT / '.edesk-local' / 'diagnosticos' / hashlib.sha256(uid.encode('utf-8')).hexdigest())
             environment.update(EDESK_PROGRESS_FILE=str(progress_file), EDESK_EVENTS_FILE=str(events_file))
             environment['EDESK_PROGRESS_TOTAL'] = str(total)
             if keys:

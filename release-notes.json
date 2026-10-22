@@ -1,5 +1,6 @@
 {
   "changes": [
+    "Horas E-Desk v43: corrigido o primeiro lançamento em trabalhos ainda sem Timesheet. O estado vazio é reconhecido pelo layout original completo do retroativo; telas incompletas continuam bloqueadas. Mantidas a conferência após salvar e a proteção contra duplicidade. Atualize e reinicie a integração v43.",
     "Horas E-Desk: corrigida a leitura do Timesheet real, com data e hora juntas nas colunas Início e Término e botões Excluir nas linhas. Confere o cadastro sem duplicar horas existentes e repete somente ausências comprovadas. Atualize e reinicie a integração v42.",
     "Importar pelo ID agora utiliza os tipos de serviço e as etapas de Novo trabalho. Confira as associações aos números reais do E-Desk, horas e datas antes de cadastrar. Etapas sem correspondência precisam de seleção manual; projetos existentes são preservados.",
     "Pastas e planilhas: seleção sempre pela integração local, com vínculos persistentes por conta e caminho. A v41 recupera autorizações mesmo após perda do índice local. Corrigida a gravação em cadastros antigos e preservados os dados carregados da planilha. Atualize e reinicie a integração v41.",

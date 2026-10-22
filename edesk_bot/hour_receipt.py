@@ -53,6 +53,22 @@ def presence(snapshot, hour):
 
 # Reads real table cells only. Inputs and the accumulated description are never
 # persistence evidence. Mark only genuine paging controls, never Save controls.
+GRID_DIAGNOSTIC_SCRIPT = r'''() => {
+  const visible=e=>!!(e.getClientRects().length && getComputedStyle(e).visibility!=='hidden');
+  // Visible table text only: no HTML, passwords, hidden fields, links, cookies,
+  // session URLs or form values. Keep the artifact bounded and local.
+  const tables=[...document.querySelectorAll('table')].filter(visible).map(table=>({
+    id:table.id,
+    rows:[...table.rows].filter(row=>row.closest('table')===table).slice(0,200).map(row=>({
+      visible:visible(row),
+      cells:[...row.cells].slice(0,15).map(cell=>cell.innerText.trim().slice(0,250)),
+      spans:[...row.cells].slice(0,15).map(cell=>cell.colSpan),
+      editable:!!row.querySelector('input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="image"]):not([type="checkbox"]),textarea,select')
+    }))
+  })).filter(table=>table.rows.some(row=>row.cells.some(cell=>/^(inicio|início|t[eé]rmino|hora inicial|hora final|hora de in[ií]cio|hora de t[eé]rmino|timesheet)$/i.test(cell)))).slice(0,20);
+  return {tables};
+}'''
+
 GRID_SCRIPT = r'''() => {
   const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
     .toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -132,7 +148,36 @@ GRID_SCRIPT = r'''() => {
     if(total>result.rows.length+1 && !result.pager)result.complete=false;
     candidates.push(result);
   }
-  return candidates.length===1 ? candidates[0] : {complete:false,rows:[],reason:'A listagem de horas nao foi identificada de forma unica.'};
+  if(candidates.length===1)return candidates[0];
+  if(candidates.length===0) {
+    // Captured E-Desk server layout: an unstarted work does not render its
+    // Timesheet at all. Require the complete known layout and its empty slot,
+    // not merely an absent grid or an empty description.
+    const work=document.querySelector('#cph1_pnlInfFin1');
+    const history=document.querySelector('#cph1_pnlInfFin2 #cph1_txtRea');
+    const form=document.querySelector('form#frmF');
+    const layout=work?.closest('table');
+    const directRows=layout?[...layout.rows].filter(r=>r.closest('table')===layout):[];
+    const slot=directRows.length===3 && directRows[2].cells.length===1 &&
+      directRows[0].contains(document.querySelector('#cph1_tblDadosFin')) &&
+      directRows[0].contains(document.querySelector('#cph1_tblPacoteFechadoTrab')) &&
+      directRows[1].contains(work) && directRows[1].contains(history) ? directRows[2].cells[0] : null;
+    const blankLabel=id=>{
+      const label=work?.querySelector(id);
+      const cell=label?.closest('td')?.nextElementSibling;
+      return !!(label && cell?.querySelector('.jmTxDes') && !cell.innerText.trim());
+    };
+    const ready=['#cph1_tblDadosFin','#cph1_tblPacoteFechadoTrab','#cph1_txtDatTem','#cph1_txtHorIni','#cph1_txtHorFin','#cph1_ddlTipReg','#cph1_BtAtu'].every(s=>visible(document.querySelector(s)));
+    const validUrl=/\/TrabalhoRetroativo\.aspx$/i.test(location.pathname);
+    const validForm=form && /\/TrabalhoRetroativo\.aspx$/i.test(new URL(form.action,location.href).pathname);
+    if(validUrl && validForm && ready && work && visible(work) && history && visible(history) &&
+       layout?.contains(history) && slot && !slot.children.length && !slot.innerText.trim() &&
+       blankLabel('#cph1_lblIni') && blankLabel('#cph1_lblTer') && !history.value.trim() &&
+       !norm(layout.innerText).includes('timesheet')) {
+      return {complete:true,rows:[],grid:'unstarted-work-empty-timesheet-slot',emptyUnstarted:true};
+    }
+  }
+  return {complete:false,rows:[],reason:'A listagem de horas nao foi identificada de forma unica.'};
 }'''
 
 

@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='timesheet-import-42',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='first-hour-43',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -86,6 +86,10 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
         assert cold_check.returncode == 0, cold_check.stderr
         print(cold_check.stdout.strip(), flush=True)
+        identity_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_work_identity_flow.py'), str(extracted / 'edesk_bot')],
+            cwd=extracted, env=env, capture_output=True, text=True, timeout=120)
+        assert identity_check.returncode == 0, identity_check.stderr
+        print(identity_check.stdout.strip(), flush=True)
         audit_check = subprocess.run([str(runtime), str(ROOT / 'scripts/check_work_audit_flow.py'), str(extracted / 'edesk_bot')],
             cwd=extracted, env=env, capture_output=True, text=True, timeout=150)
         assert audit_check.returncode == 0, audit_check.stderr
@@ -122,7 +126,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             assert health['workAudit'] is True
             assert health['workEnumeration'] is True
             assert health['workInbox'] is True
-            assert health['integrationPackageVersion'] == 'timesheet-import-42'
+            assert health['integrationPackageVersion'] == 'first-hour-43'
             assert health['verifiedProjectMove'] is True
             assert health['nativeSpreadsheetSheetNames'] is True
             assert 'excel-editor-sheets' in health['nativeActions']

@@ -35,7 +35,8 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                 row = '<tr><td>6</td><td>' + hidden_control + '<button id="select-work" onclick="btnSelTra()">Implantação</button></td></tr>'
                 if hidden:
                     row += '<tr style="display:none"><td>6</td><td onclick="btnSelTraWrong()">Implantação antiga</td></tr>'
-                action = f'window.open({work_url!r},"_blank")' if state['popup'] else f'location.assign({work_url!r})'
+                actual_work_url = work_url.replace('id_trabalho=6', 'id_trabalho=opaque-work-10') if state['case'] == 'different_reference' else work_url
+                action = f'window.open({actual_work_url!r},"_blank")' if state['popup'] else f'location.assign({actual_work_url!r})'
                 html = f'''<a style="display:none">Trabalhos (2)</a>
                   <a role="tab" onclick="openTab()">Trabalhos (2)</a>
                   <div id="cph1_rpvTrabalhos" style="{'min-height:20px' if hidden_table else 'display:none'}"><table id="cph1_gvwTra" style="{'display:none' if hidden_table else ''}">
@@ -55,7 +56,8 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                   setTimeout(()=>{{window.busy=false}},700);
                   </script>'''
             elif path.endswith('/Trabalho.aspx'):
-                html = '<p>Solicitação/Trabalho 226144/6</p>'
+                html = ('<p>Solicitação/Trabalho 226144/10</p><table><tr><td>Ordem</td><td><input value="6"></td></tr></table>'
+                        if state['case'] == 'different_reference' else '<p>Solicitação/Trabalho 226144/6</p>')
             elif path.endswith('/TrabalhoRetroativo.aspx'):
                 html = '<input id="cph1_txtDatTem"><input id="cph1_txtHorIni"><input id="cph1_txtHorFin">'
             else:
@@ -64,7 +66,7 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
 
         context.route('**/*', respond)
         with patch.object(hours, 'log'):
-            for case in ['initial_busy', 'ajax_tab', 'hidden_controls', 'visible_panel_hidden_table']:
+            for case in ['initial_busy', 'ajax_tab', 'hidden_controls', 'visible_panel_hidden_table', 'different_reference']:
                 for popup in [False, True]:
                     for cold in [True, False]:
                         state.update(case=case, popup=popup, cold=cold)
@@ -79,4 +81,4 @@ with tempfile.TemporaryDirectory(prefix='hours-cold-', dir=ROOT / 'build') as te
                         for opened in list(context.pages):
                             opened.close()
         browser.close()
-print('HOURS_COLD_START_OK: 16 cold/warm/Ajax/hidden-control/hidden-table/popup cases; correct work and retroactive form; no POSTs')
+print('HOURS_COLD_START_OK: 20 cold/warm/Ajax/hidden-control/hidden-table/different-reference/popup cases; correct work and retroactive form; no POSTs')

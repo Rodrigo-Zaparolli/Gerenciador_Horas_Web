@@ -23,7 +23,8 @@ with tempfile.TemporaryDirectory(prefix='hours-receipt-', dir=ROOT / 'build') as
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         for scenario in ['persisted', 'video_headers', 'dropped_once', 'closed', 'paginated', 'unreadable',
-                         'timesheet_persisted', 'timesheet_dropped_once', 'timesheet_paginated', 'timesheet_empty', 'timesheet_malformed']:
+                         'timesheet_persisted', 'timesheet_dropped_once', 'timesheet_paginated', 'timesheet_empty', 'timesheet_malformed',
+                         'unstarted', 'unstarted_missing_slot', 'unstarted_history']:
             timesheet = scenario.startswith('timesheet_')
             mode = scenario.removeprefix('timesheet_')
             context = browser.new_context()
@@ -59,7 +60,7 @@ with tempfile.TemporaryDirectory(prefix='hours-receipt-', dir=ROOT / 'build') as
                 if scenario == 'unreadable': grid = '<div>Listagem temporariamente indisponivel</div>'
                 if scenario == 'video_headers':
                     grid = grid.replace('<th>Hora Inicial</th>', '<th>Hora de In&#237;cio</th>').replace('<th>Hora Final</th>', '<th>Hora de T&#233;rmino</th>')
-                return '''<html><body><input id="cph1_txtDatTem"><input id="cph1_txtHorIni"><input id="cph1_txtHorFin">
+                document = '''<html><body><input id="cph1_txtDatTem"><input id="cph1_txtHorIni"><input id="cph1_txtHorFin">
                   <select id="cph1_ddlTipReg"><option value="0">Interno</option></select>
                   <textarea id="cph1_txtRea">''' + html.escape(state['history']) + '''</textarea>
                   <button id="cph1_BtAtu" onclick="saveHour()">Salvar</button>''' + grid + '''<script>
@@ -74,6 +75,17 @@ with tempfile.TemporaryDirectory(prefix='hours-receipt-', dir=ROOT / 'build') as
                     await saved.text();
                     ''' + ('window.close();' if mode == 'closed' else 'location.reload();') + '''
                   }</script></body></html>'''
+                if mode.startswith('unstarted'):
+                    import re
+                    document = document.replace('<body>', '<body><form id="frmF" onsubmit="return false" action="'+url+'">').replace('</body>', '</form></body>')
+                    if not records:
+                        document = document.replace(grid, '')
+                    history = 'Historico anterior' if mode == 'unstarted_history' else state['history']
+                    replacement = '<table><tr><td><table id="cph1_tblDadosFin"><tr><td>Solicitacao</td></tr></table></td><td><table id="cph1_tblPacoteFechadoTrab"><tr><td>Apontamento de tempo</td></tr></table></td></tr><tr><td><div id="cph1_pnlInfFin1"><table><tr><td><span id="cph1_lblIni">Inicio</span></td><td><span class="jmTxDes"></span></td><td><span id="cph1_lblTer">Termino</span></td><td><span class="jmTxDes"></span></td></tr></table></div></td><td><div id="cph1_pnlInfFin2"><textarea id="cph1_txtRea">'+html.escape(history)+'</textarea></div></td></tr>'
+                    replacement += '' if mode == 'unstarted_missing_slot' else '<tr><td></td></tr>'
+                    replacement += '</table>'
+                    document = re.sub(r'<textarea id="cph1_txtRea">.*?</textarea>', lambda _: replacement, document, flags=re.S)
+                return document
 
             def route(request_route):
                 request = request_route.request
@@ -123,7 +135,7 @@ with tempfile.TemporaryDirectory(prefix='hours-receipt-', dir=ROOT / 'build') as
                 return item['_saveOutcome']
 
             result = deliver_hours(items, read_fresh, submit, hour_event)
-            if mode in {'unreadable', 'malformed'}:
+            if mode in {'unreadable', 'malformed', 'unstarted_missing_slot', 'unstarted_history'}:
                 assert result['ok'] is False and not state['calls'], result
             else:
                 assert result['ok'] is True, result
