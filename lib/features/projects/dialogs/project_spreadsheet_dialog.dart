@@ -82,7 +82,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   Future<Map<String, dynamic>> request(String action,
       {String? revision,
       List<Map<String, dynamic>>? changes,
-      Map<String, String>? selectedSheets}) {
+      Map<String, String>? selectedSheets}) async {
     final selected = selectedSheets ?? sheetNames;
     if (widget.transport != null) {
       return widget.transport!({
@@ -94,12 +94,18 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         if (changes != null) 'changes': changes
       });
     }
-    return NativeLocalFiles.call(action,
+    final result = await NativeLocalFiles.call(action,
         reference: widget.project.excelLink,
+        projectId: widget.project.id,
+        projectField: 'excelLink',
         serviceType: widget.project.serviceType,
         sheetNames: selected.isEmpty ? null : selected,
         revision: revision,
         changes: changes);
+    if (mounted && authorized && result['reference'] is String) {
+      widget.project.excelLink = result['reference'] as String;
+    }
+    return result;
   }
 
   @override

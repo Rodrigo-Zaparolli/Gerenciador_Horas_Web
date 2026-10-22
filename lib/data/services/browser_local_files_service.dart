@@ -40,19 +40,16 @@ class BrowserLocalFiles {
   }
 
   static Future<String?> pickFolder({String? createName}) async =>
-      (await (NativeLocalFiles.preferred || await NativeLocalFiles.available()
-          ? NativeLocalFiles.call(
-              createName == null ? 'pick-folder' : 'create-folder',
-              name: createName)
-          : call(createName == null ? 'pick-folder' : 'create-folder',
-              name: createName)))['reference'] as String?;
+      // A failed health probe must not turn a project binding into a
+      // browser-only handle that cannot carry its original Windows path.
+      (await NativeLocalFiles.call(
+          createName == null ? 'pick-folder' : 'create-folder',
+          name: createName))['reference'] as String?;
   static Future<String?> pickFile() async =>
-      (await (NativeLocalFiles.preferred || await NativeLocalFiles.available()
-          ? NativeLocalFiles.call('pick-file')
-          : call('pick-file')))['reference'] as String?;
-  static Future<Uint8List> read(String reference) async =>
+      (await NativeLocalFiles.call('pick-file'))['reference'] as String?;
+  static Future<Uint8List> read(String reference, {String? projectId}) async =>
       Uri.parse(reference).scheme.startsWith('desktop-')
-          ? NativeLocalFiles.read(reference)
+          ? NativeLocalFiles.read(reference, projectId: projectId)
           : base64Decode(
               (await call('read', reference: reference))['base64'] as String);
 }

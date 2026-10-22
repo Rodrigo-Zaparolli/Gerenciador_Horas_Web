@@ -15,8 +15,17 @@ class ProjectExcelPreviewService {
   ProjectExcelPreviewService({
     ProjectStorageService? storageService,
     NativeExcelRequest? nativeRequest,
+    String? projectId,
   })  : _storageService = storageService,
-        _nativeRequest = nativeRequest ?? NativeLocalFiles.call;
+        _nativeRequest = nativeRequest ??
+            ((String action,
+                    {String? reference, String? name, String? range}) =>
+                NativeLocalFiles.call(action,
+                    reference: reference,
+                    name: name,
+                    range: range,
+                    projectId: projectId,
+                    projectField: 'excelLink'));
 
   static const int _maxRows = 40;
   static const int _maxColumns = 20;

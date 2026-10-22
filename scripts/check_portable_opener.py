@@ -58,7 +58,8 @@ health=client.get('/healthz')
 assert health.status_code==200 and health.json['nativeFiles'] is True
 assert health.json['excelMirror'] is True
 assert 'preview' in health.json['nativeActions']
-assert health.json['nativeFilesVersion'] == 'persistent-file-links-6'
+assert health.json['nativeFilesVersion'] == 'persistent-file-links-7'
+assert health.json['durableLocalLinks'] is True
 assert health.json['nativeSpreadsheetSheetNames'] is True
 assert health.json['verifiedProjectMove'] is True
 assert 'excel-editor-sheets' in health.json['nativeActions']

@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import '../../core/platform/native_file_transport.dart';
-import '../../core/platform/local_user_state.dart';
+import 'firebase_service.dart';
 
 class NativeFilesException implements Exception {
   final String message;
@@ -16,28 +15,10 @@ class NativeFilesException implements Exception {
 }
 
 class NativeLocalFiles {
-  static bool get preferred =>
-      Firebase.apps.isNotEmpty &&
-      LocalUserState.read(FirebaseAuth.instance.currentUser?.uid,
-              'native-local-files')?['preferred'] ==
-          true;
-  static Future<bool> available() async {
-    try {
-      final result =
-          await nativeFileRequest({'action': 'health', 'interactive': false})
-              .timeout(const Duration(milliseconds: 1500));
-      final data = result['data'];
-      return result['status'] == 200 &&
-          data is Map &&
-          data['service'] == 'gerenciador-horas-edesk' &&
-          data['nativeFiles'] == true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   static Future<Map<String, dynamic>> call(String action,
       {String? reference,
+      String? projectId,
+      String? projectField,
       String? name,
       String? range,
       String? revision,
@@ -52,6 +33,26 @@ class NativeLocalFiles {
     final token = await user?.getIdToken();
     if (token == null) {
       throw const NativeFilesException('Entre novamente na sua conta.');
+    }
+    if (const {'pick-file', 'pick-folder', 'create-folder'}.contains(action)) {
+      final health =
+          await nativeFileRequest({'action': 'health', 'interactive': true});
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
+        throw const NativeFilesException('A conta mudou.');
+      }
+      if (health['error'] != null) {
+        throw NativeFilesException(
+            health['message']?.toString() ??
+                'Não foi possível acessar a integração local.',
+            code: health['error']?.toString());
+      }
+      if (health['status'] != 200 ||
+          health['data'] is! Map ||
+          (health['data'] as Map)['durableLocalLinks'] != true) {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração v41 para salvar os vínculos permanentes de pasta e planilha.',
+            code: 'update');
+      }
     }
     final kind = serviceType?.toLowerCase() ?? '';
     if (action == 'excel-editor-sheets' || sheetNames != null) {
@@ -164,12 +165,30 @@ class NativeLocalFiles {
       throw NativeFilesException(
           data['message']?.toString() ?? 'Não foi possível abrir o arquivo.');
     }
-    if (data['cancelled'] != true) {
-      LocalUserState.write(user.uid, 'native-local-files', {'preferred': true});
+    final resolved = data['reference'];
+    if (data['cancelled'] != true &&
+        projectId != null &&
+        projectId.trim().isNotEmpty &&
+        projectField != null &&
+        reference != null &&
+        resolved is String &&
+        resolved != reference) {
+      try {
+        await FirebaseService()
+            .upgradeProjectLocalReference(projectId.trim(),
+                field: projectField, previous: reference, resolved: resolved)
+            .timeout(const Duration(seconds: 15));
+      } catch (_) {
+        throw const NativeFilesException(
+            'O recurso foi acessado, mas o vínculo recuperado ainda não foi confirmado no projeto. Confira a conexão e tente novamente.');
+      }
     }
     return data;
   }
 
-  static Future<Uint8List> read(String reference) async => base64Decode(
-      (await call('read', reference: reference))['base64'] as String);
+  static Future<Uint8List> read(String reference, {String? projectId}) async =>
+      base64Decode((await call('read',
+          reference: reference,
+          projectId: projectId,
+          projectField: 'excelLink'))['base64'] as String);
 }

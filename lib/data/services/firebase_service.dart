@@ -12,34 +12,65 @@ import 'project_move_patch.dart';
 import 'project_reference_save.dart';
 
 class FirebaseService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseService({FirebaseFirestore? database, FirebaseAuth? auth})
+      : _db = database ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
+  final FirebaseFirestore _db;
+  final FirebaseAuth _auth;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  Future<List<DocumentReference<Map<String, dynamic>>>> _projectReferences(
+      String uid, String projectId) async {
+    final owner = _db.collection('users').doc(uid);
+    final refs = <String, DocumentReference<Map<String, dynamic>>>{};
+    for (final name in ['projects', 'completed_projects']) {
+      final collection = owner.collection(name);
+      final canonical = collection.doc(projectId);
+      refs[canonical.path] = canonical;
+      final matches = await collection
+          .where('id', isEqualTo: projectId)
+          .get(const GetOptions(source: Source.server));
+      if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou.');
+      if (matches.docs.length > 1) {
+        throw StateError(
+            'Há mais de um cadastro com essa solicitação. Os vínculos foram preservados; confira os cadastros antes de alterá-los.');
+      }
+      for (final document in matches.docs) {
+        refs[document.reference.path] = document.reference;
+      }
+    }
+    return refs.values.toList();
+  }
 
   Future<void> applyProjectFolderMove(
       String projectId, Map<String, dynamic> move) async {
     final uid = _userId;
     final owner = _db.collection('users').doc(uid);
-    final refs = [
-      owner.collection('projects').doc(projectId),
-      owner.collection('completed_projects').doc(projectId)
-    ];
+    final refs = await _projectReferences(uid, projectId);
     final cache = refs.first.collection('spreadsheet').doc('snapshot');
     final history =
         owner.collection('folder_moves').doc(move['operation'] as String);
     await _db.runTransaction((transaction) async {
       final projects = [
-        await transaction.get(refs[0]),
-        await transaction.get(refs[1])
+        for (final reference in refs) await transaction.get(reference)
       ];
       final saved = await transaction.get(cache);
       if (_auth.currentUser?.uid != uid) throw StateError('A conta mudou.');
-      if (!projects.any((p) => p.exists)) {
+      if (projects.any((p) =>
+          p.data()?['id'] != null && p.data()?['id'].toString() != projectId)) {
+        throw StateError(
+            'Há um cadastro com identificador conflitante. Os vínculos foram preservados.');
+      }
+      if (!projects.any((p) =>
+          p.exists &&
+          (p.data()?['id'] == null ||
+              p.data()?['id'].toString() == projectId))) {
         throw StateError(
             'O projeto não foi encontrado para atualizar os vínculos.');
       }
       for (var i = 0; i < projects.length; i++) {
-        if (projects[i].exists) {
+        if (projects[i].exists &&
+            (projects[i].data()?['id'] == null ||
+                projects[i].data()?['id'].toString() == projectId)) {
           transaction.update(
               refs[i], projectMovePatch(projects[i].data()!, move));
         }
@@ -62,26 +93,53 @@ class FirebaseService {
       {required String field,
       required String previous,
       required String resolved}) async {
+    if (!{'folderPath', 'excelLink'}.contains(field)) {
+      throw ArgumentError('Campo de vínculo inválido.');
+    }
     final uid = _userId;
     final owner = _db.collection('users').doc(uid);
-    final refs = [
-      owner.collection('projects').doc(projectId),
-      owner.collection('completed_projects').doc(projectId)
-    ];
+    final refs = await _projectReferences(uid, projectId);
+    final cache = owner
+        .collection('projects')
+        .doc(projectId)
+        .collection('spreadsheet')
+        .doc('snapshot');
     await _db.runTransaction((transaction) async {
       final snapshots = [
-        await transaction.get(refs[0]),
-        await transaction.get(refs[1])
+        for (final reference in refs) await transaction.get(reference)
       ];
+      final savedCache =
+          field == 'excelLink' ? await transaction.get(cache) : null;
       if (_auth.currentUser?.uid != uid) {
         throw StateError('A conta mudou. Abra o trabalho novamente.');
       }
+      if (snapshots.any((p) =>
+          p.data()?['id'] != null && p.data()?['id'].toString() != projectId)) {
+        throw StateError(
+            'Há um cadastro com identificador conflitante. Os vínculos foram preservados.');
+      }
+      var confirmed = false;
       for (var i = 0; i < refs.length; i++) {
         final data = snapshots[i].data();
-        if (data == null) continue;
+        if (data == null ||
+            data['id'] != null && data['id'].toString() != projectId) {
+          continue;
+        }
         final patch = projectReferenceUpgrade(data,
             uid: uid, field: field, previous: previous, resolved: resolved);
-        if (patch != null) transaction.update(refs[i], patch);
+        if (patch != null) {
+          transaction.update(refs[i], patch);
+          confirmed = true;
+        } else if (data[field] == resolved) {
+          confirmed = true;
+        }
+      }
+      if (!confirmed) {
+        throw StateError(
+            'O vínculo não foi confirmado no projeto. O cadastro pode ter sido alterado em outra tela; reabra o editor.');
+      }
+      if (savedCache?.data()?['reference'] == previous) {
+        transaction.update(cache, {'reference': resolved});
       }
     });
   }

@@ -1543,7 +1543,7 @@ class ComentarioModal {
       });
       try {
         String preview;
-        final service = ProjectExcelPreviewService();
+        final service = ProjectExcelPreviewService(projectId: project.id);
         if (kIsWeb) {
           if (caminho.isEmpty ||
               ProjectFileService.isWebLink(caminho) ||

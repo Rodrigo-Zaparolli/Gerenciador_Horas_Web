@@ -343,8 +343,10 @@ class _ProjectEmailModalState extends State<ProjectEmailModal> {
           reference.isNotEmpty &&
           !reference.startsWith('http')) {
         bytes = BrowserLocalFiles.isReference(reference)
-            ? await BrowserLocalFiles.read(reference)
-            : await NativeLocalFiles.read(reference);
+            ? await BrowserLocalFiles.read(reference,
+                projectId: widget.project.id)
+            : await NativeLocalFiles.read(reference,
+                projectId: widget.project.id);
       } else {
         final selection = await FilePicker.platform.pickFiles(
             type: FileType.custom,

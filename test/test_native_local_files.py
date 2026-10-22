@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import sqlite3
+import shutil
 import tempfile
 import unittest
 from contextlib import closing
@@ -17,6 +18,137 @@ from cloud_run.main import app
 
 
 class LocalFilesTests(unittest.TestCase):
+    def test_distinct_unicode_paths_are_not_interchangeable_authorizations(self):
+        original = self.root / 'Große.xlsx'
+        other = self.root / 'Grosse.xlsx'
+        original.write_bytes(b'approved')
+        other.write_bytes(b'not approved')
+        self.assertFalse(local_files._same_path(original, other))
+        with patch.object(local_files, 'choose', return_value=str(original)):
+            ref = local_files.execute('owner', {'action': 'pick-file'})['reference']
+        changed = ref.rsplit('/', 1)[0] + '/' + quote(str(other), safe='')
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Picker')):
+            with self.assertRaises(ValueError):
+                local_files.execute('owner', {'action': 'read', 'reference': changed})
+            local_files.DB_PATH.unlink()
+            local_files._recovery_path().unlink()
+            with self.assertRaises(ValueError):
+                local_files.execute('owner', {'action': 'read', 'reference': changed})
+
+    def test_damaged_old_extraction_does_not_break_approved_current_links(self):
+        folder = self.root / 'Documentos'
+        folder.mkdir()
+        with patch.object(local_files, 'choose', return_value=str(folder)):
+            ref = local_files.execute('owner', {'action': 'pick-folder'})['reference']
+        local_files.LEGACY_DB_PATH.parent.mkdir(parents=True)
+        local_files.LEGACY_DB_PATH.write_bytes(b'damaged old index')
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Picker')), patch.object(local_files.os, 'startfile'):
+            self.assertTrue(local_files.execute('owner', {'action': 'open', 'reference': ref})['opened'])
+        self.assertEqual(local_files.LEGACY_DB_PATH.read_bytes(), b'damaged old index')
+
+    def test_signed_links_recover_without_database_or_backup_and_keep_projects_separate(self):
+        selected = []
+        for client in ['Orquinare', 'Sin Moveis']:
+            folder = self.root / client / 'Documentos'
+            folder.mkdir(parents=True)
+            book = folder / 'Projeto.xlsm'
+            book.write_bytes(client.encode())
+            for kind, path in [('folder', folder), ('file', book)]:
+                with patch.object(local_files, 'choose', return_value=str(path)):
+                    ref = local_files.execute('owner', {'action': 'pick-' + kind})['reference']
+                selected.append((kind, path, ref))
+        local_files.DB_PATH.unlink()
+        local_files._recovery_path().unlink()
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Picker after update')), patch.object(local_files.os, 'startfile') as opener:
+            for kind, path, ref in selected:
+                result = local_files.execute('owner', {'action': 'open', 'reference': ref})
+                self.assertEqual(result['reference'], ref)
+                opener.assert_called_with(str(path.resolve()))
+                if kind == 'file':
+                    result = local_files.execute('owner', {'action': 'read', 'reference': ref})
+                    import base64
+                    self.assertEqual(base64.b64decode(result['base64']), path.read_bytes())
+
+    def test_signed_reference_cannot_authorize_changed_path_account_kind_or_token(self):
+        original = self.root / 'Original.xlsx'
+        original.write_bytes(b'approved')
+        other = self.root / 'Other.xlsx'
+        other.write_bytes(b'not approved')
+        with patch.object(local_files, 'choose', return_value=str(original)):
+            ref = local_files.execute('owner', {'action': 'pick-file'})['reference']
+        local_files.DB_PATH.unlink()
+        local_files._recovery_path().unlink()
+        parts = urlsplit(ref).path.split('/')
+        changed_token = ref.replace(parts[2], '12345678-1234-1234-1234-123456789012')
+        changed_path = ref.rsplit('/', 1)[0] + '/' + quote(str(other), safe='')
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Unexpected picker')), patch.object(local_files.os, 'startfile') as opener:
+            for uid, forged in [('owner', changed_path), ('other', ref.replace('/owner/', '/other/')), ('owner', changed_token), ('owner', ref.replace('desktop-file:', 'desktop-folder:'))]:
+                with self.subTest(uid=uid, forged=forged), self.assertRaises(ValueError):
+                    local_files.execute(uid, {'action': 'read', 'reference': forged})
+            opener.assert_not_called()
+
+    def test_corrupt_index_is_preserved_and_signed_link_recovers_without_picker(self):
+        folder = self.root / 'Documentos'
+        folder.mkdir()
+        with patch.object(local_files, 'choose', return_value=str(folder)):
+            ref = local_files.execute('owner', {'action': 'pick-folder'})['reference']
+        local_files._recovery_path().unlink()
+        damaged = b'not a sqlite database'
+        local_files.DB_PATH.write_bytes(damaged)
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Picker')), patch.object(local_files.os, 'startfile') as opener:
+            self.assertTrue(local_files.execute('owner', {'action': 'open', 'reference': ref})['opened'])
+            opener.assert_called_once_with(str(folder.resolve()))
+        preserved = list(self.root.glob('files.db.corrupt-*'))
+        self.assertEqual(len(preserved), 1)
+        self.assertEqual(preserved[0].read_bytes(), damaged)
+
+    def test_old_full_path_grant_upgrades_to_recoverable_link(self):
+        folder = self.root / 'Documentos'
+        folder.mkdir()
+        old = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/' + quote(str(folder), safe='')
+        local_files._save('owner', old, folder, 'folder')
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Picker')), patch.object(local_files.os, 'startfile'):
+            signed = local_files.execute('owner', {'action': 'open', 'reference': old})['reference']
+            self.assertNotEqual(signed, old)
+            local_files.DB_PATH.unlink()
+            local_files._recovery_path().unlink()
+            self.assertEqual(local_files.execute('owner', {'action': 'open', 'reference': signed})['reference'], signed)
+
+    def test_two_extracted_versions_recover_same_links_in_new_processes(self):
+        folder = self.root / 'Documentos'
+        folder.mkdir()
+        book = folder / 'Projeto.xlsm'
+        book.write_bytes(b'original unchanged')
+        refs = []
+        for kind, path in [('folder', folder), ('file', book)]:
+            with patch.object(local_files, 'choose', return_value=str(path)):
+                refs.append(local_files.execute('owner', {'action': 'pick-' + kind})['reference'])
+        program = '''
+import json,sys
+from unittest.mock import patch
+sys.path.insert(0,sys.argv[1])
+from local_edesk import local_files
+with patch.object(local_files,'choose',side_effect=AssertionError('Picker after upgrade')), patch.object(local_files.os,'startfile') as opener:
+    for ref in json.loads(sys.argv[2]):
+        result=local_files.execute('owner',{'action':'open','reference':ref})
+        assert result['reference']==ref
+    assert opener.call_count==2
+print('SIGNED_LINKS_UPGRADE_OK')
+'''
+        for version in ['old extraction', 'new extraction']:
+            package = self.root / version / 'local_edesk'
+            package.mkdir(parents=True)
+            (package / '__init__.py').write_text('')
+            shutil.copy2(Path(local_files.__file__), package / 'local_files.py')
+            local_files.DB_PATH.unlink(missing_ok=True)
+            local_files._recovery_path().unlink(missing_ok=True)
+            result = subprocess.run([sys.executable, '-I', '-c', program, str(package.parent), json.dumps(refs)],
+                env={**os.environ, 'EDESK_LOCAL_FILES_DB_PATH': str(local_files.DB_PATH)},
+                capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('SIGNED_LINKS_UPGRADE_OK', result.stdout)
+        self.assertEqual(book.read_bytes(), b'original unchanged')
+
     def test_changed_reference_reuses_exact_authorized_path_without_picker(self):
         for kind, name in [('folder', 'Documentos'), ('file', 'Projeto.xlsx')]:
             path = self.root / name
@@ -27,7 +159,8 @@ class LocalFilesTests(unittest.TestCase):
             with patch.object(local_files, 'choose') as picker, patch.object(local_files.os, 'startfile') as opener:
                 for _ in range(3):
                     result = local_files.execute('owner', {'action': 'open', 'reference': fresh})
-                    self.assertEqual(result['reference'], fresh)
+                    self.assertEqual(local_files._expected_path(result['reference']), str(path.resolve()))
+                    self.assertTrue(local_files._signed_authorization('owner', result['reference'], kind))
                     opener.assert_called_with(str(path.resolve()))
                 picker.assert_not_called()
 

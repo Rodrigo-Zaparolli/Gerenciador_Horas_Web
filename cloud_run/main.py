@@ -140,6 +140,7 @@ def health_check():
         from local_edesk import local_files
         actions = sorted(getattr(local_files, 'SUPPORTED_ACTIONS', []))
         native = {'nativeActions': actions,
+                  'durableLocalLinks': getattr(local_files, 'DURABLE_LINKS', False),
                   'nativeSpreadsheetLayouts': list(getattr(local_files, 'SPREADSHEET_LAYOUTS', [])),
                   'nativeSpreadsheetSheetNames': getattr(local_files, 'SPREADSHEET_SHEET_NAMES', False),
                   'projectRootMove': getattr(local_files, 'PROJECT_ROOT_MOVE', False),

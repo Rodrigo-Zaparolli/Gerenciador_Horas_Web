@@ -100,9 +100,8 @@ def _table(con):
 
 
 def _reference(uid, path, kind):
-    from urllib.parse import quote
-    identity = uuid.uuid5(uuid.NAMESPACE_URL, f'{uid}/{kind}/{path.as_posix().casefold()}')
-    return f'desktop-{kind}://local/{quote(uid, safe="")}/{identity}/{quote(str(path), safe="")}'
+    from local_edesk.local_files import signed_reference
+    return signed_reference(uid, path, kind)
 
 
 def _cleanup_backups(con, uid, operation, result):

@@ -7,7 +7,6 @@ import 'package:gerenciador_horas/data/services/file_download.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'native_local_files_service.dart';
 import 'browser_local_files_service.dart';
-import 'firebase_service.dart';
 
 class ProjectFileService {
   static bool isWebLink(String value) {
@@ -76,23 +75,16 @@ class ProjectFileService {
 
   static Future<String?> _openNative(String reference,
       {String? projectId, String? field}) async {
-    final result = await NativeLocalFiles.call('open', reference: reference);
+    final result = await NativeLocalFiles.call('open',
+        reference: reference, projectId: projectId, projectField: field);
     if (result['cancelled'] == true) return null;
     final resolved = result['reference'];
     if (resolved is! String || resolved == reference) return null;
-    if (projectId != null && projectId.isNotEmpty && field != null) {
-      try {
-        await FirebaseService().upgradeProjectLocalReference(projectId,
-            field: field, previous: reference, resolved: resolved)
-            .timeout(const Duration(seconds: 15));
-      } catch (_) {
-        throw StateError('O destino foi aberto, mas o caminho atualizado ainda não foi confirmado no projeto. Confira a conexão e salve o trabalho.');
-      }
-    }
     return resolved;
   }
 
-  static Future<String?> openFile(String reference, {String? projectId, String? field}) async {
+  static Future<String?> openFile(String reference,
+      {String? projectId, String? field}) async {
     var value = reference.trim();
     if (BrowserLocalFiles.isReference(value)) {
       if (!kIsWeb) {

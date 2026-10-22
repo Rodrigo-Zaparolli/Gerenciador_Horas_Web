@@ -38,7 +38,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='work-tab-40',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='durable-links-41',
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -121,7 +121,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             assert health['workAudit'] is True
             assert health['workEnumeration'] is True
             assert health['workInbox'] is True
-            assert health['integrationPackageVersion'] == 'work-tab-40'
+            assert health['integrationPackageVersion'] == 'durable-links-41'
             assert health['verifiedProjectMove'] is True
             assert health['nativeSpreadsheetSheetNames'] is True
             assert 'excel-editor-sheets' in health['nativeActions']
@@ -130,7 +130,8 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             assert health['projectRootMove'] is True
             assert health['nativeSpreadsheetLayouts'] == ['enterprise', 'professional-maker']
             assert health['commentPercentageReceipt'] is True
-            assert health['nativeFilesVersion'] == 'persistent-file-links-6'
+            assert health['nativeFilesVersion'] == 'persistent-file-links-7'
+            assert health['durableLocalLinks'] is True
             assert health['commentPercentage'] is True
             assert health['standalonePercentage'] is True
             assert health['excelMirror'] and 'preview' in health['nativeActions']

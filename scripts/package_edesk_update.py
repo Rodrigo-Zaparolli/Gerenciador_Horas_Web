@@ -1,4 +1,4 @@
-"""Build the small work-tab-40 update for an existing full installation."""
+"""Build the small durable-links-41 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -20,8 +20,9 @@ FILES = (
     'local_edesk/project_archive.py',
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
+    'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO work-tab-40 — instalação completa já existente
+README = '''ATUALIZAÇÃO durable-links-41 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -32,6 +33,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Correcao v41: vinculos assinados por conta, tipo e caminho completo. A chave fica no perfil do Windows, fora das pastas extraidas, e recupera autorizacoes mesmo se o indice SQLite for perdido. Os caminhos existentes aprovados sao atualizados automaticamente ao abrir. Nao apague os dados em LOCALAPPDATA\\GerenciadorHoras\\integracao.
 
 Correcao v40: abre a aba Trabalhos verificando a tabela real, inclusive apos recarregar cada etapa. Aguarda a aba e informa em qual etapa a consulta falhou. Nao altera trabalhos no E-Desk.
 
@@ -157,7 +160,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-importacao-40.zip'
+    target = ROOT / 'web/downloads/atualizacao-vinculos-41.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

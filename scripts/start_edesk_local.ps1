@@ -11,7 +11,7 @@ function Get-IntegrationStatus {
 }
 $status = Get-IntegrationStatus
 if ($status -and $status.service -eq 'gerenciador-horas-edesk' -and $status.mode -in @('local', 'central')) {
-    if ($status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-4') {
+    if ($status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-7') {
         Write-Host 'A integração já está ativa. Pode abrir as pastas e planilhas originais pelo site.'
         exit 0
     }

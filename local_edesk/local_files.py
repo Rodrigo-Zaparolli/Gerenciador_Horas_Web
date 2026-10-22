@@ -1,10 +1,16 @@
 """User-selected Windows paths, scoped to Firebase UID, never supplied to startfile by HTTP."""
 import base64
+import hashlib
+import hmac
+import json
 import logging
+import ntpath
 import os
 import re
+import secrets
 import sqlite3
 import threading
+import time
 import uuid
 from contextlib import closing, contextmanager
 from pathlib import Path, PureWindowsPath
@@ -25,7 +31,10 @@ DB_PATH = database_path()
 EXTENSIONS = {'.xlsx', '.xls', '.xlsm', '.csv', '.doc', '.docx', '.pdf', '.txt'}
 picker_lock = threading.Lock()
 recovery_lock = threading.Lock()
-PROTOCOL_VERSION = 'persistent-file-links-6'
+key_lock = threading.Lock()
+database_lock = threading.Lock()
+PROTOCOL_VERSION = 'persistent-file-links-7'
+DURABLE_LINKS = True
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 PROJECT_ROOT_MOVE = True
 VERIFIED_PROJECT_MOVE = True
@@ -51,13 +60,73 @@ def _expected_path(reference):
 
 
 def _same_path(first, second):
-    return PureWindowsPath(str(first)).as_posix().rstrip('/').casefold() == PureWindowsPath(str(second)).as_posix().rstrip('/').casefold()
+    # Windows path casing must not conflate distinct Unicode names (ß/ss).
+    return ntpath.normcase(str(PureWindowsPath(str(first)))).rstrip('\\/') == ntpath.normcase(str(PureWindowsPath(str(second)))).rstrip('\\/')
 
 
 def _check_expected_path(reference, path):
     expected = _expected_path(reference)
     if expected is not None and not _same_path(expected, path):
         raise ValueError('A pasta ou planilha selecionada não corresponde ao caminho salvo. Selecione o destino correto no editor deste trabalho.')
+
+
+def _signing_key(create=False):
+    # Kept in the Windows profile, never in a downloaded/extracted package or
+    # sent to the web app. A reference alone cannot grant a new filesystem path.
+    location = DB_PATH.with_name(DB_PATH.name + '.key')
+    with key_lock:
+        try:
+            key = location.read_bytes()
+        except FileNotFoundError:
+            if not create:
+                return None
+            location.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                descriptor = os.open(location, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                key = location.read_bytes()
+            else:
+                key = secrets.token_bytes(32)
+                with os.fdopen(descriptor, 'wb') as file:
+                    file.write(key)
+                    file.flush()
+                    os.fsync(file.fileno())
+        # Another service process may have exclusively created the key just
+        # before writing its 32 bytes. Never replace that process's key.
+        for _ in range(10):
+            if key:
+                break
+            time.sleep(.02)
+            key = location.read_bytes()
+        if len(key) != 32:
+            raise ValueError('A chave local dos vínculos não pôde ser lida. Seus caminhos foram preservados; reinicie a integração.')
+        return key
+
+
+def _signed_id(uid, path, kind, key):
+    normalized = PureWindowsPath(str(path)).as_posix().rstrip('/')
+    message = json.dumps(['file-link-v1', uid, kind, normalized], ensure_ascii=False,
+                         separators=(',', ':')).encode('utf-8')
+    return str(uuid.UUID(bytes=hmac.new(key, message, hashlib.sha256).digest()[:16], version=4))
+
+
+def signed_reference(uid, path, kind):
+    identity = _signed_id(uid, path, kind, _signing_key(create=True))
+    return f'desktop-{kind}://local/{quote(uid, safe="")}/{identity}/{quote(str(path), safe="")}'
+
+
+def _signed_authorization(uid, reference, kind):
+    # Called only after parse_reference checked account, shape and resource kind.
+    if not reference.startswith(f'desktop-{kind}://'):
+        return None
+    expected = _expected_path(reference)
+    key = _signing_key()
+    if expected is None or key is None:
+        return None
+    identity = urlsplit(reference).path.split('/')[2]
+    if hmac.compare_digest(identity, _signed_id(uid, expected, kind, key)):
+        return expected, kind
+    return None
 
 
 def parse_reference(reference, uid):
@@ -106,10 +175,35 @@ def _validate(path, kind):
     return value
 
 
+def _open_database():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with database_lock:
+        con = sqlite3.connect(DB_PATH, timeout=10)
+        try:
+            con.execute('PRAGMA schema_version').fetchone()
+            return con
+        except sqlite3.DatabaseError as error:
+            con.close()
+            if getattr(error, 'sqlite_errorcode', None) not in {sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB}:
+                raise
+            # Keep the damaged index and its sidecars for recovery; never
+            # overwrite the grant backup or discard the installation key.
+            root = DB_PATH.parent.resolve()
+            quarantine = DB_PATH.with_name(DB_PATH.name + '.corrupt-' + uuid.uuid4().hex)
+            for suffix in ('', '-wal', '-shm', '-journal'):
+                source = DB_PATH.with_name(DB_PATH.name + suffix)
+                target = quarantine.with_name(quarantine.name + suffix)
+                if source.exists():
+                    if source.resolve().parent != root or target.resolve().parent != root:
+                        raise ValueError('O índice local precisa de recuperação manual; nenhum caminho foi alterado.')
+                    os.replace(source, target)
+            logging.getLogger(__name__).warning('Indice local danificado preservado; recuperando autorizacoes nativas.')
+            return sqlite3.connect(DB_PATH, timeout=10)
+
+
 @contextmanager
 def _connection():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB_PATH, timeout=10)
+    con = _open_database()
     try:
         with con:
             had_files = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='files'").fetchone()
@@ -190,8 +284,12 @@ def _import_legacy(con, source_path=None):
     imported = con.execute('SELECT fingerprint FROM imported_file_databases WHERE source=?', (source,)).fetchone()
     if imported and imported[0] == fingerprint:
         return
-    with closing(sqlite3.connect(legacy.as_uri() + '?mode=ro', uri=True, timeout=10)) as old:
-        rows = old.execute('SELECT uid,reference,path,kind FROM files').fetchall()
+    try:
+        with closing(sqlite3.connect(legacy.as_uri() + '?mode=ro', uri=True, timeout=10)) as old:
+            rows = old.execute('SELECT uid,reference,path,kind FROM files').fetchall()
+    except sqlite3.DatabaseError:
+        logging.getLogger(__name__).warning('Indice antigo ilegivel preservado; usando os vinculos persistentes deste computador.')
+        return
     con.executemany('INSERT OR IGNORE INTO files(uid,reference,path,kind) VALUES(?,?,?,?)', rows)
     con.execute('INSERT INTO imported_file_databases(source,fingerprint) VALUES(?,?) '
                 'ON CONFLICT(source) DO UPDATE SET fingerprint=excluded.fingerprint', (source, fingerprint))
@@ -214,16 +312,15 @@ def _authorized_path(con, uid, reference, kind):
     for path, saved_kind in con.execute('SELECT path,kind FROM files WHERE uid=? AND kind=?', (uid, kind)):
         if _same_path(expected, path):
             return path, saved_kind
-    return None
+    return _signed_authorization(uid, reference, kind)
 
 
 def _persistent_reference(uid, reference, path, kind):
-    # Upgrade old browser/name-only links to an identity with the full path.
-    if reference.startswith('desktop-') and _expected_path(reference) is not None:
+    # Upgrade old grants, too: the signed full path survives loss of the SQLite
+    # index, while the key stays outside all integration installation folders.
+    persistent = signed_reference(uid, path, kind)
+    if persistent == reference:
         return reference
-    identity = f'{uid}/{kind}/{PureWindowsPath(str(path)).as_posix().casefold()}'
-    stable_id = uuid.uuid5(uuid.NAMESPACE_URL, identity)
-    persistent = f'desktop-{kind}://local/{quote(uid, safe="")}/{stable_id}/{quote(str(path), safe="")}'
     _save(uid, persistent, path, kind)
     return persistent
 
@@ -322,7 +419,7 @@ def execute(uid, body, verified_user=None):
             path = _validate(path, kind)
         # Persist the selected full path as display/identity metadata. It is
         # never trusted as permission to open a path without native selection.
-        reference = f'desktop-{kind}://local/{quote(uid, safe="")}/{uuid.uuid4()}/{quote(str(path), safe="")}'
+        reference = signed_reference(uid, path, kind)
         _save(uid, reference, path, kind)
         return {'reference': reference}
     finally:
