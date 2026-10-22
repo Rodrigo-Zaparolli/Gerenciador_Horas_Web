@@ -478,7 +478,7 @@ def run_edesk_automation(action: str):
     if auth_error is not None:
         return auth_error
 
-    if action in {'conferencia', 'recebidos'} and str(_user.get('email') or '').strip().lower() != 'rodrigozaparolli79@gmail.com':
+    if action in {'conferencia', 'recebidos'} and str(_user.get('email') or '').strip().lower() not in {'rodrigozaparolli79@gmail.com', 'maiquel.elste@cyncly.com'}:
         return _failure('Conferencia em teste disponivel apenas para a conta autorizada.', 403)
 
     try:

@@ -1,4 +1,4 @@
-"""Build the small work-inbox-38 update for an existing full installation."""
+"""Build the small pilot-access-39 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -21,7 +21,7 @@ FILES = (
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
 )
-README = '''ATUALIZAÇÃO work-inbox-38 — instalação completa já existente
+README = '''ATUALIZAÇÃO pilot-access-39 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -32,6 +32,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v39: libera os recursos piloto para maiquel.elste@cyncly.com.
 
 Novidade v38: busca a Minha Grid para a caixa Trabalhos recebidos do app.
 Nao cria nem altera trabalhos no E-Desk. O cadastro no app depende de
@@ -153,7 +155,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-trabalhos-recebidos-38.zip'
+    target = ROOT / 'web/downloads/atualizacao-acesso-39.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

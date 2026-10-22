@@ -5,10 +5,14 @@ class PilotFeatureAccess {
   PilotFeatureAccess._();
 
   static const ownerEmail = 'rodrigozaparolli79@gmail.com';
+  static const allowedEmails = {
+    ownerEmail,
+    'maiquel.elste@cyncly.com',
+  };
 
   static bool allows({required String? uid, required String? email}) =>
       uid != null &&
       uid.trim().isNotEmpty &&
       email != null &&
-      email.trim().toLowerCase() == ownerEmail;
+      allowedEmails.contains(email.trim().toLowerCase());
 }

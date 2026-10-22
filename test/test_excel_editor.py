@@ -14,6 +14,11 @@ os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
+    def test_maiQuel_access_uses_verified_identity_and_exact_email(self):
+        self.assertTrue(allowed({'sub': 'maiQuel', 'email': ' MAIQUEL.ELSTE@CYNCLY.COM '}))
+        self.assertFalse(allowed({'sub': '', 'email': 'maiQuel.elste@cyncly.com'}))
+        self.assertFalse(allowed({'sub': 'other', 'email': 'maiQuel.elste@cyncly.com.invalid'}))
+
     def test_custom_sheet_names_override_only_named_tabs_and_reject_invalid_names(self):
         self.assertEqual(checklist_sheet('Professional', {'checklist': 'Professional CheckList-Processo'}), 'Professional CheckList-Processo')
         self.assertEqual(checklist_sheet('Enterprise', {'entry': 'Entrada'}), 'Checklist-Processo')
@@ -33,7 +38,7 @@ class ExcelEditorTests(unittest.TestCase):
             with patch.object(local_files, 'DB_PATH', Path(directory) / 'files.sqlite3'), patch('cloud_run.main.LOCAL_MODE', True):
                 local_files._save('owner', ref, path, 'file')
                 for server, verifier in [(app, 'local_edesk.authentication.verify_token'), (files_app, 'local_edesk.files_server.verify_token')]:
-                    for email, status in [('rodrigozaparolli79@gmail.com', 200), ('other@example.com', 403)]:
+                    for email, status in [('rodrigozaparolli79@gmail.com', 200), ('maiquel.elste@cyncly.com', 200), ('other@example.com', 403)]:
                         with patch(verifier, return_value={'sub': 'owner', 'email': email}), patch('local_edesk.excel_editor.edit', return_value={'sheetNames': ['Entrada', 'Professional']}) as editor:
                             response = server.test_client().post('/api/local-files', headers=headers,
                                 json={'action': 'excel-editor-sheets', 'reference': ref, 'email': 'rodrigozaparolli79@gmail.com'})

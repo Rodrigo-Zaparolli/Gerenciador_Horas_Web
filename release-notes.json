@@ -1,5 +1,6 @@
 {
   "changes": [
+    "Acesso aos recursos piloto liberado para maiquel.elste@cyncly.com, incluindo planilha, acompanhamento de plugins, conferência e importação E-Desk. Atualize a integração local para v39 para usar os recursos locais nessa conta.",
     "Conferência E-Desk: o resumo agora sinaliza leitura parcial, campos não consultados e divergências, sem apresentar consultas incompletas como concluídas.",
     "Correção da conferência E-Desk e Trabalhos recebidos: envia o endereço obrigatório do portal, evitando encerrar a consulta antes do login.",
     "Planilha do projeto: senhas de Orçamentos, Margens e Configurador visíveis ao abrir, com botão para ocultar ou mostrar cada valor.",

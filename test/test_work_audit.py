@@ -48,7 +48,7 @@ class WorkAuditTests(unittest.TestCase):
             data=json.loads(Path(command[-1]).read_text(encoding='utf-8'))
             self.assertIs(data['enviar'],False)
             return SimpleNamespace(returncode=0,communicate=lambda **_: (json.dumps(receipt),''))
-        with app.test_client() as client, patch('local_edesk.authentication.verify_token',return_value={'sub':'test','email':'rodrigozaparolli79@gmail.com'}), patch('cloud_run.main.subprocess.Popen',side_effect=launch):
+        with app.test_client() as client, patch('local_edesk.authentication.verify_token',return_value={'sub':'test','email':'maiquel.elste@cyncly.com'}), patch('cloud_run.main.subprocess.Popen',side_effect=launch):
             response=client.post('/api/edesk/conferencia',headers=self.headers,json={'request':self.data,'enviar':False})
             self.assertEqual(response.status_code,200)
             self.assertEqual(json.loads(response.json['responseBody']),receipt)
