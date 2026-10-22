@@ -46,6 +46,7 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
 class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   final Map<String, Map<String, dynamic>> pending = {};
   final Map<String, String> calculatedEmails = {};
+  final Set<String> hiddenPasswords = {};
   Map<String, dynamic>? data;
   Map<String, String> sheetNames = {};
   SpreadsheetSheetSettingsStore? get settingsStore =>
@@ -534,9 +535,25 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         initialValue: current(field).toString(),
         enabled: !busy && authorized,
         readOnly: field['readOnly'] == true,
-        obscureText: label.toLowerCase().contains('senha'),
+        obscureText: label.toLowerCase().contains('senha') &&
+            hiddenPasswords.contains(keyOf(field)),
         decoration: InputDecoration(
             labelText: label,
+            suffixIcon: label.toLowerCase().contains('senha')
+                ? IconButton(
+                    tooltip: hiddenPasswords.contains(keyOf(field))
+                        ? 'Mostrar senha'
+                        : 'Ocultar senha',
+                    icon: Icon(hiddenPasswords.contains(keyOf(field))
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: () => setState(() {
+                          final key = keyOf(field);
+                          if (!hiddenPasswords.remove(key)) {
+                            hiddenPasswords.add(key);
+                          }
+                        }))
+                : null,
             helperText: calculatedEmails.containsKey(keyOf(field))
                 ? 'E-mail do cadastro. A fórmula do Excel será conferida ao salvar.'
                 : field['readOnly'] == true

@@ -1,5 +1,6 @@
 {
   "changes": [
+    "Planilha do projeto: senhas de Orçamentos, Margens e Configurador visíveis ao abrir, com botão para ocultar ou mostrar cada valor.",
     "Trabalhos recebidos em teste: busca a Minha Grid do E-Desk e permite conferir os dados antes de cadastrar no app.",
     "Cliente, tipo, horas e líder são preenchidos quando identificados. Campos ausentes precisam ser conferidos; não há cadastro sem confirmação.",
     "A importação acrescenta apenas etapas novas, preserva os dados existentes e bloqueia projetos finalizados. A gravação possui controle de duplicidade mesmo após falha de conexão.",
