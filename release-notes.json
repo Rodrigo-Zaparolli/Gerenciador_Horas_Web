@@ -1,18 +1,7 @@
 {
   "changes": [
-    "Horas E-Desk v43: corrigido o primeiro lançamento em trabalhos ainda sem Timesheet. O estado vazio é reconhecido pelo layout original completo do retroativo; telas incompletas continuam bloqueadas. Mantidas a conferência após salvar e a proteção contra duplicidade. Atualize e reinicie a integração v43.",
-    "Horas E-Desk: corrigida a leitura do Timesheet real, com data e hora juntas nas colunas Início e Término e botões Excluir nas linhas. Confere o cadastro sem duplicar horas existentes e repete somente ausências comprovadas. Atualize e reinicie a integração v42.",
-    "Importar pelo ID agora utiliza os tipos de serviço e as etapas de Novo trabalho. Confira as associações aos números reais do E-Desk, horas e datas antes de cadastrar. Etapas sem correspondência precisam de seleção manual; projetos existentes são preservados.",
-    "Pastas e planilhas: seleção sempre pela integração local, com vínculos persistentes por conta e caminho. A v41 recupera autorizações mesmo após perda do índice local. Corrigida a gravação em cadastros antigos e preservados os dados carregados da planilha. Atualize e reinicie a integração v41.",
-    "Importação pelo ID: a integração v40 aciona a aba Trabalhos verificando a tabela real. O app bloqueia a confirmação quando etapas não foram consultadas, em vez de abrir um cadastro vazio. Atualize e reinicie a integração local.",
-    "Novo botão Importar do E-Desk pelo ID ao lado de Novo trabalho: informe a solicitação, confira as etapas e confirme o cadastro no app. Preserva os números reais e acrescenta apenas etapas novas. Campos não lidos precisam ser preenchidos na prévia.",
-    "Acesso aos recursos piloto liberado para maiquel.elste@cyncly.com, incluindo planilha, acompanhamento de plugins, conferência e importação E-Desk. Atualize a integração local para v39 para usar os recursos locais nessa conta.",
-    "Conferência E-Desk: o resumo agora sinaliza leitura parcial, campos não consultados e divergências, sem apresentar consultas incompletas como concluídas.",
-    "Correção da conferência E-Desk e Trabalhos recebidos: envia o endereço obrigatório do portal, evitando encerrar a consulta antes do login.",
-    "Planilha do projeto: senhas de Orçamentos, Margens e Configurador visíveis ao abrir, com botão para ocultar ou mostrar cada valor.",
-    "Trabalhos recebidos em teste: busca a Minha Grid do E-Desk e permite conferir os dados antes de cadastrar no app.",
-    "Cliente, tipo, horas e líder são preenchidos quando identificados. Campos ausentes precisam ser conferidos; não há cadastro sem confirmação.",
-    "A importação acrescenta apenas etapas novas, preserva os dados existentes e bloqueia projetos finalizados. A gravação possui controle de duplicidade mesmo após falha de conexão.",
-    "Recurso restrito à conta piloto. Atualize e reinicie a integração v38. A busca é manual nesta primeira versão e não altera o E-Desk."
+    "Importar do E-Desk pelo ID: novo modal unificado conforme a prévia, com consulta, dados do projeto e associação das etapas na mesma janela.",
+    "Cadastro manual acessível pela aba do modal. Etapas seguem o tipo de serviço cadastrado, com números reais do E-Desk, horas, calendários e total previsto antes de confirmar o cadastro.",
+    "Layout adaptado aos temas claro e escuro, com barras de rolagem em telas menores. Alterar o ID exige nova consulta antes de cadastrar, evitando usar dados da solicitação anterior."
   ]
 }

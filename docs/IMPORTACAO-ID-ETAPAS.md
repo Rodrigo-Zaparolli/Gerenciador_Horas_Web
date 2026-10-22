@@ -1,5 +1,13 @@
 # Importação pelo ID com etapas do cadastro
 
+## Modal unificado conforme a prévia aprovada
+
+A consulta pelo ID e a conferência permanecem na mesma rota e no mesmo modal. A tela apresenta Novo trabalho, acesso ao cadastro manual e três seções numeradas: Consultar solicitação, Conferir dados do projeto e Vincular etapas do trabalho. O rodapé mantém o total previsto e a confirmação de cadastro. Os campos usam os temas do aplicativo; telas estreitas possuem rolagem vertical e horizontal explícitas. As datas podem ser digitadas ou escolhidas no calendário.
+
+Alterar o ID após uma consulta desabilita o cadastro até que a nova solicitação seja consultada. A busca não grava projetos. O botão Cadastrar no app continua usando o armazenamento transacional existente e informa a conclusão. Fechar o modal não cadastra os dados. A aba Cadastro manual fecha a importação e abre o formulário manual já existente. O acesso às contas piloto continua preservado.
+
+Verificações: 20 testes de importação, etapas e armazenamento; fluxo completo em uma única rota, temas claro/escuro e larguras de 390/1400 pixels. A validação da integração local e do envio de horas da v43 não é alterada por essa mudança web.
+
 A conferência de importação por ID carrega os modelos completos de `WorkFormat`, os mesmos utilizados em Novo trabalho. Os nomes das etapas usam `workStepName` nos dois formulários. Selecionar um tipo monta suas etapas; não cria etapas a partir da posição das linhas retornadas pelo E-Desk.
 
 Uma associação automática exige nome normalizado único nos dois lados. Na ausência de correspondência ou em caso de ambiguidade, o usuário escolhe um trabalho realmente consultado. Uma identidade não pode ser escolhida em duas etapas. Horas e datas vêm da consulta quando identificadas e podem ser conferidas; campos não identificados permanecem vazios. A confirmação valida as associações, HH:mm e datas antes de gravar. Trabalhos consultados sem associação não são importados automaticamente.

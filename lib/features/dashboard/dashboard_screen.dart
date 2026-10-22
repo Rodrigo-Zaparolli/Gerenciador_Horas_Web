@@ -2917,7 +2917,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _importWorkById() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    await ReceivedWorkDialog.show(context, importById: true);
+    await ReceivedWorkDialog.show(context, importById: true, onManual: () async {
+      if (mounted && FirebaseAuth.instance.currentUser?.uid == uid) {
+        await _createNewProject();
+      }
+    });
     if (mounted && FirebaseAuth.instance.currentUser?.uid == uid) {
       await _loadDataFromFirebase(showLoader: false);
     }

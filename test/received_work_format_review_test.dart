@@ -63,8 +63,7 @@ void main() {
                       )))));
       await tester.tap(find.text('Abrir'));
       await tester.pumpAndSettle();
-      expect(find.text('2 de 2 etapas vinculadas.'), findsNothing);
-      expect(find.textContaining('2 de 2 etapas vinculadas.'), findsOneWidget);
+      expect(find.textContaining('2 de 2 etapas vinculadas'), findsOneWidget);
       expect(find.textContaining('Total previsto: 03:30'), findsOneWidget);
       await tester.tap(find.text('Cadastrar no app'));
       await tester.pumpAndSettle();
