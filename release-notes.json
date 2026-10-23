@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Checklist-Processo: clicar em uma etapa, como Implantação, abre um modal com as tarefas, horas previstas e percentual realizado de cada uma.",
-    "Aplicar ajustes retorna os percentuais ao editor e recalcula a prévia do Status Projeto. Cancelar descarta somente os ajustes do modal. A gravação no Excel continua pelo botão Salvar na planilha.",
-    "Disponível para os modelos Enterprise e Professional/Maker nas contas autorizadas. Esta alteração não exige atualizar a integração local."
+    "Modal de tarefas da planilha: percentuais agora são selecionados como 0%, 25%, 50%, 75% e 100%, preservando os valores existentes.",
+    "Nova opção Somente pendentes: oculta tarefas em 100% e mantém os ajustes feitos nas tarefas ocultas até aplicar ou cancelar."
   ]
 }

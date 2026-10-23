@@ -52,7 +52,7 @@ Map<String, dynamic> snapshot() => {
     };
 
 Finder stagePercentField() => find.byWidgetPredicate((w) =>
-    w is TextFormField &&
+    w is DropdownButtonFormField<double> &&
     w.key is ValueKey<String> &&
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
@@ -162,7 +162,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
     await tester.pumpAndSettle();
-    await tester.enterText(stagePercentField(), '25');
+    await tester.tap(stagePercentField());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25%').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Aplicar ajustes'));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 800));
@@ -248,7 +251,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
     await tester.pumpAndSettle();
-    await tester.enterText(stagePercentField(), '25');
+    await tester.tap(stagePercentField());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25%').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Aplicar ajustes'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar na planilha'));
