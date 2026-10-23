@@ -1,4 +1,4 @@
-"""Build the small request-title-45 update for an existing full installation."""
+"""Build the small legacy-project-links-46 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -22,7 +22,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO request-title-45 — instalação completa já existente
+README = '''ATUALIZAÇÃO legacy-project-links-46 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -33,6 +33,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Correcao v46: recupera vinculos antigos que guardavam apenas o nome usando somente caminhos ja autorizados para a mesma conta, tipo e numero do projeto. Exige caminho unico e devolve vinculo assinado com caminho completo. Nao autoriza novos caminhos, nao escolhe entre pastas ambiguas e nao altera a chave local.
 
 Correcao v45: le o titulo da solicitacao para sugerir o tipo cadastrado no app, como Enterprise Producao completa -> Enterprise ou Promob Enterprise. Preserva as etapas e horas da tabela Trabalhos.
 
@@ -168,7 +170,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-tipo-solicitacao-45.zip'
+    target = ROOT / 'web/downloads/atualizacao-vinculos-projeto-46.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

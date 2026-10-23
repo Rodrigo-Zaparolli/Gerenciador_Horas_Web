@@ -1,5 +1,5 @@
 (() => {
-  window.nativeLocalFilesBridgeVersion = 'project-move-4';
+  window.nativeLocalFilesBridgeVersion = 'project-link-recovery-8';
   const permissionMessage = 'O navegador bloqueou o acesso a este computador. Clique no ícone ao lado do endereço do site, abra as permissões e permita o acesso à rede local ou a este dispositivo. Depois clique novamente na pasta ou planilha.';
   async function permissionState() {
     for (const name of ['loopback-network', 'local-network-access']) {
@@ -27,6 +27,7 @@
         cache:'no-store', signal:controller.signal,
         ...(health ? {} : {headers:{'Authorization':`Bearer ${args.token}`, 'Content-Type':'application/json'},
           body:JSON.stringify({action:args.action, reference:args.reference, name:args.name, range:args.range,
+            ...(typeof args.projectId === 'string' ? {projectId:args.projectId} : {}),
             ...(['project-move-prepare','project-move-commit'].includes(args.action) ? {destination:args.destination, sourceReference:args.sourceReference, excelReference:args.excelReference, operation:args.operation} : {}),
             ...(['excel-editor-read','excel-editor-write','excel-editor-preview'].includes(args.action) ? {revision:args.revision, changes:args.changes, serviceType:args.serviceType, sheetNames:args.sheetNames} : {})})})
       });

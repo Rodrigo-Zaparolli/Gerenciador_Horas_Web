@@ -35,6 +35,7 @@ key_lock = threading.Lock()
 database_lock = threading.Lock()
 PROTOCOL_VERSION = 'persistent-file-links-7'
 DURABLE_LINKS = True
+PROJECT_LINK_RECOVERY = True
 SPREADSHEET_LAYOUTS = ('enterprise', 'professional-maker')
 PROJECT_ROOT_MOVE = True
 VERIFIED_PROJECT_MOVE = True
@@ -325,6 +326,34 @@ def _persistent_reference(uid, reference, path, kind):
     return persistent
 
 
+def _authorized_legacy_project_path(con, uid, reference, kind, project_id):
+    """Recover name-only links from this UID's already-approved project paths.
+
+    The project ID must be a complete directory component prefix, not a
+    substring. A repeated leaf name (e.g. Documentos) alone grants nothing.
+    Full paths are never redirected to another path by this recovery.
+    """
+    if _expected_path(reference) is not None or not isinstance(project_id, str):
+        return None
+    project_id = project_id.strip()
+    if not re.fullmatch(r'[0-9]{1,20}', project_id):
+        return None
+    _, label = parse_reference(reference, uid)
+    project_component = re.compile(r'^' + re.escape(project_id) + r'(?:\s*[-_.]|\s+|$)')
+    matches = {}
+    for path, saved_kind in con.execute('SELECT path,kind FROM files WHERE uid=? AND kind=?', (uid, kind)):
+        parts = PureWindowsPath(path)
+        if ntpath.normcase(parts.name) != ntpath.normcase(label):
+            continue
+        directories = parts.parts if kind == 'folder' else parts.parent.parts
+        if not any(project_component.match(part) for part in directories):
+            continue
+        matches[ntpath.normcase(str(parts)).rstrip('\\/')] = (path, saved_kind)
+    if len(matches) > 1:
+        raise ValueError('Há mais de um caminho autorizado para este projeto com esse nome. Confira o vínculo no editor; nenhum caminho foi escolhido automaticamente.')
+    return next(iter(matches.values()), None)
+
+
 def execute(uid, body, verified_user=None):
     if os.name != 'nt':
         raise ValueError('A abertura local está disponível no Windows.')
@@ -349,6 +378,7 @@ def execute(uid, body, verified_user=None):
         if (action == 'preview' or editor) and kind != 'file':
             raise ValueError('Selecione a planilha do trabalho, não a pasta.')
         with _connection() as con:
+            project_recovered = False
             record = con.execute('SELECT path,kind FROM files WHERE uid=? AND reference=?', (uid, reference)).fetchone()
             expected = _expected_path(reference)
             conflicting = bool(record and (record[1] != kind or expected is not None and not _same_path(expected, record[0])))
@@ -360,12 +390,17 @@ def execute(uid, body, verified_user=None):
             recovered = record is None
             if recovered:
                 record = _authorized_path(con, uid, reference, kind)
+                if record is None:
+                    record = _authorized_legacy_project_path(con, uid, reference, kind, body.get('projectId'))
+                    project_recovered = record is not None
         if record:
             path = _validate(record[0], kind)
             if record[1] != kind:
                 raise ValueError('O tipo do vínculo local não corresponde ao arquivo ou pasta.')
             _check_expected_path(reference, path)
-            if recovered:
+            # Do not attach a potentially shared legacy alias to one project.
+            # _persistent_reference below saves the signed full-path identity.
+            if recovered and not project_recovered:
                 _save(uid, reference, path, kind, repair=action == 'authorize' and conflicting)
         elif action == 'read' or editor:
             raise ValueError('Selecione novamente o arquivo no editor deste computador.')

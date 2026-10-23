@@ -4,6 +4,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/platform/native_file_transport.dart';
 import 'firebase_service.dart';
 
+bool requiresLegacyProjectRecovery(String? reference, String? projectId) {
+  if (!RegExp(r'^[0-9]{1,20}$').hasMatch(projectId?.trim() ?? '')) return false;
+  final uri = Uri.tryParse(reference ?? '');
+  if (uri == null ||
+      !const {
+        'desktop-folder',
+        'desktop-file',
+        'browser-folder',
+        'browser-file'
+      }.contains(uri.scheme) ||
+      uri.host != 'local' ||
+      uri.pathSegments.length != 3) {
+    return false;
+  }
+  return !RegExp(r'^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)')
+      .hasMatch(uri.pathSegments.last);
+}
+
 class NativeFilesException implements Exception {
   final String message;
   final String? code;
@@ -33,6 +51,26 @@ class NativeLocalFiles {
     final token = await user?.getIdToken();
     if (token == null) {
       throw const NativeFilesException('Entre novamente na sua conta.');
+    }
+    if (requiresLegacyProjectRecovery(reference, projectId)) {
+      final health =
+          await nativeFileRequest({'action': 'health', 'interactive': true});
+      if (FirebaseAuth.instance.currentUser?.uid != user!.uid) {
+        throw const NativeFilesException('A conta mudou.');
+      }
+      if (health['error'] != null) {
+        throw NativeFilesException(
+            health['message']?.toString() ??
+                'Não foi possível acessar a integração.',
+            code: health['error']?.toString());
+      }
+      if (health['status'] != 200 ||
+          health['data'] is! Map ||
+          (health['data'] as Map)['nativeProjectLinkRecovery'] != true) {
+        throw const NativeFilesException(
+            'Atualize e reinicie a integração v46 para recuperar os vínculos antigos deste projeto sem selecionar novamente os caminhos já autorizados.',
+            code: 'update');
+      }
     }
     if (const {'pick-file', 'pick-folder', 'create-folder'}.contains(action)) {
       final health =
@@ -110,6 +148,7 @@ class NativeLocalFiles {
       'action': action,
       'token': token,
       'reference': reference,
+      if (projectId != null) 'projectId': projectId.trim(),
       'name': name,
       'range': range,
       if (serviceType != null) 'serviceType': serviceType,

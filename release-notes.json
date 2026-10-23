@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Modal de tarefas da planilha: percentuais agora são selecionados como 0%, 25%, 50%, 75% e 100%, preservando os valores existentes.",
-    "Nova opção Somente pendentes: oculta tarefas em 100% e mantém os ajustes feitos nas tarefas ocultas até aplicar ou cancelar."
+    "Pastas e planilhas: recuperação dos vínculos antigos que guardavam apenas o nome, usando caminhos já autorizados neste computador para a mesma conta e o número exato do projeto.",
+    "O vínculo recuperado é atualizado com o caminho completo. Pastas de mesmo nome em projetos diferentes não são confundidas; caminhos ambíguos ou ainda não autorizados não são escolhidos automaticamente. Requer integração v46."
   ]
 }

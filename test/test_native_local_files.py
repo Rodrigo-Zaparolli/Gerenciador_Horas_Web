@@ -18,6 +18,63 @@ from cloud_run.main import app
 
 
 class LocalFilesTests(unittest.TestCase):
+    def test_name_only_links_recover_unique_approved_project_paths_and_survive_restart(self):
+        projects = []
+        for number in ['2263800', '2265173']:
+            folder = self.root / (number + ' - Cliente') / 'Documentos'
+            folder.mkdir(parents=True)
+            workbook = folder / 'Projeto.xlsm'
+            workbook.write_bytes(number.encode())
+            for action, target in [('pick-folder', folder), ('pick-file', workbook)]:
+                with patch.object(local_files, 'choose', return_value=str(target)):
+                    local_files.execute('owner', {'action': action})
+            projects.append((folder, workbook))
+        folder_ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos'
+        file_ref = 'browser-file://local/owner/12345678-1234-1234-1234-123456789013/Projeto.xlsm'
+        with patch.object(local_files, 'choose', side_effect=AssertionError('Must not reselect')), patch.object(local_files.os, 'startfile') as opener:
+            folder = local_files.execute('owner', {'action': 'open', 'reference': folder_ref, 'projectId': '2263800'})
+            self.assertEqual(opener.call_args.args, (str(projects[0][0].resolve()),))
+            local_files.execute('owner', {'action': 'open', 'reference': folder_ref, 'projectId': '2265173'})
+            self.assertEqual(opener.call_args.args, (str(projects[1][0].resolve()),))
+            workbook = local_files.execute('owner', {'action': 'read', 'reference': file_ref, 'projectId': '2265173'})
+            self.assertEqual(workbook['base64'], 'MjI2NTE3Mw==')
+            self.assertNotEqual(folder['reference'], folder_ref)
+            self.assertTrue(workbook['reference'].startswith('desktop-file://'))
+            local_files.DB_PATH.unlink()
+            self.assertTrue(local_files.execute('owner', {'action': 'open', 'reference': folder['reference']})['opened'])
+
+    def test_project_recovery_never_uses_a_leaf_name_alone_or_a_partial_project_number(self):
+        folder = self.root / '22638001 - Outro' / 'Documentos'
+        folder.mkdir(parents=True)
+        local_files._save('owner', 'approved', folder, 'folder')
+        ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos'
+        with local_files._connection() as con:
+            for project in [None, '', '2263800', 'abc', '2265173']:
+                self.assertIsNone(local_files._authorized_legacy_project_path(con, 'owner', ref, 'folder', project))
+            other = ref.replace('/owner/', '/other/')
+            self.assertIsNone(local_files._authorized_legacy_project_path(con, 'other', other, 'folder', '22638001'))
+
+    def test_project_recovery_rejects_ambiguous_paths_and_preserves_explicit_full_paths(self):
+        first = self.root / 'a' / '2263800 - Cliente' / 'Documentos'
+        second = self.root / 'b' / '2263800 - Cliente' / 'Documentos'
+        for i, folder in enumerate([first, second]):
+            folder.mkdir(parents=True)
+            local_files._save('owner', 'approved-' + str(i), folder, 'folder')
+        ref = 'desktop-folder://local/owner/12345678-1234-1234-1234-123456789012/Documentos'
+        with local_files._connection() as con:
+            with self.assertRaisesRegex(ValueError, 'mais de um'):
+                local_files._authorized_legacy_project_path(con, 'owner', ref, 'folder', '2263800')
+            full = ref.rsplit('/', 1)[0] + '/' + quote(str(first), safe='')
+            self.assertIsNone(local_files._authorized_legacy_project_path(con, 'owner', full, 'folder', '2263800'))
+
+    def test_a_file_name_containing_the_project_number_is_not_directory_identity(self):
+        workbook = self.root / '2263800 - Projeto.xlsm'
+        workbook.write_bytes(b'approved')
+        local_files._save('owner', 'approved', workbook, 'file')
+        ref = 'desktop-file://local/owner/12345678-1234-1234-1234-123456789012/' + quote(workbook.name, safe='')
+        with local_files._connection() as con:
+            self.assertIsNone(local_files._authorized_legacy_project_path(con, 'owner', ref, 'file', '2263800'))
+
     def test_distinct_unicode_paths_are_not_interchangeable_authorizations(self):
         original = self.root / 'Große.xlsx'
         other = self.root / 'Grosse.xlsx'
