@@ -1,4 +1,4 @@
-"""Build the small first-hour-43 update for an existing full installation."""
+"""Build the small work-grid-44 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -22,7 +22,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO first-hour-43 — instalação completa já existente
+README = '''ATUALIZAÇÃO work-grid-44 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -33,6 +33,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Correcao v44: importa diretamente da tabela Trabalhos os IDs reais, Tipo de Trabalho, Tempo Estimado e datas. Mantem a consulta somente de leitura e nao abre cada trabalho na importacao por ID.
 
 Correcao v43: reconhece o layout original de trabalho ainda nao iniciado, sem Timesheet renderizado, para permitir o primeiro apontamento. Confere os seguintes pela tabela persistida. Preserva diagnostico local e valida a associacao entre ordem e referencia do trabalho.
 
@@ -164,7 +166,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-primeira-hora-43.zip'
+    target = ROOT / 'web/downloads/atualizacao-importacao-tabela-44.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

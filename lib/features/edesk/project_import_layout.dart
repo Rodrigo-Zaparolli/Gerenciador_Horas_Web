@@ -8,12 +8,14 @@ class ProjectImportLayout extends StatefulWidget {
       this.onManual,
       this.onClose,
       this.summary,
+      this.message,
       this.busy = false});
   final List<Widget> children;
   final List<Widget> actions;
   final VoidCallback? onManual, onClose;
   final bool busy;
   final Widget? summary;
+  final Widget? message;
   @override
   State<ProjectImportLayout> createState() => _ProjectImportLayoutState();
 }
@@ -91,6 +93,10 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
                                           CrossAxisAlignment.stretch,
                                       children: widget.children)))),
                       const SizedBox(height: 12),
+                      if (widget.message != null) ...[
+                        widget.message!,
+                        const SizedBox(height: 8),
+                      ],
                       LayoutBuilder(builder: (context, constraints) {
                         final actions = Wrap(
                             alignment: WrapAlignment.end,

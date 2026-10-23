@@ -6,6 +6,35 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('grid import requires v44 capability before starting a query', () async {
+    for (final supported in [false, true]) {
+      var posts = 0;
+      final result = await EdeskWebClient(
+        apiUrl: 'http://127.0.0.1:8765',
+        tokenProvider: () async => 'token',
+        client: MockClient((request) async {
+          if (request.method == 'GET') {
+            return http.Response(
+                jsonEncode({
+                  'workAudit': true,
+                  'workEnumeration': true,
+                  'workGridImport': supported,
+                }),
+                200);
+          }
+          posts++;
+          expect(jsonDecode(request.body)['request']['importWorkGrid'], true);
+          return http.Response('{"confirmed":true,"responseBody":"{}"}', 200);
+        }),
+      ).execute(
+          requestJson: '{"importWorkGrid":true}',
+          enviar: false,
+          script: 'edesk_conferencia.py');
+      expect(posts, supported ? 1 : 0);
+      expect(result.confirmed, supported);
+      if (!supported) expect(result.message, contains('v44'));
+    }
+  });
   test(
       'ID import requires the fixed work-tab reader before starting the browser',
       () async {

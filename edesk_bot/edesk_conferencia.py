@@ -126,7 +126,48 @@ def work_numbers(page):
     }''')
 
 
-def audit_request(context, grid, target, guid, include_hours=False):
+def import_work_rows(page, solicitation):
+    """Read the request's visible work grid; never infer IDs from Ordem."""
+    show_works(page)
+    table = page.locator('#cph1_gvwTra')
+    if table.locator('a[href*="Page$"],.rgPager').count():
+        raise AuditLookupError('work_pagination')
+    result = table.evaluate(r'''table => {
+      const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const rows=[...table.rows].filter(r=>r.closest('table')===table&&r.getClientRects().length);
+      const header=rows.find(r=>[...r.cells].some(c=>norm(c.innerText)==='tipodetrabalho'));
+      if(!header)return {error:'Nao foi encontrada a coluna Tipo de Trabalho.'};
+      const labels=[...header.cells].map(c=>norm(c.innerText));
+      const column=aliases=>labels.map((v,i)=>aliases.includes(v)?i:-1).filter(i=>i>=0);
+      const name=column(['tipodetrabalho']);
+      const hours=column(['tpestimado','tempoestimado','horasprevistas','horasestimadas']);
+      const start=column(['inicio']),end=column(['termino','fim']);
+      if(name.length!==1||hours.length!==1)return {error:'As colunas Tipo de Trabalho e Tempo Estimado nao foram reconhecidas sem ambiguidade.'};
+      const output=[];
+      for(const row of rows){
+        const links=[...row.querySelectorAll('[onclick*="btnSelTra"],a[href*="btnSelTra"]')];
+        if(!links.length)continue;
+        const ids=[...new Set(links.map(e=>e.innerText.trim()).filter(v=>/^\d+$/.test(v)))];
+        if(ids.length!==1)return {error:'O ID real de um trabalho nao foi reconhecido; Ordem nao sera usada como ID.'};
+        const text=i=>row.cells[i]?.innerText.trim()||'';
+        const title=text(name[0]),estimated=text(hours[0]);
+        if(!title||!/^\d{1,5}:[0-5]\d$/.test(estimated))return {error:'Confira o tipo e o tempo estimado do trabalho '+ids[0]+'.'};
+        const date=indices=>indices.length===1?(text(indices[0]).match(/^\d{2}\/\d{2}\/\d{4}/)?.[0]||''):'';
+        output.push({idTrabalho:ids[0],values:{name:title,estimatedHours:estimated,start:date(start),end:date(end)}});
+      }
+      return {rows:output};
+    }''')
+    if result.get('error'):
+        raise RuntimeError(result['error'])
+    rows = result.get('rows', [])
+    if not rows:
+        raise AuditLookupError('work_numbers')
+    if len({row['idTrabalho'] for row in rows}) != len(rows):
+        raise RuntimeError('A tabela retornou IDs de trabalho repetidos.')
+    return [{**row, 'solicitacao': solicitation} for row in rows]
+
+
+def audit_request(context, grid, target, guid, include_hours=False, import_grid=False):
     from edesk_comentario import (acessar_minha_grid, abrir_solicitacao_para_comentario,
                                   localizar_solicitacao_validada)
     from edesk_horas import abrir_trabalho_na_solicitacao, validar_tela_trabalho, abrir_trabalho_retroativo, extrair_dados_url
@@ -140,6 +181,8 @@ def audit_request(context, grid, target, guid, include_hours=False):
         phase = 'open_request'
         request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
         request_url = request_page.url
+        if import_grid:
+            return import_work_rows(request_page, solicitation)
         numbers = target.get('trabalhos') or work_numbers(request_page)
     except AuditLookupError:
         raise
@@ -213,13 +256,14 @@ def main():
                 try:
                     if grid.is_closed():
                         grid = context.new_page()
-                    rows.extend(audit_request(context, grid, target, guid, data.get('includeHours') is True))
+                    rows.extend(audit_request(context, grid, target, guid,
+                        data.get('includeHours') is True, data.get('importWorkGrid') is True))
                 except AuditLookupError as error:
                     rows.append({'solicitacao': target['solicitacao'], 'idTrabalho': '', 'values': {},
                         'error': str(error), 'errorCode': error.code})
-                except Exception:
+                except Exception as error:
                     rows.append({'solicitacao': target['solicitacao'], 'idTrabalho': '', 'values': {},
-                        'error': 'Solicitacao nao consultada. Confira o acesso, o numero e a janela do E-Desk.'})
+                        'error': str(error) if data.get('importWorkGrid') is True else 'Solicitacao nao consultada. Confira o acesso, o numero e a janela do E-Desk.'})
                 completed(index)
                 stage('auditing')
         finally:

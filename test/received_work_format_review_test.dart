@@ -17,7 +17,8 @@ void main() {
       final formats = [
         WorkFormat(id: 'p', name: 'Professional', steps: [
           'Contato Inicial',
-          {'name': 'Implantação'}
+          {'name': 'Implantação'},
+          'Etapa opcional ausente',
         ])
       ];
       await tester.pumpWidget(MaterialApp(
@@ -33,7 +34,7 @@ void main() {
                                     'solicitacao': '226144',
                                     'client': 'Cliente',
                                     'leader': 'Líder',
-                                    'serviceType': 'Professional'
+                                    'serviceType': 'Promob Professional'
                                   },
                                   types: const ['Professional'],
                                   formats: formats,
@@ -41,7 +42,7 @@ void main() {
                                     {
                                       'idTrabalho': '7',
                                       'values': {
-                                        'name': 'Implantacao',
+                                        'name': 'Implantacao (OH)',
                                         'estimatedHours': '02:30',
                                         'start': '22/10/2026',
                                         'end': '23/10/2026'
@@ -63,7 +64,7 @@ void main() {
                       )))));
       await tester.tap(find.text('Abrir'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('2 de 2 etapas vinculadas'), findsOneWidget);
+      expect(find.textContaining('2 de 3 etapas vinculadas'), findsOneWidget);
       expect(find.textContaining('Total previsto: 03:30'), findsOneWidget);
       await tester.tap(find.text('Cadastrar no app'));
       await tester.pumpAndSettle();
@@ -136,6 +137,57 @@ void main() {
     await tester.tap(find.text('Cadastrar no app'));
     await tester.pumpAndSettle();
     expect(writes, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('existing legacy service permits choosing a stage template',
+      (tester) async {
+    ProjectModel? saved;
+    final existing = ProjectModel(
+        id: '226144',
+        id2: '',
+        client: 'Cliente',
+        serviceType: 'Tipo antigo',
+        leader: 'Equipe',
+        stage: '',
+        task: '',
+        status: 'INI_PRO',
+        startDate: DateTime(2026, 10, 23),
+        estimatedHours: '00:00',
+        hourType: 'Hs Cobradas');
+    await tester.pumpWidget(MaterialApp(
+        home: ReceivedWorkReview(
+      auth: ImportAuth(),
+      existing: existing,
+      summary: const {'solicitacao': '226144'},
+      types: const ['Professional'],
+      formats: [
+        WorkFormat(id: 'p', name: 'Professional', steps: ['Implantacao'])
+      ],
+      details: const [
+        {
+          'idTrabalho': '7',
+          'values': {'name': 'Implantacao', 'estimatedHours': '02:00'}
+        }
+      ],
+      importProject: (project) async {
+        saved = project;
+        return 1;
+      },
+      onCompleted: (_) {},
+    )));
+    await tester.pumpAndSettle();
+    final type = find.byKey(const ValueKey('import-service-type'));
+    expect(tester.widget<DropdownButtonFormField<WorkFormat>>(type).onChanged,
+        isNotNull);
+    await tester.ensureVisible(type);
+    await tester.tap(type);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Professional').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cadastrar no app'));
+    await tester.pumpAndSettle();
+    expect(saved?.subTasks?.single.edeskWorkNumber, '7');
     expect(tester.takeException(), isNull);
   });
 }

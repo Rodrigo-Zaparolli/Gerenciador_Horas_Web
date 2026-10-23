@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(sys.argv[1]).resolve() if len(sys.argv)>1 else ROOT/'edesk_bot'))
 from playwright.sync_api import sync_playwright
-from edesk_conferencia import audit_request, protect_read_only, work_numbers
+from edesk_conferencia import audit_request, protect_read_only, work_numbers, import_work_rows
 
 base='https://fixture.invalid'
 request_url=base+'/Solicitacao.aspx?solicitacao=226144'
@@ -76,5 +76,23 @@ with sync_playwright() as p:
     probe=context.new_page();probe.goto(base+'/Trabalho.aspx?solicitacao=226144&id_trabalho=3')
     probe.evaluate("fetch('/save',{method:'POST',body:'__EVENTTARGET=cph1%24BtAtu'}).catch(()=>null)")
     assert not writes,'The read-only guard allowed a Save POST'
+    # Grid matching the supplied screenshot. Ordem is deliberately different
+    # from the real work IDs, and worked time must not become estimated time.
+    grid_probe=context.new_page()
+    grid_probe.set_content('<table id="cph1_gvwTra"><tr><th></th><th>Ordem</th><th>Tipo de Trabalho</th><th>Inicio</th><th>Termino</th><th>Tp. Trab.</th><th>Tp. Estimado</th></tr>' + ''.join(
+        '<tr><td><a onclick="/*btnSelTra*/">'+str(number)+'</a></td><td>'+str(index+20)+'</td><td>'+name+' (OH)</td><td>02/07/2026 15:00</td><td></td><td>00:15</td><td>'+hours+'</td></tr>'
+        for index,(number,name,hours) in enumerate([
+            (2,'Contato Inicial','08:00'),(3,'Levantamento de Escopo','14:00'),
+            (4,'Desenvolvimento','14:00'),(5,'Implantacao','30:30'),(6,'Pos Implantacao','21:00')])) + '</table>')
+    imported=import_work_rows(grid_probe,'2260860')
+    assert [r['idTrabalho'] for r in imported]==['2','3','4','5','6'],imported
+    assert [r['values']['estimatedHours'] for r in imported]==['08:00','14:00','14:00','30:30','21:00'],imported
+    assert sum(int(r['values']['estimatedHours'].split(':')[0])*60+int(r['values']['estimatedHours'].split(':')[1]) for r in imported)==5250
+    grid_probe.evaluate("document.querySelector('[onclick]').textContent='Abrir'")
+    try:
+        import_work_rows(grid_probe,'2260860')
+        raise AssertionError('Ordem was incorrectly accepted as a real ID')
+    except RuntimeError as error:
+        assert 'ID real' in str(error),error
     browser.close()
 print('WORK_AUDIT_BROWSER_OK: exact edited work, request enumeration, labeled values, retroactive hours, zero Save POSTs; no real E-Desk access',flush=True)

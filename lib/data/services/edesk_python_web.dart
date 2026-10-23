@@ -338,6 +338,13 @@ class EdeskWebClient {
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
           if (action == 'conferencia' &&
+              data['importWorkGrid'] == true &&
+              (health is! Map || health['workGridImport'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v44 para importar ID, Tipo de Trabalho e Tempo Estimado diretamente da tabela Trabalhos. Nenhum cadastro foi realizado.',
+                503);
+          }
+          if (action == 'conferencia' &&
               data['requireWorkEnumeration'] == true &&
               (health is! Map || health['workEnumeration'] != true)) {
             return _failure(

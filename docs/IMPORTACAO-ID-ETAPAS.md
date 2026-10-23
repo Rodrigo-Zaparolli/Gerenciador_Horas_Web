@@ -1,5 +1,13 @@
 # Importação pelo ID com etapas do cadastro
 
+## v44 — leitura da tabela Trabalhos
+
+A importação por ID envia `importWorkGrid: true` e exige `workGridImport` na integração. Depois de localizar a solicitação e abrir Trabalhos, lê diretamente o ID numérico do link de seleção, Tipo de Trabalho, Tp. Estimado e as datas. Não abre cada trabalho nessa modalidade. Ordem e Tp. Trab. nunca substituem ID e horas previstas. A conferência antiga continua com seu fluxo independente.
+
+O cenário do print da solicitação 2260860 foi reproduzido em navegador isolado: IDs 2/3/4/5/6; horas 08:00/14:00/14:00/30:30/21:00; total 87:30. A reprodução usa Ordem deliberadamente diferente dos IDs para verificar a identidade. Sufixo (OH) é ignorado somente na comparação dos nomes, preservando a escolha do tipo pelo usuário e a associação manual quando houver ambiguidade. Paginação ou colunas não reconhecidas interrompem a leitura, sem cadastrar dados parciais como completos.
+
+Projetos existentes podem selecionar um modelo de etapas sem alterar seus metadados salvos. Mensagens de validação ficam no rodapé visível do modal. Testes isolados não substituem a validação no E-Desk real.
+
 ## Modal unificado conforme a prévia aprovada
 
 A consulta pelo ID e a conferência permanecem na mesma rota e no mesmo modal. A tela apresenta Novo trabalho, acesso ao cadastro manual e três seções numeradas: Consultar solicitação, Conferir dados do projeto e Vincular etapas do trabalho. O rodapé mantém o total previsto e a confirmação de cadastro. Os campos usam os temas do aplicativo; telas estreitas possuem rolagem vertical e horizontal explícitas. As datas podem ser digitadas ou escolhidas no calendário.

@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Login: Manter conectado agora prioriza o banco persistente do navegador utilizado pelo Firebase para restaurar a sessão ao reabrir o site.",
-    "Se esse banco estiver indisponível, o login tenta o armazenamento local persistente. A opção desmarcada continua mantendo a sessão somente enquanto o navegador estiver aberto."
+    "Importar pelo ID: a integração v44 lê diretamente a tabela Trabalhos da solicitação, usando o ID real, Tipo de Trabalho, Tempo Estimado e datas, sem abrir cada trabalho individualmente.",
+    "Associação das etapas reconhece o sufixo (OH). Projetos com tipo antigo permitem selecionar o modelo das etapas sem alterar os dados já cadastrados. Erros de cadastro ficam visíveis junto aos botões.",
+    "Atualize e reinicie a integração local v44 para utilizar a nova leitura. A consulta não altera o E-Desk; o cadastro no app continua dependendo da conferência e confirmação."
   ]
 }

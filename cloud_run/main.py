@@ -153,6 +153,7 @@ def health_check():
                     "hoursTimesheet": True,
                     "workAudit": True,
                     "workEnumeration": True,
+                    "workGridImport": True,
                     "workInbox": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),

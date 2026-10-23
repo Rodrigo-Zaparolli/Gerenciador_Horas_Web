@@ -168,6 +168,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     });
     try {
       final receipt = await _query('edesk_conferencia.py', {
+        if (widget.importById) 'importWorkGrid': true,
         'requireWorkEnumeration': (row['works'] as Set<String>).isEmpty,
         'solicitacoes': [
           {
@@ -531,13 +532,26 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
           .where((f) => _nameKey(f.name) == _nameKey(_type.text))
           .toList();
       if (matched.length == 1) _chooseFormat(matched.single);
+      if (matched.isEmpty) {
+        // E-Desk may include the product prefix in the service name. Only
+        // accept a unique configured equivalent; never choose by position.
+        String productKey(String value) =>
+            _nameKey(value).replaceFirst(RegExp(r'^promob'), '');
+        final equivalents = widget.formats
+            .where((f) => productKey(f.name) == productKey(_type.text))
+            .toList();
+        if (equivalents.length == 1) _chooseFormat(equivalents.single);
+      }
     }
   }
 
   String _nameKey(String name) {
     const accented = 'áàâãäéèêëíìîïóòôõöúùûüç';
     const plain = 'aaaaaeeeeiiiiooooouuuuc';
-    var result = name.trim().toLowerCase();
+    var result = name
+        .replaceFirst(RegExp(r'\s*\(OH\)\s*$', caseSensitive: false), '')
+        .trim()
+        .toLowerCase();
     for (var i = 0; i < accented.length; i++) {
       result = result.replaceAll(accented[i], plain[i]);
     }
@@ -578,6 +592,13 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
           .toList();
       if (sameLabel.length == 1 && matches.length == 1) {
         _link(step, matches.single);
+      }
+    }
+    // A template may contain optional stages absent from this request. Keep
+    // them available for manual mapping, but do not require invented work IDs.
+    if (_steps.any((step) => step.id.isNotEmpty)) {
+      for (final step in _steps.where((step) => step.id.isEmpty)) {
+        step.selected = false;
       }
     }
   }
@@ -897,6 +918,11 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
       onManual: widget.onManual,
       onClose: () => Navigator.pop(context),
       summary: Text(_selectionSummary),
+      message: _error.isEmpty
+          ? null
+          : SelectableText(_error,
+              key: const ValueKey('import-validation-error'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
       actions: [
         TextButton(
             onPressed: _saving ? null : () => Navigator.pop(context),
@@ -937,7 +963,7 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
                               .map((f) => DropdownMenuItem(
                                   value: f, child: Text(f.name)))
                               .toList(),
-                          onChanged: _saving || widget.existing != null
+                          onChanged: _saving
                               ? null
                               : (f) {
                                   if (f != null) {
@@ -998,7 +1024,7 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
                     const Padding(
                         padding: EdgeInsets.only(top: 8),
                         child: Text(
-                            'Projeto existente: somente etapas novas serão adicionadas. Os dados e vínculos atuais serão preservados.')),
+                            'Projeto existente: selecione o modelo das etapas a importar. Somente etapas novas serão adicionadas; o tipo e os demais dados atuais do projeto serão preservados.')),
                 ])),
         ProjectImportSection(
             number: 3,
@@ -1010,12 +1036,6 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: _mappedStageWidgets(context))),
-        if (_error.isNotEmpty)
-          Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: SelectableText(_error,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error))),
       ],
     );
   }
