@@ -1,4 +1,4 @@
-"""Build the small legacy-project-links-46 update for an existing full installation."""
+"""Build the small workbook-tools-47 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -17,12 +17,14 @@ FILES = (
     'local_edesk/local_files.py',
     'local_edesk/files_server.py',
     'local_edesk/excel_editor.py',
+    'local_edesk/excel_mirror.py',
+    'edesk_bot/excel_preview.py',
     'local_edesk/project_archive.py',
     'local_edesk/backup_policy.py',
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO legacy-project-links-46 — instalação completa já existente
+README = '''ATUALIZAÇÃO workbook-tools-47 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -33,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidades v47: edicao das guias da planilha, datas da linha do tempo e identificacao dos blocos do checklist. Espelho Professional compativel com o nome Maker antigo. Verificacao da capacidade real ao iniciar e importacao por ID sem depender da aba Comentarios. Preserva dados, macros, backups e vinculos.
 
 Correcao v46: recupera vinculos antigos que guardavam apenas o nome usando somente caminhos ja autorizados para a mesma conta, tipo e numero do projeto. Exige caminho unico e devolve vinculo assinado com caminho completo. Nao autoriza novos caminhos, nao escolhe entre pastas ambiguas e nao altera a chave local.
 
@@ -170,7 +174,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-vinculos-projeto-46.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-47.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

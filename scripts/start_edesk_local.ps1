@@ -11,7 +11,7 @@ function Get-IntegrationStatus {
 }
 $status = Get-IntegrationStatus
 if ($status -and $status.service -eq 'gerenciador-horas-edesk' -and $status.mode -in @('local', 'central')) {
-    if ($status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-7') {
+    if ($status.nativeFiles -and $status.excelMirror -and $status.nativeFilesVersion -eq 'persistent-file-links-7' -and $status.nativeProjectLinkRecovery -eq $true) {
         Write-Host 'A integração já está ativa. Pode abrir as pastas e planilhas originais pelo site.'
         exit 0
     }
@@ -28,7 +28,7 @@ $process = Start-Process -FilePath $pythonExecutable -ArgumentList '-m','local_e
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
     Start-Sleep -Milliseconds 500
     $status = Get-IntegrationStatus
-    if ($status -and $status.service -eq 'gerenciador-horas-edesk' -and $status.mode -eq 'local') {
+    if ($status -and $status.service -eq 'gerenciador-horas-edesk' -and $status.mode -eq 'local' -and $status.nativeProjectLinkRecovery -eq $true) {
         $process.Id | Set-Content -LiteralPath (Join-Path $logDirectory 'service.pid')
         Write-Host 'Integração E-Desk ativa. Abra https://gerenciador-horas.web.app neste computador.'
         exit 0

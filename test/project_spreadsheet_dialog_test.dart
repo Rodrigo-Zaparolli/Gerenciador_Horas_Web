@@ -57,6 +57,59 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  testWidgets('timeline opens separately and only editable dates open calendar',
+      (tester) async {
+    final data = snapshot();
+    data['fields'] = List<Map<String, dynamic>>.from(data['fields'] as List);
+    (data['fields'] as List).addAll(<Map<String, dynamic>>[
+      {
+        'sheet': 'Implantação - Linha do Tempo',
+        'cell': 'C20',
+        'label': 'Evento editavel',
+        'kind': 'date',
+        'group': 'Linha do tempo',
+        'timeline': true,
+        'value': '2026-10-23',
+        'readOnly': false
+      },
+      {
+        'sheet': 'Implantação - Linha do Tempo',
+        'cell': 'C19',
+        'label': 'Evento calculado',
+        'kind': 'date',
+        'group': 'Linha do tempo',
+        'timeline': true,
+        'value': '2026-10-22',
+        'readOnly': true
+      },
+    ]);
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+      project: ProjectModel.fromJson({
+        'id': '2263800',
+        'client': 'Cliente',
+        'serviceType': 'Enterprise',
+        'excelLink': 'C:/Projeto.xlsm'
+      }),
+      uidProvider: () => 'owner',
+      emailProvider: () => 'rodrigozaparolli79@gmail.com',
+      contactsLoader: () async => [],
+      transport: (_) async => data,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('Evento editavel'), findsNothing);
+    await tester.ensureVisible(find.text('Implantação - Linha do Tempo'));
+    await tester.tap(find.text('Implantação - Linha do Tempo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextFormField, 'Evento calculado'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsNothing);
+    await tester.tap(find.widgetWithText(TextFormField, 'Evento editavel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final brightness in Brightness.values) {
     for (final size in [const Size(1366, 768), const Size(390, 844)]) {
       testWidgets('Approved spreadsheet layout fits $size in $brightness',

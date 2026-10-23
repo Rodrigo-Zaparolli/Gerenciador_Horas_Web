@@ -18,6 +18,143 @@ Future<void> choose(WidgetTester tester, String cell, String value) async {
 }
 
 void main() {
+  testWidgets(
+      'bulk edits include hidden tasks, isolate blocks and skip read-only',
+      (tester) async {
+    Map<String, double>? result;
+    await tester.pumpWidget(MaterialApp(
+        home: Builder(
+            builder: (context) => Scaffold(
+                    body: TextButton(
+                  child: const Text('Open blocks'),
+                  onPressed: () async {
+                    result = await showDialog<Map<String, double>>(
+                        context: context,
+                        builder: (_) => ChecklistStageDialog(
+                              stage: 'Implantacao',
+                              canApply: () => true,
+                              tasks: const [
+                                {
+                                  'sheet': 'Checklist',
+                                  'cell': 'E1',
+                                  'label': 'First',
+                                  'block': 'Install',
+                                  'blockId': 'F1'
+                                },
+                                {
+                                  'sheet': 'Checklist',
+                                  'cell': 'E2',
+                                  'label': 'Completed',
+                                  'block': 'Install',
+                                  'blockId': 'F1'
+                                },
+                                {
+                                  'sheet': 'Checklist',
+                                  'cell': 'E3',
+                                  'label': 'Locked',
+                                  'block': 'Install',
+                                  'blockId': 'F1',
+                                  'readOnly': true
+                                },
+                                {
+                                  'sheet': 'Checklist',
+                                  'cell': 'E4',
+                                  'label': 'Other',
+                                  'block': 'Install',
+                                  'blockId': 'F4'
+                                },
+                              ],
+                              values: const {
+                                'Checklist!E1': 0,
+                                'Checklist!E2': 1,
+                                'Checklist!E3': .5,
+                                'Checklist!E4': .25
+                              },
+                            ));
+                  },
+                )))));
+    await tester.tap(find.text('Open blocks'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+    await tester.pumpAndSettle();
+    final block = find.byWidgetPredicate((w) =>
+        w is DropdownButtonFormField<double> &&
+        w.key.toString().contains('stage-block-F1-'));
+    await tester.tap(block);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('75%').last);
+    await tester.pumpAndSettle();
+    await choose(tester, 'E1', '25');
+    await tester.tap(find.text('Aplicar ajustes'));
+    await tester.pumpAndSettle();
+    expect(result, {
+      'Checklist!E1': .25,
+      'Checklist!E2': .75,
+      'Checklist!E3': .5,
+      'Checklist!E4': .25
+    });
+    await tester.tap(find.text('Open blocks'));
+    await tester.pumpAndSettle();
+    await tester.tap(block);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('100%').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(result, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('stage preview uses draft values including hidden tasks',
+      (tester) async {
+    Map<String, double>? calculated;
+    await tester.pumpWidget(MaterialApp(
+        home: ChecklistStageDialog(
+      stage: 'Implantacao',
+      tasks: const [
+        {
+          'sheet': 'Checklist',
+          'cell': 'E1',
+          'label': 'Task one',
+          'estimated': '01:00'
+        },
+        {
+          'sheet': 'Checklist',
+          'cell': 'E2',
+          'label': 'Task done',
+          'estimated': '03:00'
+        },
+      ],
+      values: const {'Checklist!E1': 0, 'Checklist!E2': 1},
+      canApply: () => true,
+      calculatePreview: (values) async {
+        calculated = values;
+        return {
+          'rows': [
+            {
+              'label': 'Implantacao',
+              'percentage':
+                  (values['Checklist!E1']! + 3 * values['Checklist!E2']!) / 4
+            }
+          ]
+        };
+      },
+    )));
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stage-live-percentage')), findsOneWidget);
+    expect(find.text('75%'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+    await tester.pumpAndSettle();
+    await choose(tester, 'E1', '100');
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(calculated, {'Checklist!E1': 1, 'Checklist!E2': 1});
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Nenhuma tarefa pendente nesta etapa.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final width in [390.0, 1200.0]) {
     for (final brightness in Brightness.values) {
       testWidgets(

@@ -1252,7 +1252,7 @@ def fechar_solicitacoes_duplicadas(context, selecionada, principal, snapshot):
             pass
 
 
-def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, pagina_solicitacao_preaberta=None, abrir_retroativo=True, somente_solicitacao=False):
+def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, pagina_solicitacao_preaberta=None, abrir_retroativo=True, somente_solicitacao=False, validar_solicitacao=None):
     id_trabalho = str(id_trabalho).strip()
     numero_solicitacao = str(numero_solicitacao).strip()
 
@@ -1284,6 +1284,9 @@ def abrir_trabalho(page, context, linha_grid, numero_solicitacao, id_trabalho, p
         if somente_solicitacao:
             if not eh_solicitacao(pagina.url):
                 return False
+            if validar_solicitacao is not None:
+                validar_solicitacao(pagina)
+                return True
             pagina.get_by_text(re.compile(r'^Coment\u00e1rios\s*(?:\(\d+\))?$')).wait_for(state='visible', timeout=20000)
             return True
         inicio = time.time()

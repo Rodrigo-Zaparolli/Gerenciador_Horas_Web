@@ -223,24 +223,12 @@ def snapshot(book, service_type=None, sheet_names=None):
             other = str(entry.Cells(row, 7).Value2 or '').strip()
             if other:
                 add(entry, f'H{row}', other, 'Cadastro do cliente e acessos')
-    for row in range(first + 1, last + 1):
-        description = str(checklist.Cells(row, 6).Value2 or '').strip()
-        cell = checklist.Cells(row, 5)
-        raw = cell.Value2
-        if not description or cell.HasFormula or not isinstance(raw, (int, float)):
-            continue
-        if isinstance(raw, bool) or not 0 <= raw <= 1:
-            continue
-        estimate = checklist.Cells(row, 8).Value2
-        minutes = round(float(estimate) * 1440) if isinstance(estimate, (int, float)) else 0
-        tasks.append({'sheet': checklist.Name, 'cell': f'E{row}', 'kind': 'percent',
-                      'value': float(raw), 'label': description,
-                      'group': str(checklist.Cells(row, 4).Value2 or ''),
-                      'estimated': f'{minutes // 60:02}:{minutes % 60:02}',
-                      'note': str(checklist.Cells(row, 10).Value2 or '')})
+    tasks.extend(checklist_tasks(checklist, first, last))
+    timeline, timeline_sheet = timeline_fields(book)
+    fields.extend(timeline)
     progress = checklist.Range(f'T{first - 1}').Value2
     formulas = [(sheet.Name, row, column, formula)
-                for sheet in [entry, checklist]
+                for sheet in [entry, checklist] + ([timeline_sheet] if timeline_sheet is not None else [])
                 for row, values in enumerate(sheet.formulas, 1)
                 for column, formula in enumerate(values, 1)
                 if isinstance(formula, str) and formula.startswith('=')]
@@ -250,6 +238,60 @@ def snapshot(book, service_type=None, sheet_names=None):
             'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest(),
             'formulaCount': len(formulas),
             'progress': float(progress) if isinstance(progress, (int, float)) and 0 <= progress <= 1 else None}
+
+
+def timeline_fields(book):
+    name = 'Implantação - Linha do Tempo'
+    try:
+        source = book.Worksheets(name)
+    except Exception:
+        return [], None
+    sheet = SheetSnapshot(source)
+    tables = [table for table in sheet.ListObjects if str(table.Name) == 'DetalhesProjeto']
+    if len(tables) != 1:
+        return [], sheet
+    table = tables[0].Range
+    first, last = int(table.Row), int(table.Row + table.Rows.Count - 1)
+    if int(table.Column) != 1 or last > 500 or str(sheet.Cells(first, 3).Value2).strip() != 'Data':
+        return [], sheet
+    fields = []
+    for row in range(first + 1, last + 1):
+        label = str(sheet.Cells(row, 2).Value2 or '').strip()
+        if not label:
+            continue
+        cell = sheet.Cells(row, 3)
+        fields.append({'sheet': name, 'cell': f'C{row}', 'kind': 'date',
+            'label': label, 'group': 'Linha do tempo', 'timeline': True,
+            'value': value(cell, 'date'), 'readOnly': bool(cell.HasFormula),
+            'dateStorage': 'text' if isinstance(cell.Value2, str) or source.Range(f'C{row}').NumberFormat == '@' else 'number'})
+    return fields, sheet
+
+
+def checklist_tasks(checklist, first, last):
+    tasks = []
+    block = block_id = previous_group = ''
+    for row in range(first + 1, last + 1):
+        description = str(checklist.Cells(row, 6).Value2 or '').strip()
+        group = str(checklist.Cells(row, 4).Value2 or '').strip()
+        if group != previous_group:
+            block = block_id = ''
+            previous_group = group
+        cell = checklist.Cells(row, 5)
+        raw = cell.Value2
+        if description and not cell.HasFormula and (raw is None or isinstance(raw, str) and not raw.strip()):
+            block, block_id = description, f'{checklist.Name}!F{row}'
+        if not description or cell.HasFormula or not isinstance(raw, (int, float)):
+            continue
+        if isinstance(raw, bool) or not 0 <= raw <= 1:
+            continue
+        estimate = checklist.Cells(row, 8).Value2
+        minutes = round(float(estimate) * 1440) if isinstance(estimate, (int, float)) else 0
+        tasks.append({'sheet': checklist.Name, 'cell': f'E{row}', 'kind': 'percent',
+                      'value': float(raw), 'label': description,
+                      'group': group, 'block': block, 'blockId': block_id,
+                      'estimated': f'{minutes // 60:02}:{minutes % 60:02}',
+                      'note': str(checklist.Cells(row, 10).Value2 or '')})
+    return tasks
 
 
 def status_preview(book, service_type, sheet_names=None):
@@ -308,7 +350,13 @@ def validated_changes(current, changes):
             raise ValueError('A planilha mudou desde a leitura. Recarregue antes de salvar.')
         new = change.get('value')
         kind = field['kind']
-        if kind == 'percent':
+        if field.get('generic') and kind == 'text' and field['value'] == '' and isinstance(new, (int, float)) and not isinstance(new, bool):
+            kind = 'number'
+            field = {**field, 'kind': kind}
+        if kind == 'number':
+            if isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new):
+                raise ValueError('Numero invalido.')
+        elif kind == 'percent':
             if isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new) or new not in {0, .25, .5, .75, 1}:
                 raise ValueError('Use 0%, 25%, 50%, 75% ou 100%.')
         elif not isinstance(new, str) or len(new) > 10000:
@@ -409,7 +457,7 @@ def preserve_package(source, target, changes):
                     kind = field['kind']
                     if kind == 'date':
                         new = stored_date(field, new)
-                    text = kind not in {'date', 'percent'} or kind == 'date' and field.get('dateStorage') == 'text'
+                    text = kind not in {'date', 'percent', 'number'} or kind == 'date' and field.get('dateStorage') == 'text'
                     cell_updates[field['cell']] = ('inlineStr' if text else '', new)
                 found = set()
                 def replace(match):
@@ -420,8 +468,52 @@ def preserve_package(source, target, changes):
                     kind, new = cell_updates[address]
                     return patched_cell(match[0], address, kind, new)
                 raw = re.sub(r'<c\b[^>]*\br="([A-Z]+[1-9][0-9]*)"[^>]*?(?:/>|>.*?</c>)', replace, raw, flags=re.S)
-                if set(cell_updates) - found:
-                    raise ValueError('Uma célula não foi localizada no arquivo original.')
+                raw = re.sub(r'<sheetData\b([^>]*)/>', r'<sheetData\1></sheetData>', raw)
+                for address in set(cell_updates) - found:
+                    kind, new = cell_updates[address]
+                    new_cell = patched_cell(f'<c r="{address}"/>', address, kind, new)
+                    row_number = int(re.search(r'\d+', address)[0])
+                    row_pattern = rf'<row\b[^>]*\br="{row_number}"[^>]*?(?:/>|>.*?</row>)'
+                    row_match = re.search(row_pattern, raw, re.S)
+                    def order(a):
+                        letters = re.match(r'[A-Z]+', a)[0]
+                        result = 0
+                        for letter in letters: result = result * 26 + ord(letter) - 64
+                        return result
+                    if row_match:
+                        old_row = row_match[0]
+                        if old_row.endswith('/>'):
+                            new_row = old_row[:-2] + '>' + new_cell + '</row>'
+                        else:
+                            later = next((m for m in re.finditer(r'<c\b[^>]*\br="([A-Z]+[0-9]+)"', old_row) if order(m[1]) > order(address)), None)
+                            at = later.start() if later else old_row.rfind('</row>')
+                            new_row = old_row[:at] + new_cell + old_row[at:]
+                        raw = raw[:row_match.start()] + new_row + raw[row_match.end():]
+                    else:
+                        later = next((m for m in re.finditer(r'<row\b[^>]*\br="([0-9]+)"', raw) if int(m[1]) > row_number), None)
+                        at = later.start() if later else raw.find('</sheetData>')
+                        if at < 0:
+                            raise ValueError('A estrutura da guia nao permite inserir esta celula.')
+                        raw = raw[:at] + f'<row r="{row_number}">{new_cell}</row>' + raw[at:]
+                dimension = re.search(r'<dimension\b[^>]*\bref="([A-Z]+[0-9]+)(?::([A-Z]+[0-9]+))?"', raw)
+                if dimension and cell_updates:
+                    addresses = [dimension[1], dimension[2] or dimension[1], *cell_updates]
+                    def coordinates(address):
+                        letters, row = re.fullmatch(r'([A-Z]+)([0-9]+)', address).groups()
+                        col = 0
+                        for letter in letters: col = col * 26 + ord(letter) - 64
+                        return col, int(row)
+                    coords = [coordinates(address) for address in addresses]
+                    def address(col, row):
+                        letters = ''
+                        while col:
+                            col, digit = divmod(col - 1, 26)
+                            letters = chr(65 + digit) + letters
+                        return f'{letters}{row}'
+                    lower = address(min(c for c,r in coords), min(r for c,r in coords))
+                    upper = address(max(c for c,r in coords), max(r for c,r in coords))
+                    new_dimension = re.sub(r'ref="[^"]*"', f'ref="{lower}:{upper}"', dimension[0])
+                    raw = raw[:dimension.start()] + new_dimension + raw[dimension.end():]
                 updates[part] = raw.encode('utf-8')
             with ZipFile(replacement, 'w') as output:
                 for info in original.infolist():
@@ -429,6 +521,38 @@ def preserve_package(source, target, changes):
         os.replace(replacement, target)
     finally:
         replacement.unlink(missing_ok=True)
+
+
+def worksheet_snapshot(book, body):
+    name = body.get('worksheet')
+    if not isinstance(name, str) or not name.strip() or len(name) > 31:
+        raise ValueError('Selecione uma guia existente.')
+    row, column = body.get('firstRow', 1), body.get('firstColumn', 1)
+    if type(row) is not int or type(column) is not int or not 1 <= row <= 1048552 or not 1 <= column <= 16377:
+        raise ValueError('Intervalo de consulta invalido.')
+    sheet = book.Worksheets(name)
+    fields, formulas = [], []
+    for r in range(row, row + 25):
+        for c in range(column, column + 8):
+            cell = sheet.Cells(r, c)
+            letters, index = '', c
+            while index:
+                index, digit = divmod(index - 1, 26)
+                letters = chr(65 + digit) + letters
+            address = f'{letters}{r}'
+            raw, formula = cell.Value2, cell.Formula
+            calculated = bool(cell.HasFormula)
+            fmt = str(cell.NumberFormat).lower()
+            kind = 'number' if isinstance(raw, (int, float)) and not isinstance(raw, bool) else 'text'
+            if (kind == 'number' or raw is None) and re.search(r'[dy]|aa', re.sub(r'"[^"]*"|\\.', '', fmt)):
+                kind = 'date'
+            readonly = calculated or bool(sheet.ProtectContents and cell.Locked) or bool(cell.MergeCells and cell.MergeArea.Cells(1,1).Address != cell.Address) or isinstance(raw, bool)
+            fields.append({'sheet': name, 'cell': address, 'kind': kind, 'label': address,
+                'group': 'Guia', 'value': value(cell, kind) if kind != 'number' else float(raw),
+                'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
+            formulas.append([address, str(formula) if calculated else None])
+    return {'fields': fields, 'tasks': [], 'worksheet': name, 'firstRow':row, 'firstColumn':column,
+        'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}
 
 
 def edit(path, body):
@@ -450,7 +574,7 @@ def edit(path, body):
             raise ValueError('O arquivo mudou desde a leitura. Recarregue antes de salvar.')
         if not writing and not previewing:
             with workbook(path) as (_, book):
-                data = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
+                data = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a leitura. Recarregue.')
             return {**data, 'revision': original, 'filename': path.name}
@@ -459,7 +583,7 @@ def edit(path, body):
         staged = Path(name)
         shutil.copy2(path, staged)
         with workbook(staged, writable=True) as (app, book):
-            before = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
+            before = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
             changes = [] if previewing and body.get('changes') == [] else validated_changes(before, body.get('changes'))
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
@@ -482,7 +606,7 @@ def edit(path, body):
                     'entrySheet': (body.get('sheetNames') or {}).get('entry', 'Informa\u00e7\u00f5es de entrada'), 'checklistSheet': checklist_sheet(body.get('serviceType'), body.get('sheetNames')), 'filename': path.name}
         preserve_package(path, staged, changes)
         with workbook(staged) as (_, book):
-            checked = snapshot(book, body.get('serviceType'), body.get('sheetNames'))
+            checked = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
         if checked['formulaFingerprint'] != before['formulaFingerprint']:
             raise ValueError('Uma fórmula do modelo mudou. O original foi preservado.')
         mapped = {(f['sheet'], f['cell']): f['value'] for f in checked['fields'] + checked['tasks']}

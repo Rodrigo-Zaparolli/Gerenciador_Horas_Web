@@ -103,6 +103,19 @@ def interpretar_referencia(referencia):
 # DIRETÓRIO DE TRABALHO / DEBUG
 # ============================================================
 
+def resolver_nome_aba(nome_aba, abas):
+    """Preserve exact sheet choices; support the confirmed legacy Maker name."""
+    requested = str(nome_aba).strip().casefold()
+    exact = [name for name in abas if str(name).strip().casefold() == requested]
+    if len(exact) == 1:
+        return exact[0]
+    if requested == 'professional checklist-processo' and not exact:
+        maker = [name for name in abas if str(name).strip().casefold() == 'maker checklist-processo']
+        if len(maker) == 1:
+            return maker[0]
+    raise ValueError(f"Aba '{nome_aba}' não encontrada. Abas disponíveis: {', '.join(abas)}")
+
+
 def obter_diretorio_debug():
     """
     O aplicativo instalado pode estar em Program Files.
@@ -270,9 +283,10 @@ def renderizar_intervalo_excel(
             "para renderização real do intervalo."
         )
 
-        excel = win32com.client.DispatchEx(
-            "Excel.Application"
-        )
+        try:
+            excel = win32com.client.DispatchEx('Excel.Application')
+        except Exception as error:
+            raise RuntimeError('Não foi possível iniciar o Microsoft Excel neste computador. Abra o Excel manualmente e conclua eventuais telas de ativação ou configuração; depois tente novamente.') from error
 
         excel.Visible = False
         excel.DisplayAlerts = False
@@ -281,44 +295,26 @@ def renderizar_intervalo_excel(
         excel.AskToUpdateLinks = False
         excel.AutomationSecurity = 3
 
-        workbook = excel.Workbooks.Open(
-            str(caminho_arquivo),
-            UpdateLinks=0,
-            ReadOnly=True,
-            IgnoreReadOnlyRecommended=True,
-            AddToMru=False,
-        )
-
-        worksheet = None
-
-        for indice in range(
-            1,
-            workbook.Worksheets.Count + 1,
-        ):
-            candidata = workbook.Worksheets(indice)
-
-            if str(candidata.Name).strip().lower() == str(
-                nome_aba
-            ).strip().lower():
-                worksheet = candidata
-                break
-
-        if worksheet is None:
-            abas = [
-                str(workbook.Worksheets(i).Name)
-                for i in range(
-                    1,
-                    workbook.Worksheets.Count + 1,
-                )
-            ]
-
-            raise ValueError(
-                f"Aba '{nome_aba}' não encontrada. "
-                f"Abas disponíveis: {', '.join(abas)}"
+        try:
+            workbook = excel.Workbooks.Open(
+                str(caminho_arquivo),
+                UpdateLinks=0,
+                ReadOnly=True,
+                IgnoreReadOnlyRecommended=True,
+                AddToMru=False,
             )
+        except Exception as error:
+            raise RuntimeError('O Excel iniciou, mas não conseguiu abrir a planilha vinculada. Confira se o arquivo está disponível neste PC e se exige senha ou está bloqueado.') from error
+
+        abas = [str(workbook.Worksheets(i).Name) for i in range(1, workbook.Worksheets.Count + 1)]
+        nome_resolvido = resolver_nome_aba(nome_aba, abas)
+        worksheet = workbook.Worksheets(nome_resolvido)
 
         worksheet.Activate()
-        intervalo = worksheet.Range(endereco)
+        try:
+            intervalo = worksheet.Range(endereco)
+        except Exception as error:
+            raise RuntimeError(f'O Excel abriu a guia {nome_aba}, mas não conseguiu acessar o intervalo {endereco}. Confira o campo Tabela do Excel.') from error
 
         log(
             "Renderizando pelo Excel: "
@@ -450,7 +446,11 @@ def renderizar_intervalo_excel(
         )
 
     finally:
-        if clipboard_saved and clipboard_sequence == win32clipboard.GetClipboardSequenceNumber():
+        try:
+            restore_clipboard = clipboard_saved and clipboard_sequence == win32clipboard.GetClipboardSequenceNumber()
+        except Exception:
+            restore_clipboard = False
+        if restore_clipboard:
             try:
                 pythoncom.OleSetClipboard(clipboard_original)
                 pythoncom.OleFlushClipboard()

@@ -17,8 +17,12 @@ vm.runInNewContext(fs.readFileSync('web/native_local_files_v2.js','utf8'), conte
   assert.equal(requests[0].body.projectId,'2263800');
   assert.equal(requests[0].body.reference,base.reference);
   assert.equal(requests[1].body.projectId,undefined);
-  assert.equal(requests.length,2);
-  assert.equal(context.window.nativeLocalFilesBridgeVersion,'project-link-recovery-8');
-  assert.ok(fs.readFileSync('web/index.html','utf8').includes('native_local_files_v2.js?v=project-links-46'));
+  await context.window.nativeLocalFilesRequest(JSON.stringify({...base,action:'excel-editor-read',worksheet:'Linha do Tempo',firstRow:26,firstColumn:9}));
+  assert.equal(requests[2].body.worksheet,'Linha do Tempo');
+  assert.equal(requests[2].body.firstRow,26);
+  assert.equal(requests[2].body.firstColumn,9);
+  assert.equal(requests.length,3);
+  assert.equal(context.window.nativeLocalFilesBridgeVersion,'workbook-tools-9');
+  assert.ok(fs.readFileSync('web/index.html','utf8').includes('native_local_files_v2.js?v=workbook-tools-47'));
   console.log('BRIDGE_PROJECT_ID_FORWARDING_OK');
 })().catch(error=>{console.error(error.message);process.exitCode=1;});

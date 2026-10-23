@@ -87,6 +87,44 @@ class ExcelEditorTests(unittest.TestCase):
             sheet.ListObjects = [table, table]
             with self.assertRaises(ValueError): checklist_table(sheet)
 
+    def test_block_headers_keep_distinct_identity_and_reset_at_stage_boundary(self):
+        from local_edesk.excel_editor import checklist_tasks
+        rows = {
+            2: ('Implantacao', None, 'Instalacao'),
+            3: ('Implantacao', 0, 'Instalar'),
+            4: ('Implantacao', 1, 'Ativar'),
+            5: ('Implantacao', None, 'Instalacao'),
+            6: ('Implantacao', .5, 'Configurar'),
+            7: ('Pos', .25, 'Revisar'),
+        }
+        def cell(row, column):
+            values = rows[row]
+            return SimpleNamespace(Value2={4:values[0],5:values[1],6:values[2],8:1/24,10:''}.get(column), HasFormula=False)
+        tasks = checklist_tasks(SimpleNamespace(Name='Checklist', Cells=cell), 1, 7)
+        self.assertEqual([t['blockId'] for t in tasks], ['Checklist!F2', 'Checklist!F2', 'Checklist!F5', ''])
+        self.assertEqual([t['value'] for t in tasks], [0, 1, .5, .25])
+        self.assertEqual(tasks[0]['block'], 'Instalacao')
+
+    def test_timeline_exposes_only_table_dates_and_preserves_formulas(self):
+        from local_edesk.excel_editor import timeline_fields
+        table = SimpleNamespace(Name='DetalhesProjeto', Range=SimpleNamespace(Row=18, Column=1, Rows=SimpleNamespace(Count=4)))
+        def cell(row, column):
+            if row == 18: return SimpleNamespace(Value2='Data', HasFormula=False)
+            if column == 2: return SimpleNamespace(Value2={19:'Contrato',20:'Implantacao',21:''}[row], HasFormula=False)
+            return SimpleNamespace(Value2=46000, HasFormula=row == 19)
+        sheet = SimpleNamespace(ListObjects=[table], Cells=cell)
+        source = SimpleNamespace(Range=lambda address: SimpleNamespace(NumberFormat='dd/mm/yyyy'))
+        book = SimpleNamespace(Worksheets=lambda name: source)
+        with patch('local_edesk.excel_editor.SheetSnapshot', return_value=sheet):
+            fields, _ = timeline_fields(book)
+        self.assertEqual([f['cell'] for f in fields], ['C19','C20'])
+        self.assertTrue(fields[0]['readOnly'])
+        self.assertFalse(fields[1]['readOnly'])
+        self.assertTrue(all(f['timeline'] and f['kind']=='date' for f in fields))
+        with self.assertRaises(ValueError):
+            validated_changes({'fields':fields,'tasks':[]}, [{'sheet':fields[0]['sheet'],'cell':'C19','before':fields[0]['value'],'value':'2026-10-23'}])
+        self.assertEqual(len(validated_changes({'fields':fields,'tasks':[]}, [{'sheet':fields[1]['sheet'],'cell':'C20','before':fields[1]['value'],'value':'2026-10-23'}])),1)
+
     def setUp(self):
         self.field = {'sheet': 'entry', 'cell': 'C2', 'kind': 'text', 'value': 'old'}
         self.current = {'fields': [self.field], 'tasks': []}

@@ -188,7 +188,13 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
         phase = 'search_request'
         page, row, opened = localizar_solicitacao_validada(grid, context, solicitation)
         phase = 'open_request'
-        request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
+        if import_grid:
+            from edesk_horas import abrir_trabalho
+            request_page = abrir_trabalho(page, context, row, solicitation, '',
+                pagina_solicitacao_preaberta=opened, abrir_retroativo=False,
+                somente_solicitacao=True, validar_solicitacao=show_works)
+        else:
+            request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
         request_url = request_page.url
         if import_grid:
             return import_work_rows(request_page, solicitation)

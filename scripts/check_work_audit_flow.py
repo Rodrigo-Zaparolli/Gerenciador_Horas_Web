@@ -103,5 +103,17 @@ with sync_playwright() as p:
         raise AssertionError('Ordem was incorrectly accepted as a real ID')
     except RuntimeError as error:
         assert 'ID real' in str(error),error
+    # Import readiness must not depend on a Comments tab existing at all.
+    from edesk_horas import abrir_trabalho
+    from edesk_conferencia import show_works
+    request_probe = context.new_page()
+    request_probe.goto(request_url + '&GUID=test')
+    opened_request = abrir_trabalho(request_probe, context, None, '226144', '',
+        pagina_solicitacao_preaberta=request_probe, abrir_retroativo=False,
+        somente_solicitacao=True, validar_solicitacao=show_works)
+    assert opened_request is request_probe
+    assert request_probe.locator('#cph1_gvwTra').is_visible()
+    assert request_probe.get_by_text('Comentarios', exact=True).count() == 0
+    assert not writes, writes
     browser.close()
 print('WORK_AUDIT_BROWSER_OK: exact edited work, request enumeration, labeled values, retroactive hours, zero Save POSTs; no real E-Desk access',flush=True)

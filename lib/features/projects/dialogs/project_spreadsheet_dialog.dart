@@ -6,6 +6,7 @@ import 'project_spreadsheet_kind.dart';
 import 'checklist_status_preview.dart';
 import 'checklist_live_preview.dart';
 import 'checklist_stage_dialog.dart';
+import 'workbook_sheet_dialog.dart';
 import 'spreadsheet_dialog_chrome.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -155,6 +156,45 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               'Não foi possível carregar a configuração de abas. Use Abas para conferir antes de editar. $e';
         });
       }
+    }
+  }
+
+  Future<void> openAllSheets() async {
+    if (busy || !authorized || !await discard() || !mounted) return;
+    await livePreview.pauseAndWait();
+    if (!mounted || !authorized) return;
+    setState(() {
+      pending.clear();
+      calculatedEmails.clear();
+    });
+    try {
+      final changed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => WorkbookSheetDialog(
+              allowed: () => mounted && authorized,
+              call: (args) async {
+                if (widget.transport != null) {
+                  return widget.transport!(
+                      {...args, 'reference': widget.project.excelLink});
+                }
+                return NativeLocalFiles.call(args['action'] as String,
+                    reference: widget.project.excelLink,
+                    projectId: widget.project.id,
+                    projectField: 'excelLink',
+                    worksheet: args['worksheet'] as String?,
+                    firstRow: args['firstRow'] as int?,
+                    firstColumn: args['firstColumn'] as int?,
+                    revision: args['revision'] as String?,
+                    changes: (args['changes'] as List?)
+                        ?.cast<Map<String, dynamic>>());
+              }));
+      if (changed == true && mounted && authorized) {
+        pending.clear();
+        await load();
+      }
+    } finally {
+      if (mounted && authorized) livePreview.resume(clear: true);
     }
   }
 
@@ -521,9 +561,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               labelText: label,
               suffixIcon: IconButton(
                   tooltip: 'Limpar data',
-                  onPressed: busy ? null : () => change(field, ''),
+                  onPressed: busy || field['readOnly'] == true
+                      ? null
+                      : () => change(field, ''),
                   icon: const Icon(Icons.clear, size: 16))),
-          onTap: busy
+          onTap: busy || field['readOnly'] == true
               ? null
               : () async {
                   final selected = await showDatePicker(
@@ -574,7 +616,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   }
 
   Widget entry() {
-    final fields = (data!['fields'] as List).cast<Map<String, dynamic>>();
+    final fields = (data!['fields'] as List)
+        .cast<Map<String, dynamic>>()
+        .where((f) => f['timeline'] != true)
+        .toList();
     return ListView(padding: const EdgeInsets.all(16), children: [
       const Padding(
           padding: EdgeInsets.only(bottom: 12),
@@ -604,22 +649,95 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     ]);
   }
 
+  Widget timeline() {
+    final fields = (data!['fields'] as List)
+        .cast<Map<String, dynamic>>()
+        .where((f) => f['timeline'] == true)
+        .toList();
+    if (fields.isEmpty) {
+      return const Center(
+          child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                  'Recarregue do Excel com a integração atualizada para carregar a tabela Detalhes do Projeto da guia Implantação - Linha do Tempo.')));
+    }
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      const Text(
+          'Ajuste as datas dos eventos. As datas calculadas e o resumo da planilha são preservados.'),
+      const SizedBox(height: 16),
+      for (final field in fields)
+        Padding(
+            padding: const EdgeInsets.only(bottom: 16), child: input(field)),
+    ]);
+  }
+
   Future<void> editStage(String group, List<Map<String, dynamic>> tasks) async {
     if (busy || !authorized) return;
     final revision = data?['revision'];
-    final result = await showDialog<Map<String, double>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => ChecklistStageDialog(
-          stage: group,
-          tasks: tasks,
-          values: {
-            for (final task in tasks)
-              keyOf(task): (current(task) as num).toDouble()
-          },
-          canApply: () =>
-              mounted && authorized && !busy && data?['revision'] == revision),
-    );
+    await livePreview.pauseAndWait();
+    if (!mounted || !authorized || busy || data?['revision'] != revision) {
+      if (mounted && authorized) livePreview.resume();
+      return;
+    }
+    Map<String, double>? result;
+    try {
+      result = await showDialog<Map<String, double>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => ChecklistStageDialog(
+            stage: group,
+            calculatePreview: (values) async {
+              if (!mounted ||
+                  !authorized ||
+                  busy ||
+                  data?['revision'] != revision) {
+                throw StateError('A conta ou a planilha mudou.');
+              }
+              final changes = {...pending};
+              for (final task in tasks) {
+                final key = keyOf(task);
+                final value = values[key];
+                if (task['readOnly'] == true || value == null) continue;
+                if (value == task['value']) {
+                  changes.remove(key);
+                } else {
+                  changes[key] = {
+                    'sheet': task['sheet'],
+                    'cell': task['cell'],
+                    'before': task['value'],
+                    'value': value
+                  };
+                }
+              }
+              final response = await request('excel-editor-preview',
+                  revision: revision as String,
+                  changes: changes.values.toList());
+              if (!mounted ||
+                  !authorized ||
+                  data?['revision'] != revision ||
+                  response['preview'] != true ||
+                  response['statusPreview'] is! Map ||
+                  !matches(response)) {
+                throw StateError(
+                    'A planilha mudou ou a prévia não foi confirmada.');
+              }
+              return Map<String, dynamic>.from(
+                  response['statusPreview'] as Map);
+            },
+            tasks: tasks,
+            values: {
+              for (final task in tasks)
+                keyOf(task): (current(task) as num).toDouble()
+            },
+            canApply: () =>
+                mounted &&
+                authorized &&
+                !busy &&
+                data?['revision'] == revision),
+      );
+    } finally {
+      if (mounted && authorized) livePreview.resume();
+    }
     if (result == null ||
         !mounted ||
         !authorized ||
@@ -756,7 +874,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               width: 1240,
               height: size.height * .92,
               child: DefaultTabController(
-                  length: 2,
+                  length: 3,
                   child: Column(children: [
                     SpreadsheetDialogHeader(
                         projectId: widget.project.id,
@@ -764,11 +882,25 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                         filename: data?['filename']?.toString() ?? '',
                         serviceType: widget.project.serviceType,
                         onClose: busy ? null : close,
-                        sheetAction: TextButton.icon(
-                            onPressed:
-                                busy || !authorized ? null : configureSheets,
-                            icon: const Icon(Icons.tune, size: 18),
-                            label: const Text('Abas')),
+                        sheetAction: PopupMenuButton<String>(
+                            tooltip: 'Guias da planilha',
+                            enabled: !busy && authorized,
+                            icon: const Icon(Icons.table_chart_outlined),
+                            itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                      value: 'all',
+                                      child: Text('Todas as guias')),
+                                  PopupMenuItem(
+                                      value: 'configure',
+                                      child: Text('Configurar abas do modelo'))
+                                ],
+                            onSelected: (value) {
+                              if (value == 'all') {
+                                openAllSheets();
+                              } else {
+                                configureSheets();
+                              }
+                            }),
                         moreActions: menus.isEmpty || !authorized
                             ? null
                             : PopupMenuButton<String>(
@@ -815,7 +947,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                           Tab(
                               text: projectChecklistSheet(
                                   widget.project.serviceType,
-                                  override: sheetNames['checklist']))
+                                  override: sheetNames['checklist'])),
+                          const Tab(
+                              text: 'Implanta\u00e7\u00e3o - Linha do Tempo')
                         ]),
                     Expanded(
                         child: data == null || !authorized
@@ -823,7 +957,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                 child: Text(busy
                                     ? 'Carregando a planilha...'
                                     : 'Nenhuma planilha carregada.'))
-                            : TabBarView(children: [entry(), checklist()])),
+                            : TabBarView(
+                                children: [entry(), checklist(), timeline()])),
                     SpreadsheetDialogFooter(
                         pendingCount: pending.length,
                         synchronization: synchronizationLabel,

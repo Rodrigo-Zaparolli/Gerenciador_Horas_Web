@@ -1,4 +1,5 @@
 import re
+import logging
 import threading
 from edesk_bot.excel_preview import interpretar_referencia, renderizar_intervalo_excel
 
@@ -29,9 +30,10 @@ def render(path, reference):
     try:
         image, actual_sheet = renderizar_intervalo_excel(path, sheet, address)
         return {'imagemBase64': image, 'sheet': actual_sheet, 'renderer': 'excel'}
-    except RuntimeError as error:
+    except (RuntimeError, ValueError) as error:
         raise ValueError(str(error)) from error
     except Exception as error:
-        raise ValueError('Não foi possível espelhar a planilha. Confirme que o Microsoft Excel está instalado e que a aba e o intervalo existem no arquivo vinculado.') from error
+        logging.getLogger(__name__).exception('Falha ao gerar a imagem do intervalo no Excel.')
+        raise ValueError('Não foi possível gerar a imagem deste intervalo. A integração registrou o detalhe da falha; confira o arquivo vinculado e tente novamente.') from error
     finally:
         render_lock.release()

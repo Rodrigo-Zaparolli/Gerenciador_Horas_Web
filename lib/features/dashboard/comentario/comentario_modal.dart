@@ -1,3 +1,6 @@
+import 'client_contacts.dart';
+import 'comment_contact_insert.dart';
+import '../../../core/config/pilot_feature_access.dart';
 import 'comment_template.dart';
 import 'excel_field_edit_dialog.dart';
 import 'comment_percentage_work.dart';
@@ -689,6 +692,19 @@ class ComentarioModal {
         default:
           return const Color(0xFF47D35A);
       }
+    }
+
+    Future<void> inserirContatoCliente(BuildContext dialogContext, StateSetter setDialogState) async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (!PilotFeatureAccess.allows(uid:user?.uid, email:user?.email)) return;
+      final selection = editorController.selection;
+      final contact = await ClientContactsDialog.pick(dialogContext, project.client);
+      if (contact == null || !dialogContext.mounted || FirebaseAuth.instance.currentUser?.uid != user?.uid) return;
+      setDialogState(() {
+        insertClientContact(editorController, selection, contact);
+        sincronizarEstadoEditor();
+      });
+      editorFocusNode.requestFocus();
     }
 
     Future<void> inserirIndicador(
@@ -6562,6 +6578,8 @@ class ComentarioModal {
                                                           ],
                                                         ),
                                                         indicators: [
+                                                          if (PilotFeatureAccess.allows(uid: FirebaseAuth.instance.currentUser?.uid, email: FirebaseAuth.instance.currentUser?.email))
+                                                            IconButton(tooltip:'Inserir contato do cliente', visualDensity:VisualDensity.compact, icon:const Icon(Icons.contact_phone_outlined,size:17), onPressed:()=>inserirContatoCliente(dialogContext,setDialogState)),
                                                           for (final indicador
                                                               in const [
                                                             (
