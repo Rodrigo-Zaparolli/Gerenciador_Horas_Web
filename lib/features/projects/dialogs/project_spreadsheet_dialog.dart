@@ -5,6 +5,7 @@ import 'company_contacts.dart';
 import 'project_spreadsheet_kind.dart';
 import 'checklist_status_preview.dart';
 import 'checklist_live_preview.dart';
+import 'checklist_stage_dialog.dart';
 import 'spreadsheet_dialog_chrome.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -603,6 +604,35 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     ]);
   }
 
+  Future<void> editStage(String group, List<Map<String, dynamic>> tasks) async {
+    if (busy || !authorized) return;
+    final revision = data?['revision'];
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ChecklistStageDialog(
+          stage: group,
+          tasks: tasks,
+          values: {
+            for (final task in tasks)
+              keyOf(task): (current(task) as num).toDouble()
+          },
+          canApply: () =>
+              mounted && authorized && !busy && data?['revision'] == revision),
+    );
+    if (result == null ||
+        !mounted ||
+        !authorized ||
+        busy ||
+        data?['revision'] != revision) {
+      return;
+    }
+    for (final task in tasks) {
+      final value = result[keyOf(task)];
+      if (value != null && task['readOnly'] != true) change(task, value);
+    }
+  }
+
   Widget checklist() {
     final all = (data!['tasks'] as List).cast<Map<String, dynamic>>();
     final shown = all
@@ -680,95 +710,23 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                       .colorScheme
                                       .outlineVariant)),
                           clipBehavior: Clip.antiAlias,
-                          child: ExpansionTile(
-                              controlAffinity: ListTileControlAffinity.leading,
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.surface,
-                              collapsedBackgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLow,
-                              title: Row(children: [
-                                Expanded(
-                                    child: Text(group,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600))),
-                                Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: .08),
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                    child: Text(
-                                        '${shown.where((f) => f['group'] == group).length} tarefas',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall))
-                              ]),
-                              children: [
-                                for (final task
-                                    in shown.where((f) => f['group'] == group))
-                                  ListTile(
-                                      dense: true,
-                                      minTileHeight: 58,
-                                      shape: Border(
-                                          top: BorderSide(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .outlineVariant
-                                                  .withValues(alpha: .45))),
-                                      leading:
-                                          Icon(current(task) == 1 ? Icons.check_circle_outline : Icons.radio_button_unchecked,
-                                              size: 19,
-                                              color: current(task) == 1
-                                                  ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primary
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant),
-                                      title: Text(task['label'] as String,
-                                          style: const TextStyle(fontSize: 14)),
-                                      subtitle: Text(
-                                          'Estimado: ${task['estimated']}${task['note'] == '' ? '' : '\n${task['note']}'}'),
-                                      trailing: Container(
-                                          width: 100,
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8),
-                                          decoration: BoxDecoration(
-                                              border:
-                                                  Border.all(color: pending.containsKey(keyOf(task)) ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.outlineVariant),
-                                              borderRadius: BorderRadius.circular(7)),
-                                          child: DropdownButton<double>(
-                                              isDense: true,
-                                              underline: const SizedBox.shrink(),
-                                              isExpanded: true,
-                                              value: const [0.0, .25, .5, .75, 1.0].contains((current(task) as num).toDouble()) ? (current(task) as num).toDouble() : null,
-                                              hint: Text('${((current(task) as num) * 100).round()}%'),
-                                              items: [
-                                                for (final v in [
-                                                  0.0,
-                                                  .25,
-                                                  .5,
-                                                  .75,
-                                                  1.0
-                                                ])
-                                                  DropdownMenuItem(
-                                                      value: v,
-                                                      child: Text(
-                                                          '${(v * 100).round()}%'))
-                                              ],
-                                              onChanged: busy || !authorized
-                                                  ? null
-                                                  : (v) {
-                                                      if (v != null) {
-                                                        change(task, v);
-                                                      }
-                                                    })))
-                              ]))
+                          child: ListTile(
+                            key: ValueKey('checklist-stage-$group'),
+                            leading: const Icon(Icons.checklist_outlined),
+                            title: Text(group,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            subtitle: Text(
+                                '${shown.where((f) => f['group'] == group).length} tarefas'),
+                            trailing: const Icon(Icons.open_in_new),
+                            onTap: busy || !authorized
+                                ? null
+                                : () => editStage(
+                                    group,
+                                    all
+                                        .where((f) => f['group'] == group)
+                                        .toList()),
+                          ))
                   ]))
             ]));
   }

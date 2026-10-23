@@ -51,6 +51,11 @@ Map<String, dynamic> snapshot() => {
       ]
     };
 
+Finder stagePercentField() => find.byWidgetPredicate((w) =>
+    w is TextFormField &&
+    w.key is ValueKey<String> &&
+    (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
+
 void main() {
   for (final brightness in Brightness.values) {
     for (final size in [const Size(1366, 768), const Size(390, 844)]) {
@@ -108,11 +113,12 @@ void main() {
         expect(find.text('Progresso total'), findsOneWidget);
         expect(tester.getBottomRight(find.text('Salvar na planilha')).dy,
             lessThan(size.height));
+        await tester.ensureVisible(
+            find.byKey(const ValueKey('checklist-stage-Implantação')));
         await tester
-            .ensureVisible(find.widgetWithText(ExpansionTile, 'Implantação'));
-        await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
+            .tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
         await tester.pumpAndSettle();
-        expect(find.byType(DropdownButton<double>), findsOneWidget);
+        expect(stagePercentField(), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
@@ -154,11 +160,10 @@ void main() {
     final writes = store.writes;
     await tester.tap(find.text('Checklist-Processo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
+    await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButton<double>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('25%').last);
+    await tester.enterText(stagePercentField(), '25');
+    await tester.tap(find.text('Aplicar ajustes'));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
@@ -241,11 +246,10 @@ void main() {
     expect(find.text('Maker CheckList-Processo'), findsOneWidget);
     await tester.tap(find.text('Maker CheckList-Processo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ExpansionTile, 'Implantação'));
+    await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownButton<double>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('25%').last);
+    await tester.enterText(stagePercentField(), '25');
+    await tester.tap(find.text('Aplicar ajustes'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar na planilha'));
     await tester.pumpAndSettle();

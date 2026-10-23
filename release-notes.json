@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Importação por ID: o tipo de serviço é sugerido pelo título da solicitação. Enterprise Produção completa corresponde ao tipo Enterprise ou Promob Enterprise cadastrado no app.",
-    "As etapas, IDs reais, horas previstas e datas continuam vindo da tabela Trabalhos. O tipo sugerido pode ser conferido e alterado antes de cadastrar; nomes desconhecidos ou ambíguos exigem escolha manual.",
-    "Atualize e reinicie a integração local v45 para ler o título. Projetos existentes preservam seu tipo e demais dados salvos."
+    "Checklist-Processo: clicar em uma etapa, como Implantação, abre um modal com as tarefas, horas previstas e percentual realizado de cada uma.",
+    "Aplicar ajustes retorna os percentuais ao editor e recalcula a prévia do Status Projeto. Cancelar descarta somente os ajustes do modal. A gravação no Excel continua pelo botão Salvar na planilha.",
+    "Disponível para os modelos Enterprise e Professional/Maker nas contas autorizadas. Esta alteração não exige atualizar a integração local."
   ]
 }
