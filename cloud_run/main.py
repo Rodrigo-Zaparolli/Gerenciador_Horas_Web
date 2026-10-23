@@ -154,6 +154,7 @@ def health_check():
                     "workAudit": True,
                     "workEnumeration": True,
                     "workGridImport": True,
+                    "requestTitleImport": True,
                     "workInbox": True,
                     "standalonePercentage": True,
                     "integrationPackageVersion": os.environ.get('EDESK_INTEGRATION_VERSION'),

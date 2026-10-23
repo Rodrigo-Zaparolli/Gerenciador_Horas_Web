@@ -6,7 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test('grid import requires v44 capability before starting a query', () async {
+  test('title import requires v45 capability before starting a query',
+      () async {
     for (final supported in [false, true]) {
       var posts = 0;
       final result = await EdeskWebClient(
@@ -18,7 +19,8 @@ void main() {
                 jsonEncode({
                   'workAudit': true,
                   'workEnumeration': true,
-                  'workGridImport': supported,
+                  'workGridImport': true,
+                  'requestTitleImport': supported,
                 }),
                 200);
           }
@@ -27,12 +29,12 @@ void main() {
           return http.Response('{"confirmed":true,"responseBody":"{}"}', 200);
         }),
       ).execute(
-          requestJson: '{"importWorkGrid":true}',
+          requestJson: '{"importWorkGrid":true,"importRequestTitle":true}',
           enviar: false,
           script: 'edesk_conferencia.py');
       expect(posts, supported ? 1 : 0);
       expect(result.confirmed, supported);
-      if (!supported) expect(result.message, contains('v44'));
+      if (!supported) expect(result.message, contains('v45'));
     }
   });
   test(

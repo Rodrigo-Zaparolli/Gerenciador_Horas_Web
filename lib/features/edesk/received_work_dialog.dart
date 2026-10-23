@@ -169,6 +169,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     try {
       final receipt = await _query('edesk_conferencia.py', {
         if (widget.importById) 'importWorkGrid': true,
+        if (widget.importById) 'importRequestTitle': true,
         'requireWorkEnumeration': (row['works'] as Set<String>).isEmpty,
         'solicitacoes': [
           {
@@ -541,6 +542,11 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
             .where((f) => productKey(f.name) == productKey(_type.text))
             .toList();
         if (equivalents.length == 1) _chooseFormat(equivalents.single);
+      }
+      if (_format == null && widget.existing == null) {
+        final suggested = receivedFormatForTitle(
+            first['requestTitle']?.toString() ?? '', widget.formats);
+        if (suggested != null) _chooseFormat(suggested);
       }
     }
   }

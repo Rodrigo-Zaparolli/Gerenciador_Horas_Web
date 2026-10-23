@@ -1,5 +1,11 @@
 # Importação pelo ID com etapas do cadastro
 
+## v45 — tipo do projeto pelo título da solicitação
+
+A integração lê o cabeçalho visível Solicitação, confere o número e retorna `requestTitle` junto às linhas. Para projetos novos, o app compara os segmentos do título com os tipos cadastrados, normalizando acentos, o prefixo Promob e o sufixo Produção completa. Assim, Enterprise Produção completa identifica Enterprise/Promob Enterprise. O último segmento é o cliente e não participa dessa escolha. Tipos desconhecidos ou ambíguos continuam sem seleção automática. O usuário pode revisar a sugestão. O tipo de projetos existentes não é sobrescrito.
+
+Essa leitura exige `requestTitleImport` na integração v45. As etapas e suas horas continuam vindo da tabela Trabalhos, conforme a v44.
+
 ## v44 — leitura da tabela Trabalhos
 
 A importação por ID envia `importWorkGrid: true` e exige `workGridImport` na integração. Depois de localizar a solicitação e abrir Trabalhos, lê diretamente o ID numérico do link de seleção, Tipo de Trabalho, Tp. Estimado e as datas. Não abre cada trabalho nessa modalidade. Ordem e Tp. Trab. nunca substituem ID e horas previstas. A conferência antiga continua com seu fluxo independente.

@@ -1,4 +1,32 @@
 import '../../domain/models/project_model.dart';
+import '../../domain/models/work_format_model.dart';
+
+/// Match only title segments, never words in an arbitrary customer name.
+/// Ambiguous titles require the user's explicit choice in the review.
+WorkFormat? receivedFormatForTitle(String title, List<WorkFormat> formats) {
+  String key(String value) {
+    const accented = 'áàâãäéèêëíìîïóòôõöúùûüç';
+    const plain = 'aaaaaeeeeiiiiooooouuuuc';
+    var result = value.trim().toLowerCase();
+    for (var i = 0; i < accented.length; i++) {
+      result = result.replaceAll(accented[i], plain[i]);
+    }
+    return result
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .replaceFirst(RegExp(r'^promob'), '')
+        .replaceFirst(RegExp(r'producaocompleta$'), '');
+  }
+
+  final parts = title.split(RegExp(r'\s+[-–—]\s+'));
+  // The final segment is the customer in the request heading.
+  final segments = (parts.length > 1 ? parts.take(parts.length - 1) : parts)
+      .map(key)
+      .toSet();
+  final matches = formats
+      .where((f) => key(f.name).isNotEmpty && segments.contains(key(f.name)))
+      .toList();
+  return matches.length == 1 ? matches.single : null;
+}
 
 int receivedMinutes(String value) {
   final match = RegExp(r'^(\d{1,5}):([0-5]\d)$').firstMatch(value.trim());

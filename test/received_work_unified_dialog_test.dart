@@ -74,7 +74,7 @@ void main() {
                 'name': 'Implantação',
                 'estimatedHours': '01:00',
                 'client': 'Cliente de teste',
-                'serviceType': 'Professional',
+                'requestTitle': 'Professional Produção completa - Cliente',
                 'leader': 'Líder'
               }
             }

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Importar pelo ID: a integração v44 lê diretamente a tabela Trabalhos da solicitação, usando o ID real, Tipo de Trabalho, Tempo Estimado e datas, sem abrir cada trabalho individualmente.",
-    "Associação das etapas reconhece o sufixo (OH). Projetos com tipo antigo permitem selecionar o modelo das etapas sem alterar os dados já cadastrados. Erros de cadastro ficam visíveis junto aos botões.",
-    "Atualize e reinicie a integração local v44 para utilizar a nova leitura. A consulta não altera o E-Desk; o cadastro no app continua dependendo da conferência e confirmação."
+    "Importação por ID: o tipo de serviço é sugerido pelo título da solicitação. Enterprise Produção completa corresponde ao tipo Enterprise ou Promob Enterprise cadastrado no app.",
+    "As etapas, IDs reais, horas previstas e datas continuam vindo da tabela Trabalhos. O tipo sugerido pode ser conferido e alterado antes de cadastrar; nomes desconhecidos ou ambíguos exigem escolha manual.",
+    "Atualize e reinicie a integração local v45 para ler o título. Projetos existentes preservam seu tipo e demais dados salvos."
   ]
 }

@@ -164,6 +164,15 @@ def import_work_rows(page, solicitation):
         raise AuditLookupError('work_numbers')
     if len({row['idTrabalho'] for row in rows}) != len(rows):
         raise RuntimeError('A tabela retornou IDs de trabalho repetidos.')
+    heading = page.evaluate(r'''() => {
+      const match=document.body.innerText.match(/(?:^|\n)\s*Solicita[cç][aã]o:\s*(\d+)\s*-\s*([^\r\n]+)/i);
+      return match ? {request:match[1],title:match[2].trim()} : null;
+    }''')
+    if heading:
+        if str(heading['request']) != str(solicitation):
+            raise RuntimeError('O cabecalho pertence a outra solicitacao.')
+        for row in rows:
+            row['values']['requestTitle'] = heading['title']
     return [{**row, 'solicitacao': solicitation} for row in rows]
 
 

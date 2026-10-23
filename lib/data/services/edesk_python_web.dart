@@ -338,6 +338,13 @@ class EdeskWebClient {
         if (healthResponse.statusCode == 200) {
           final health = jsonDecode(utf8.decode(healthResponse.bodyBytes));
           if (action == 'conferencia' &&
+              data['importRequestTitle'] == true &&
+              (health is! Map || health['requestTitleImport'] != true)) {
+            return _failure(
+                'Atualize e reinicie a integração v45 para identificar o tipo cadastrado pelo título da solicitação, como Enterprise Produção completa.',
+                503);
+          }
+          if (action == 'conferencia' &&
               data['importWorkGrid'] == true &&
               (health is! Map || health['workGridImport'] != true)) {
             return _failure(

@@ -84,10 +84,19 @@ with sync_playwright() as p:
         for index,(number,name,hours) in enumerate([
             (2,'Contato Inicial','08:00'),(3,'Levantamento de Escopo','14:00'),
             (4,'Desenvolvimento','14:00'),(5,'Implantacao','30:30'),(6,'Pos Implantacao','21:00')])) + '</table>')
+    grid_probe.evaluate("document.body.insertAdjacentHTML('afterbegin','<div>Solicita\u00e7\u00e3o: 2260860 - Revitaliza\u00e7\u00e3o de base - Enterprise Produ\u00e7\u00e3o completa - Cliente</div>')")
     imported=import_work_rows(grid_probe,'2260860')
+    assert all('Enterprise' in r['values']['requestTitle'] for r in imported),imported
     assert [r['idTrabalho'] for r in imported]==['2','3','4','5','6'],imported
     assert [r['values']['estimatedHours'] for r in imported]==['08:00','14:00','14:00','30:30','21:00'],imported
     assert sum(int(r['values']['estimatedHours'].split(':')[0])*60+int(r['values']['estimatedHours'].split(':')[1]) for r in imported)==5250
+    grid_probe.evaluate("document.body.firstElementChild.textContent='Solicitacao: 999999 - Enterprise Producao completa - Cliente'")
+    try:
+        import_work_rows(grid_probe,'2260860')
+        raise AssertionError('Another request heading was accepted')
+    except RuntimeError as error:
+        assert 'cabecalho' in str(error),error
+    grid_probe.evaluate("document.body.firstElementChild.textContent='Solicitacao: 2260860 - Enterprise Producao completa - Cliente'")
     grid_probe.evaluate("document.querySelector('[onclick]').textContent='Abrir'")
     try:
         import_work_rows(grid_probe,'2260860')
