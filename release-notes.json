@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Importar do E-Desk pelo ID: novo modal unificado conforme a prévia, com consulta, dados do projeto e associação das etapas na mesma janela.",
-    "Cadastro manual acessível pela aba do modal. Etapas seguem o tipo de serviço cadastrado, com números reais do E-Desk, horas, calendários e total previsto antes de confirmar o cadastro.",
-    "Layout adaptado aos temas claro e escuro, com barras de rolagem em telas menores. Alterar o ID exige nova consulta antes de cadastrar, evitando usar dados da solicitação anterior."
+    "Login: Manter conectado agora prioriza o banco persistente do navegador utilizado pelo Firebase para restaurar a sessão ao reabrir o site.",
+    "Se esse banco estiver indisponível, o login tenta o armazenamento local persistente. A opção desmarcada continua mantendo a sessão somente enquanto o navegador estiver aberto."
   ]
 }

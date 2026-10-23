@@ -10,9 +10,18 @@ class LoginSession {
     bool web = kIsWeb,
   }) async {
     if (web) {
-      await auth.setPersistence(
-        keepConnected ? Persistence.LOCAL : Persistence.SESSION,
-      );
+      if (keepConnected) {
+        // Use the same durable backend that Firebase prefers when restoring
+        // authentication after a browser restart. Never fall back to a
+        // session-only login when the user requested a persistent session.
+        try {
+          await auth.setPersistence(Persistence.INDEXED_DB);
+        } catch (_) {
+          await auth.setPersistence(Persistence.LOCAL);
+        }
+      } else {
+        await auth.setPersistence(Persistence.SESSION);
+      }
     }
     return auth.signInWithEmailAndPassword(email: email, password: password);
   }
