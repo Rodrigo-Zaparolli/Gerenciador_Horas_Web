@@ -1,18 +1,9 @@
-/// Account allowlist for new features while they are being validated.
-/// This controls presentation only. Any new write endpoint must independently
-/// enforce the same restriction using verified Firebase token claims.
+/// Features available to every authenticated account. Backend authorization
+/// and per-account data isolation are enforced independently.
 class PilotFeatureAccess {
   PilotFeatureAccess._();
-
+  // Retained only for this user's default archive destination.
   static const ownerEmail = 'rodrigozaparolli79@gmail.com';
-  static const allowedEmails = {
-    ownerEmail,
-    'maiquel.elste@cyncly.com',
-  };
-
   static bool allows({required String? uid, required String? email}) =>
-      uid != null &&
-      uid.trim().isNotEmpty &&
-      email != null &&
-      allowedEmails.contains(email.trim().toLowerCase());
+      uid != null && uid.trim().isNotEmpty;
 }

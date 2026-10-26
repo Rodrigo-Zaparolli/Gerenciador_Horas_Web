@@ -45,3 +45,11 @@ Validacao concluida: 177 testes Python, 45 testes Flutter, analise dos sete arqu
 Excel real: gravacao em planilha sintetica aprovada para texto, data e celula numerica nova, mantendo formula e criando backup. Captura PNG aprovada para guia Maker usando a referencia Professional antiga, sem alterar o arquivo. Nao foi feito envio real ao E-Desk nem cadastro real de contatos durante os testes. O uso no outro PC depende da atualizacao local v47.
 
 Site publicado e conferido publicamente: release `4a26950d4ca14834b5eb65a74af256a2`, Hosting `a17ce755b3a4fa1f`. Pacote leve `atualizacao-integracao-completa-47.zip` com integridade conferida; pacote completo `integracao-edesk-completa-windows-v47.zip` disponivel. Notas incluidas no modal de atualizacao. Historico mantido nas duas publicacoes mais recentes.
+
+## Publicado em 26/10/2026 - recursos liberados a todos os usuarios autenticados (v48)
+
+Solicitacao expressa: "liberar sistema para todos". Removida a lista de e-mails piloto do app e da integracao. Editor e guias da planilha, acompanhamento de plugins, contatos, conferencia e importacao agora exigem uma conta autenticada, sem limitar a Rodrigo/Maiquel. Login, verificacao de token, isolamento por UID no Firestore e autorizacoes de arquivos por usuario permanecem obrigatorios. O destino sugerido especifico de Rodrigo continua somente para ele; outros usuarios configuram seu proprio destino. Nao foi removida a autorizacao de pareamento de computadores centrais.
+
+Validacao: 177 testes Python e 26 testes Flutter aprovados, incluindo conta comum, bloqueio sem login, arquivos e operacoes de outra conta e troca de identidade durante importacao. Analise sem problemas; pacote completo extraido aprovado. Nenhum envio real ao E-Desk foi realizado pelos testes.
+
+Publicacao web conferida: `9a25aa2639c94c6dae94e1ffa6196318`, Hosting `e1fd79a066104166`. Downloads v48 leve/completo conferidos. Integracao `all-users-48` necessaria nos computadores dos usuarios para os recursos nativos; vinculos anteriores preservados. Historico com as duas publicacoes mais recentes. Proximas alteracoes continuam sujeitas a autorizacao de publicacao.

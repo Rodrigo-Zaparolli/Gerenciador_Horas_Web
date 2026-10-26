@@ -217,7 +217,7 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
                     const Text(
-                        'Consulta em teste · Nenhuma alteração será salva no app ou no E-Desk. Campos sem equivalente no app aparecem como “Somente consulta”.'),
+                        'Consulta · Nenhuma alteração será salva no app ou no E-Desk. Campos sem equivalente no app aparecem como “Somente consulta”.'),
                     const SizedBox(height: 12),
                     Expanded(
                         child: SingleChildScrollView(

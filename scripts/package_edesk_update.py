@@ -1,4 +1,4 @@
-"""Build the small workbook-tools-47 update for an existing full installation."""
+"""Build the small all-users-48 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO workbook-tools-47 — instalação completa já existente
+README = '''ATUALIZAÇÃO all-users-48 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v48: recursos de planilha, contatos, acompanhamento de plugins, conferencia e importacao liberados para todas as contas autenticadas. Mantem verificacao de identidade e isolamento dos dados e arquivos por usuario.
 
 Novidades v47: edicao das guias da planilha, datas da linha do tempo e identificacao dos blocos do checklist. Espelho Professional compativel com o nome Maker antigo. Verificacao da capacidade real ao iniciar e importacao por ID sem depender da aba Comentarios. Preserva dados, macros, backups e vinculos.
 
@@ -174,7 +176,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-47.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-48.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

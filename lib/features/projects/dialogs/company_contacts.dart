@@ -13,7 +13,7 @@ class CompanyContacts {
   static String owner() {
     final user = FirebaseAuth.instance.currentUser;
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
-      throw StateError('Cadastro disponível apenas para a conta autorizada.');
+      throw StateError('Entre na sua conta para acessar os contatos.');
     }
     return user!.uid;
   }

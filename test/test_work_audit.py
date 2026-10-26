@@ -40,15 +40,15 @@ class WorkAuditTests(unittest.TestCase):
             self.assertNotIn(forbidden,calls)
 
     def test_endpoint_enforces_verified_pilot_identity_and_preserves_read_only_payload(self):
-        with app.test_client() as client, patch('local_edesk.authentication.verify_token',return_value={'sub':'test','email':'other@example.com'}), patch('cloud_run.main.subprocess.Popen') as process:
+        with app.test_client() as client, patch('local_edesk.authentication.verify_token',side_effect=ValueError('invalid token')), patch('cloud_run.main.subprocess.Popen') as process:
             response=client.post('/api/edesk/conferencia',headers=self.headers,json={'request':self.data,'enviar':False})
-            self.assertEqual(response.status_code,403);process.assert_not_called()
+            self.assertEqual(response.status_code,401);process.assert_not_called()
         receipt={'ok':True,'operation':'conferencia','rows':[{'solicitacao':'226144','idTrabalho':'3','values':{'percentage':'70'}}],'message':'Consulta concluida'}
         def launch(command,**kwargs):
             data=json.loads(Path(command[-1]).read_text(encoding='utf-8'))
             self.assertIs(data['enviar'],False)
             return SimpleNamespace(returncode=0,communicate=lambda **_: (json.dumps(receipt),''))
-        with app.test_client() as client, patch('local_edesk.authentication.verify_token',return_value={'sub':'test','email':'maiquel.elste@cyncly.com'}), patch('cloud_run.main.subprocess.Popen',side_effect=launch):
+        with app.test_client() as client, patch('local_edesk.authentication.verify_token',return_value={'sub':'test','email':'other@example.com'}), patch('cloud_run.main.subprocess.Popen',side_effect=launch):
             response=client.post('/api/edesk/conferencia',headers=self.headers,json={'request':self.data,'enviar':False})
             self.assertEqual(response.status_code,200)
             self.assertEqual(json.loads(response.json['responseBody']),receipt)

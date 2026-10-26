@@ -1,6 +1,6 @@
 import 'pilot_feature_access.dart';
 
-/// The specialized plugin tracker is exclusive to the designated Firebase account.
+/// The plugin tracker is available to every authenticated account.
 /// Project data remains protected by the existing per-user Firestore rules.
 class PluginTrackingAccess {
   PluginTrackingAccess._();

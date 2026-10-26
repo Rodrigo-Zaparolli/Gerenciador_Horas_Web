@@ -366,7 +366,7 @@ def execute(uid, body, verified_user=None):
     if editor or moving:
         from local_edesk.excel_editor import allowed
         if not verified_user or verified_user.get('sub') != uid or not allowed(verified_user):
-            raise PermissionError('Recurso em teste disponível apenas para a conta autorizada.')
+            raise PermissionError('Entre na sua conta para acessar este recurso.')
     if moving:
         import sys
         from local_edesk.project_archive import execute as move_project

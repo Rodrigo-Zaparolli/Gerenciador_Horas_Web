@@ -499,7 +499,7 @@ class ArchiveTests(unittest.TestCase):
 
     def test_unauthorized_account_and_forged_operation_are_rejected(self):
         plan = self.prepare()
-        with self.assertRaises(PermissionError):
+        with self.assertRaises(ValueError):
             local_files.execute('other', {'action': 'project-move-commit', 'operation': plan['operation']},
                 verified_user={'sub': 'other', 'email': 'other@example.com'})
         with self.assertRaises(ValueError): self.request('project-move-commit', operation=str(uuid.uuid4()))

@@ -1,11 +1,7 @@
 {
   "changes": [
-    "Planilhas: acesso a todas as guias pelo menu Guias da planilha, com navegacao por linhas e colunas e edicao de textos, numeros e datas. Formulas e celulas protegidas permanecem bloqueadas.",
-    "Checklist: previa do percentual da etapa no topo do modal, calculada pelo Excel conforme os ajustes. Edicao em bloco com 0%, 25%, 50%, 75% e 100%; a tabela Status Projeto continua mostrando somente etapas.",
-    "Planilhas: guia Implantacao - Linha do Tempo para ajustar as datas dos eventos, mantendo as datas calculadas protegidas.",
-    "Comentarios: cadastro de contatos de clientes (empresa, nome, telefone e e-mail) e insercao no cursor pelo botao ao lado das tarjas. Dados salvos por conta.",
-    "Espelho do Excel: compatibilidade com a guia Maker Checklist-Processo em arquivos Professional antigos; mensagens especificas para aba, arquivo e inicializacao do Excel.",
-    "Importacao por ID: valida a aba Trabalhos e a tabela de etapas sem exigir a aba Comentarios.",
-    "Integracao v47: verifica a capacidade do processo ativo antes de anunciar sucesso, preservando os vinculos existentes. Atualize a integracao local para usar os novos recursos de planilha. Recursos piloto mantidos nas contas autorizadas."
+    "Recursos liberados para todos os usuarios autenticados: editor da planilha e suas guias, checklist por blocos, previa de percentuais, contatos de clientes e colaboradores, acompanhamento de plugins, conferencia e importacao de trabalhos do E-Desk.",
+    "O login continua obrigatorio. Projetos, contatos, credenciais, configuracoes e autorizacoes de arquivos permanecem separados por conta.",
+    "Atualize a integracao local para v48 para liberar tambem os recursos que dependem dela. Os vinculos de pastas e planilhas existentes foram preservados."
   ]
 }

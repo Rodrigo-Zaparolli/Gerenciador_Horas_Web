@@ -14,7 +14,7 @@ class ReceivedWorkStore {
   Future<ProjectModel?> loadExisting(String request) async {
     final user = _auth.currentUser;
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
-      throw StateError('Recurso em teste restrito à conta autorizada.');
+      throw StateError('Entre na sua conta para acessar este recurso.');
     }
     final root = _db.collection('users').doc(user!.uid);
     final closed = await root
@@ -42,7 +42,7 @@ class ReceivedWorkStore {
   Future<int> import(ProjectModel project, {bool? expectedExisting}) async {
     final user = _auth.currentUser;
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) {
-      throw StateError('Recurso em teste restrito à conta autorizada.');
+      throw StateError('Entre na sua conta para acessar este recurso.');
     }
     final db = _db;
     final root = db.collection('users').doc(user!.uid);

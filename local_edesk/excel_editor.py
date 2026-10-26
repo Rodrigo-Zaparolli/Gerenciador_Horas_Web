@@ -17,18 +17,14 @@ import posixpath
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
-OWNER = 'rodrigozaparolli79@gmail.com'
-ALLOWED_EMAILS = {OWNER, 'maiquel.elste@cyncly.com'}
 lock = threading.Lock()
 BASE = datetime(1899, 12, 30)
 
 
 def allowed(user):
-    # Claims are supplied exclusively by the verified Firebase-token handler.
-    # Match the same account rule as the app; do not add an email-verification
-    # requirement absent from the pilot access policy.
-    return (isinstance(user.get('sub'), str) and bool(user['sub'].strip())
-            and str(user.get('email', '')).strip().lower() in ALLOWED_EMAILS)
+    # Only verified Firebase claims reach this check. Resource UID is checked
+    # independently by local_files.execute before any filesystem operation.
+    return isinstance(user.get('sub'), str) and bool(user['sub'].strip())
 
 
 def revision(path):

@@ -17,7 +17,7 @@ class ExcelEditorTests(unittest.TestCase):
     def test_maiQuel_access_uses_verified_identity_and_exact_email(self):
         self.assertTrue(allowed({'sub': 'maiQuel', 'email': ' MAIQUEL.ELSTE@CYNCLY.COM '}))
         self.assertFalse(allowed({'sub': '', 'email': 'maiQuel.elste@cyncly.com'}))
-        self.assertFalse(allowed({'sub': 'other', 'email': 'maiQuel.elste@cyncly.com.invalid'}))
+        self.assertTrue(allowed({'sub': 'other', 'email': 'other@example.com'}))
 
     def test_custom_sheet_names_override_only_named_tabs_and_reject_invalid_names(self):
         self.assertEqual(checklist_sheet('Professional', {'checklist': 'Professional CheckList-Processo'}), 'Professional CheckList-Processo')
@@ -38,7 +38,7 @@ class ExcelEditorTests(unittest.TestCase):
             with patch.object(local_files, 'DB_PATH', Path(directory) / 'files.sqlite3'), patch('cloud_run.main.LOCAL_MODE', True):
                 local_files._save('owner', ref, path, 'file')
                 for server, verifier in [(app, 'local_edesk.authentication.verify_token'), (files_app, 'local_edesk.files_server.verify_token')]:
-                    for email, status in [('rodrigozaparolli79@gmail.com', 200), ('maiquel.elste@cyncly.com', 200), ('other@example.com', 403)]:
+                    for email, status in [('rodrigozaparolli79@gmail.com', 200), ('maiquel.elste@cyncly.com', 200), ('other@example.com', 200)]:
                         with patch(verifier, return_value={'sub': 'owner', 'email': email}), patch('local_edesk.excel_editor.edit', return_value={'sheetNames': ['Entrada', 'Professional']}) as editor:
                             response = server.test_client().post('/api/local-files', headers=headers,
                                 json={'action': 'excel-editor-sheets', 'reference': ref, 'email': 'rodrigozaparolli79@gmail.com'})
@@ -65,10 +65,10 @@ class ExcelEditorTests(unittest.TestCase):
                             self.assertEqual(response.status_code, 200, response.json)
                             self.assertTrue(response.json['preview'])
                             editor.assert_called_once()
-                        with patch(verifier, return_value={**owner, 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
+                        with patch(verifier, return_value={**owner, 'sub': 'other', 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
                             response = server.test_client().post('/api/local-files', headers=headers,
                                 json={'action': 'excel-editor-preview', 'reference': reference, 'email': owner['email']})
-                            self.assertEqual(response.status_code, 403)
+                            self.assertEqual(response.status_code, 400)
                             editor.assert_not_called()
 
     def test_project_kind_selects_only_the_requested_checklist(self):
@@ -134,10 +134,12 @@ class ExcelEditorTests(unittest.TestCase):
 
     def test_only_authenticated_owner_token_can_access(self):
         owner = {'sub': 'owner', 'email': 'rodrigozaparolli79@gmail.com', 'email_verified': True}
+        self.assertTrue(allowed({'sub':'another', 'email':'another@example.com'}))
+        self.assertTrue(allowed({'sub':'another'}))
         self.assertTrue(allowed(owner))
         self.assertTrue(allowed({**owner, 'email_verified': False}))
         self.assertTrue(allowed({'sub': 'owner', 'email': owner['email']}))
-        for changes in [{'email': 'other@example.com'}, {'sub': ''}, {'sub': ' '}, {'email': None}]:
+        for changes in [{'sub': ''}, {'sub': ' '}, {'sub': None}]:
             self.assertFalse(allowed({**owner, **changes}))
         with patch.object(local_files, '_connection') as db:
             for action in ['excel-editor-read', 'excel-editor-write', 'excel-editor-preview']:
@@ -163,10 +165,10 @@ class ExcelEditorTests(unittest.TestCase):
                         json={'action': 'excel-editor-read', 'reference': reference})
                     self.assertEqual(response.status_code, 200, response.json)
                     editor.assert_called_once()
-                with patch('local_edesk.authentication.verify_token', return_value={**owner, 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
+                with patch('local_edesk.authentication.verify_token', return_value={**owner, 'sub': 'other', 'email': 'other@example.com'}), patch('local_edesk.excel_editor.edit') as editor:
                     response = app.test_client().post('/api/local-files', headers=headers,
                         json={'action': 'excel-editor-read', 'reference': reference, 'email': owner['email'], 'email_verified': True})
-                    self.assertEqual(response.status_code, 403)
+                    self.assertEqual(response.status_code, 400)
                     editor.assert_not_called()
 
     def test_unmapped_duplicate_and_stale_values_rejected(self):

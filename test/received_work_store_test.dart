@@ -17,7 +17,7 @@ class ImportUser extends Fake implements User {
   @override
   String get uid => 'owner';
   @override
-  String get email => 'rodrigozaparolli79@gmail.com';
+  String get email => 'usuario.comum@example.com';
 }
 
 class ImportAuth extends Fake implements FirebaseAuth {

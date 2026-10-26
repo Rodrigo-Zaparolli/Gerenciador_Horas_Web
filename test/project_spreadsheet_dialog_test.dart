@@ -574,13 +574,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Other account never loads spreadsheet data', (tester) async {
+  testWidgets('Unauthenticated session never loads spreadsheet data', (tester) async {
     var calls = 0;
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(
             body: ProjectSpreadsheetDialog(
                 project: ProjectModel.fromJson({'id': '1'}),
-                uidProvider: () => 'other',
+                uidProvider: () => null,
                 emailProvider: () => 'other@example.com',
                 transport: (_) async {
                   calls++;
