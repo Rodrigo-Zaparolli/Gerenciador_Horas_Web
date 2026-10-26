@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class WorkbookSheetDialog extends StatefulWidget {
   const WorkbookSheetDialog(
-      {super.key, required this.call, required this.allowed});
+      {super.key,
+      required this.call,
+      required this.allowed,
+      this.initialWorksheet,
+      this.onWorksheetOpened});
+  final String? initialWorksheet;
+  final Future<void> Function(String)? onWorksheetOpened;
   final Future<Map<String, dynamic>> Function(Map<String, dynamic>) call;
   final bool Function() allowed;
   @override
@@ -11,10 +18,10 @@ class WorkbookSheetDialog extends StatefulWidget {
 
 class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   List<String> names = [];
-  String? selected, error;
+  String? selected, error, savedWorksheet;
   Map<String, dynamic>? data;
   final Map<String, Map<String, dynamic>> edits = {};
-  bool busy = false, saved = false;
+  bool busy = false, saved = false, saving = false;
   int row = 1, column = 1, selectionEpoch = 0;
   final vertical = ScrollController(), horizontal = ScrollController();
 
@@ -46,6 +53,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       if (mounted) setState(() => error = e.toString());
     } finally {
       if (mounted) setState(() => busy = false);
+    }
+    if (mounted &&
+        widget.allowed() &&
+        widget.initialWorksheet != null &&
+        names.contains(widget.initialWorksheet)) {
+      final schedule = widget.initialWorksheet!.toLowerCase() == 'cronogramas';
+      await open(widget.initialWorksheet!, schedule ? 5 : 1, schedule ? 2 : 1);
     }
   }
 
@@ -93,6 +107,11 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
         throw StateError(
             'A integração não oferece a edição de todas as guias. Atualize a integração antes de continuar.');
       }
+      if (name.toLowerCase() == 'cronogramas' &&
+          result['worksheetTypesVersion'] != 2) {
+        throw StateError(
+            'Atualize a integração local para editar o cronograma com horários e percentuais. Nenhuma alteração foi enviada.');
+      }
       if (mounted) {
         setState(() {
           selected = name;
@@ -101,9 +120,25 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           data = result;
           edits.clear();
         });
+        if (savedWorksheet != name && widget.onWorksheetOpened != null) {
+          savedWorksheet = name;
+          unawaited(Future<void>.sync(() => widget.onWorksheetOpened!(name))
+              .catchError((Object _) {
+            if (savedWorksheet == name) savedWorksheet = null;
+            if (mounted && selected == name) {
+              setState(() => error =
+                  'A guia abriu, mas não foi possível salvar a preferência. Tente abrir novamente quando a conexão voltar.');
+            }
+          }));
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() {
+          error = e.toString();
+          selectionEpoch++;
+        });
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -113,6 +148,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     if (busy || data == null || edits.isEmpty) return;
     setState(() {
       busy = true;
+      saving = true;
       error = null;
     });
     try {
@@ -137,7 +173,12 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() {
+          busy = false;
+          saving = false;
+        });
+      }
     }
   }
 
@@ -155,13 +196,22 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       if (date == null) return;
       next = date.toIso8601String().substring(0, 10);
     } else {
-      final controller = TextEditingController(text: current.toString());
+      final controller = TextEditingController(
+          text: field['percent'] == true && current is num
+              ? (current * 100).toString()
+              : current.toString());
       final result = await showDialog<String>(
           context: context,
           builder: (context) => AlertDialog(
                 title: Text('$selected · $address'),
                 content: TextField(
                     controller: controller,
+                    decoration: InputDecoration(
+                        helperText: field['percent'] == true
+                            ? 'Percentual de 0 a 100'
+                            : field['kind'] == 'time'
+                                ? 'Horário no formato HH:mm'
+                                : null),
                     autofocus: true,
                     maxLength: 10000,
                     keyboardType: field['kind'] == 'number'
@@ -186,6 +236,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           : field['value'] == ''
               ? double.tryParse(result.replaceAll(',', '.')) ?? result
               : result;
+      if (field['percent'] == true && next is num) next = next / 100;
       if (next == null || next is double && !next.isFinite) {
         if (mounted) setState(() => error = 'Informe um número válido.');
         return;
@@ -219,7 +270,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     final fields =
         (data?['fields'] as List? ?? []).cast<Map<String, dynamic>>();
     return PopScope(
-        canPop: !busy && edits.isEmpty,
+        canPop: !saving && edits.isEmpty,
         child: AlertDialog(
           title: const Text('Todas as guias da planilha'),
           content: SizedBox(
@@ -356,7 +407,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                   ])),
           actions: [
             TextButton(
-                onPressed: busy
+                onPressed: saving
                     ? null
                     : () async {
                         if (await discard() && mounted) {

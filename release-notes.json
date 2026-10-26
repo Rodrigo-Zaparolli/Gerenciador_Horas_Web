@@ -1,7 +1,9 @@
 {
   "changes": [
-    "Checklist da planilha: tabela Status Projeto a esquerda e tarefas a direita em telas de notebook e desktop, aproveitando a altura do modal sem aumenta-la.",
-    "Tabela com colunas compactas e lista de tarefas com rolagem independente. Em telas menores, o conteudo fica empilhado com rolagem para manter o acesso a tabela e as tarefas.",
-    "Filtros, edicao das etapas e abertura/fechamento imediatos preservados. Ajuste somente do site; integracao v48 mantida."
+    "Treinamento Catalog: abre a guia Cronogramas, inclusive em servicos combinados com Consultoria, sem exigir o modelo Enterprise.",
+    "Escolher guia fica visivel no editor. A guia selecionada fica salva por conta e projeto e e utilizada na proxima abertura.",
+    "Cronograma: datas, horarios HH:mm e percentuais de 0 a 100 editaveis; formulas, resultados calculados, cabecalhos e celulas protegidas permanecem bloqueados.",
+    "A consulta da preferencia nao impede fechar o modal. A leitura da guia pode ser encerrada sem aguardar o Excel; gravacoes aguardam confirmacao.",
+    "Requer integracao v49 para os tipos de dados do cronograma. Pastas, planilhas e permissoes de acesso existentes foram preservadas."
   ]
 }

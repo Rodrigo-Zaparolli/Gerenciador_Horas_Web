@@ -77,7 +77,7 @@ void main() {
         ));
     await tester.pumpWidget(editor());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Abas'));
+    await tester.tap(find.byTooltip('Configurar abas do modelo'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>).last);
     await tester.pumpAndSettle();

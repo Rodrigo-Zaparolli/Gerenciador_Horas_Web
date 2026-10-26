@@ -1,3 +1,4 @@
+import 'project_worksheet_preference.dart';
 import 'dart:async';
 import 'spreadsheet_store.dart';
 import 'spreadsheet_sheet_settings.dart';
@@ -34,10 +35,64 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
   static Future<void> show(BuildContext context, ProjectModel project) async {
     final user = FirebaseAuth.instance.currentUser;
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) return;
-    await showDialog<void>(
+    final preference = ProjectWorksheetPreference.load(user!.uid, project.id)
+        .catchError((Object _) => null);
+    await showDialog<Object?>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => ProjectSpreadsheetDialog(project: project));
+        builder: (dialogContext) => FutureBuilder<String?>(
+            future: preference,
+            builder: (_, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return AlertDialog(
+                    title: const Text('Planilha do projeto'),
+                    content:
+                        const Row(mainAxisSize: MainAxisSize.min, children: [
+                      SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator()),
+                      SizedBox(width: 12),
+                      Flexible(child: Text('Carregando a guia preferida...'))
+                    ]),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('Fechar'))
+                    ]);
+              }
+              if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+                return AlertDialog(
+                    content: const Text('A conta mudou. Feche esta janela.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text('Fechar'))
+                    ]);
+              }
+              final initial =
+                  snapshot.data ?? defaultProjectWorksheet(project.serviceType);
+              if (initial == null) {
+                return ProjectSpreadsheetDialog(project: project);
+              }
+              return WorkbookSheetDialog(
+                initialWorksheet: initial,
+                allowed: () =>
+                    FirebaseAuth.instance.currentUser?.uid == user.uid,
+                onWorksheetOpened: (name) =>
+                    ProjectWorksheetPreference.save(user.uid, project.id, name),
+                call: (args) => NativeLocalFiles.call(args['action'] as String,
+                    reference: project.excelLink,
+                    projectId: project.id,
+                    projectField: 'excelLink',
+                    worksheet: args['worksheet'] as String?,
+                    firstRow: args['firstRow'] as int?,
+                    firstColumn: args['firstColumn'] as int?,
+                    revision: args['revision'] as String?,
+                    changes: (args['changes'] as List?)
+                        ?.cast<Map<String, dynamic>>()),
+              );
+            }));
   }
 
   @override
@@ -198,6 +253,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           context: context,
           barrierDismissible: false,
           builder: (_) => WorkbookSheetDialog(
+              onWorksheetOpened: widget.transport == null
+                  ? (name) => ProjectWorksheetPreference.save(
+                      owner!, widget.project.id, name)
+                  : null,
               allowed: () => mounted && authorized,
               call: (args) async {
                 if (widget.transport != null) {
@@ -926,25 +985,28 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                         filename: data?['filename']?.toString() ?? '',
                         serviceType: widget.project.serviceType,
                         onClose: busy ? null : close,
-                        sheetAction: PopupMenuButton<String>(
-                            tooltip: 'Guias da planilha',
-                            enabled: !busy && authorized,
-                            icon: const Icon(Icons.table_chart_outlined),
-                            itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                      value: 'all',
-                                      child: Text('Todas as guias')),
-                                  PopupMenuItem(
-                                      value: 'configure',
-                                      child: Text('Configurar abas do modelo'))
-                                ],
-                            onSelected: (value) {
-                              if (value == 'all') {
-                                openAllSheets();
-                              } else {
-                                configureSheets();
-                              }
-                            }),
+                        sheetAction:
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (size.width >= 600)
+                            TextButton.icon(
+                                onPressed:
+                                    busy || !authorized ? null : openAllSheets,
+                                icon: const Icon(Icons.table_chart_outlined,
+                                    size: 18),
+                                label: const Text('Escolher guia'))
+                          else
+                            IconButton(
+                                tooltip: 'Escolher guia',
+                                onPressed:
+                                    busy || !authorized ? null : openAllSheets,
+                                icon: const Icon(Icons.table_chart_outlined,
+                                    size: 18)),
+                          IconButton(
+                              tooltip: 'Configurar abas do modelo',
+                              onPressed:
+                                  busy || !authorized ? null : configureSheets,
+                              icon: const Icon(Icons.tune, size: 18)),
+                        ]),
                         moreActions: menus.isEmpty || !authorized
                             ? null
                             : PopupMenuButton<String>(

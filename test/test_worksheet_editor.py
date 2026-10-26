@@ -31,6 +31,17 @@ class WorksheetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validated_changes(page, [{'sheet':'Any sheet','cell':field['cell'],'before':'','value':float('inf')}])
 
+    def test_schedule_time_and_percent_are_typed_and_checked(self):
+        def cell(row,col):
+            return SimpleNamespace(Value2=.5, Formula='', HasFormula=False, NumberFormat='[hh]:mm' if col==1 else '0%', Locked=False, MergeCells=False, Text='12:00' if col==1 else '50%')
+        page=worksheet_snapshot(SimpleNamespace(Worksheets=lambda _:SimpleNamespace(Cells=cell,ProtectContents=False)),{'worksheet':'Cronogramas'})
+        hour,percent=page['fields'][:2]
+        self.assertEqual(hour['kind'],'time');self.assertEqual(hour['value'],'12:00');self.assertTrue(percent['percent'])
+        for field,new in [(hour,'09:15'),(percent,.99)]:
+            self.assertEqual(validated_changes(page,[{'sheet':'Cronogramas','cell':field['cell'],'before':field['value'],'value':new}])[0][1],new)
+        for field,new in [(hour,'09:75'),(percent,50)]:
+            with self.assertRaises(ValueError): validated_changes(page,[{'sheet':'Cronogramas','cell':field['cell'],'before':field['value'],'value':new}])
+
     def test_page_bounds_and_sheet_required(self):
         for args in [{}, {'worksheet':'x','firstRow':0}, {'worksheet':'x','firstColumn':16384}, {'worksheet':'x','firstRow':True}]:
             with self.assertRaises(ValueError):

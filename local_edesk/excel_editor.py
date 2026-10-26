@@ -97,6 +97,11 @@ def value(cell, kind):
         # Templates may contain instructions/placeholders instead of a date.
         # Show the original text without rewriting it or failing the whole read.
         return text
+    if kind == 'time':
+        if raw is None or raw == '':
+            return ''
+        minutes = round(float(raw or 0) * 1440)
+        return f'{minutes // 60:02}:{minutes % 60:02}'
     if kind == 'percent':
         return float(raw or 0)
     if raw is None:
@@ -352,6 +357,8 @@ def validated_changes(current, changes):
         if kind == 'number':
             if isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new):
                 raise ValueError('Numero invalido.')
+            if field.get('percent') and not 0 <= new <= 1:
+                raise ValueError('Use um percentual de 0 a 100.')
         elif kind == 'percent':
             if isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new) or new not in {0, .25, .5, .75, 1}:
                 raise ValueError('Use 0%, 25%, 50%, 75% ou 100%.')
@@ -359,6 +366,9 @@ def validated_changes(current, changes):
             raise ValueError('Texto inválido ou muito longo.')
         elif kind == 'yesno' and new not in {'Sim', 'Não'}:
             raise ValueError('Selecione Sim ou Não.')
+        elif kind == 'time':
+            if new and not re.fullmatch(r'[0-9]{1,4}:[0-5][0-9]', new):
+                raise ValueError('Horario invalido. Use HH:mm.')
         elif kind == 'date' and new:
             try:
                 datetime.strptime(new, '%Y-%m-%d')
@@ -369,6 +379,13 @@ def validated_changes(current, changes):
             raise ValueError('Este campo não aceita fórmulas. Para telefone, use apenas números e pontuação.')
         result.append((field, new))
     return result
+
+
+def stored_time(text):
+    if not text:
+        return None
+    hours, minutes = map(int, text.split(':'))
+    return (hours * 60 + minutes) / 1440
 
 
 def stored_date(field, new):
@@ -453,7 +470,9 @@ def preserve_package(source, target, changes):
                     kind = field['kind']
                     if kind == 'date':
                         new = stored_date(field, new)
-                    text = kind not in {'date', 'percent', 'number'} or kind == 'date' and field.get('dateStorage') == 'text'
+                    elif kind == 'time':
+                        new = stored_time(new)
+                    text = kind not in {'date', 'time', 'percent', 'number'} or kind == 'date' and field.get('dateStorage') == 'text'
                     cell_updates[field['cell']] = ('inlineStr' if text else '', new)
                 found = set()
                 def replace(match):
@@ -527,6 +546,11 @@ def worksheet_snapshot(book, body):
     if type(row) is not int or type(column) is not int or not 1 <= row <= 1048552 or not 1 <= column <= 16377:
         raise ValueError('Intervalo de consulta invalido.')
     sheet = book.Worksheets(name)
+    table_headers = set()
+    for table in getattr(sheet, 'ListObjects', []):
+        area = table.Range
+        if getattr(table, 'ShowHeaders', True):
+            table_headers.update((int(area.Row), c) for c in range(int(area.Column), int(area.Column + area.Columns.Count)))
     fields, formulas = [], []
     for r in range(row, row + 25):
         for c in range(column, column + 8):
@@ -542,12 +566,18 @@ def worksheet_snapshot(book, body):
             kind = 'number' if isinstance(raw, (int, float)) and not isinstance(raw, bool) else 'text'
             if (kind == 'number' or raw is None) and re.search(r'[dy]|aa', re.sub(r'"[^"]*"|\\.', '', fmt)):
                 kind = 'date'
-            readonly = calculated or bool(sheet.ProtectContents and cell.Locked) or bool(cell.MergeCells and cell.MergeArea.Cells(1,1).Address != cell.Address) or isinstance(raw, bool)
+            if (kind == 'number' or raw is None) and ':' in fmt and re.search(r'[hs]', fmt):
+                kind = 'time'
+            try:
+                spill = bool(getattr(cell, 'HasSpill', False)) or bool(getattr(cell, 'HasArray', False))
+            except Exception:
+                spill = False
+            readonly = calculated or spill or (r, c) in table_headers or bool(sheet.ProtectContents and cell.Locked) or bool(cell.MergeCells and cell.MergeArea.Cells(1,1).Address != cell.Address) or isinstance(raw, bool)
             fields.append({'sheet': name, 'cell': address, 'kind': kind, 'label': address,
                 'group': 'Guia', 'value': value(cell, kind) if kind != 'number' else float(raw),
-                'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
+                'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
             formulas.append([address, str(formula) if calculated else None])
-    return {'fields': fields, 'tasks': [], 'worksheet': name, 'firstRow':row, 'firstColumn':column,
+    return {'fields': fields, 'tasks': [], 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
         'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}
 
 
@@ -586,7 +616,7 @@ def edit(path, body):
                 try:
                     if cell.HasFormula:
                         raise ValueError('Uma célula de fórmula não pode ser editada.')
-                    cell.Value2 = stored_date(field, new) if field['kind'] == 'date' else new
+                    cell.Value2 = stored_date(field, new) if field['kind'] == 'date' else stored_time(new) if field['kind'] == 'time' else new
                 finally:
                     # Release the Range proxy before closing/uninitializing COM.
                     cell = None
