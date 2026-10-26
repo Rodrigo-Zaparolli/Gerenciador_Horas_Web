@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/checklist_stage_dialog.dart';
@@ -18,6 +19,65 @@ Future<void> choose(WidgetTester tester, String cell, String value) async {
 }
 
 void main() {
+  for (final apply in [false, true]) {
+    testWidgets(
+        'exit is immediate and single while Excel preview is pending: $apply',
+        (tester) async {
+      final pending = Completer<Map<String, dynamic>>();
+      Map<String, double>? result;
+      await tester.pumpWidget(MaterialApp(
+          home: Builder(
+              builder: (context) => Scaffold(
+                  body: TextButton(
+                      child: const Text('Editor principal'),
+                      onPressed: () async {
+                        result = await showDialog<Map<String, double>>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => ChecklistStageDialog(
+                                stage: 'Implantacao',
+                                tasks: const [
+                                  {
+                                    'sheet': 'Checklist',
+                                    'cell': 'E1',
+                                    'label': 'Tarefa'
+                                  }
+                                ],
+                                values: const {'Checklist!E1': 0},
+                                canApply: () => true,
+                                calculatePreview: (_) => pending.future));
+                      })))));
+      await tester.tap(find.text('Editor principal'));
+      await tester.pumpAndSettle();
+      await choose(tester, 'E1', '75');
+      await tester.pump(const Duration(milliseconds: 800));
+      expect(pending.isCompleted, isFalse);
+      final callback = apply
+          ? tester
+              .widget<FilledButton>(
+                  find.widgetWithText(FilledButton, 'Aplicar ajustes'))
+              .onPressed!
+          : tester
+              .widget<TextButton>(find.widgetWithText(TextButton, 'Cancelar'))
+              .onPressed!;
+      callback();
+      callback();
+      callback();
+      await tester.pumpAndSettle();
+      expect(find.byType(ChecklistStageDialog), findsNothing);
+      expect(find.text('Editor principal'), findsOneWidget);
+      expect(result, apply ? {'Checklist!E1': .75} : null);
+      pending.complete({
+        'rows': [
+          {'label': 'Implantacao', 'percentage': .75}
+        ]
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('Editor principal'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
       'bulk edits include hidden tasks, isolate blocks and skip read-only',
       (tester) async {

@@ -81,7 +81,28 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     return uid == owner && PilotFeatureAccess.allows(uid: uid, email: email);
   }
 
+  Future<void> _fileRequestTail = Future<void>.value();
+
   Future<Map<String, dynamic>> request(String action,
+      {String? revision,
+      List<Map<String, dynamic>>? changes,
+      Map<String, String>? selectedSheets}) {
+    final requestedOwner = owner;
+    final names = Map<String, String>.from(selectedSheets ?? sheetNames);
+    final edits = changes?.map((c) => Map<String, dynamic>.from(c)).toList();
+    final result = _fileRequestTail.then((_) {
+      if (!mounted || !authorized || owner != requestedOwner) {
+        throw StateError('A conta mudou ou o editor foi fechado.');
+      }
+      return _performRequest(action,
+          revision: revision, changes: edits, selectedSheets: names);
+    });
+    _fileRequestTail =
+        result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
+  Future<Map<String, dynamic>> _performRequest(String action,
       {String? revision,
       List<Map<String, dynamic>>? changes,
       Map<String, String>? selectedSheets}) async {

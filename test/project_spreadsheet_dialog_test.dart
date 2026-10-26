@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:gerenciador_horas/features/projects/dialogs/checklist_stage_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/domain/models/project_model.dart';
@@ -57,6 +59,66 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  testWidgets('closing stage releases UI while Excel requests stay serialized',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final pending = Completer<Map<String, dynamic>>();
+    var previews = 0, active = 0, maxActive = 0;
+    Map<String, dynamic> preview() => {
+          'preview': true,
+          'checklistSheet': 'Checklist-Processo',
+          'statusPreview': {'rows': []}
+        };
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+            project:
+                ProjectModel.fromJson({'id': '1', 'serviceType': 'Enterprise'}),
+            uidProvider: () => 'owner',
+            emailProvider: () => 'other@example.com',
+            transport: (args) async {
+              if (args['action'] == 'excel-editor-preview') {
+                previews++;
+                active++;
+                if (active > maxActive) maxActive = active;
+                try {
+                  if (previews == 2) return await pending.future;
+                  return preview();
+                } finally {
+                  active--;
+                }
+              }
+              return snapshot();
+            })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Checklist-Processo'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(previews, 2);
+    await tester.tap(find.descendant(
+        of: find.byType(ChecklistStageDialog),
+        matching: find.text('Cancelar')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ChecklistStageDialog), findsNothing);
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump();
+    expect(active, 1);
+    expect(previews, 2);
+    pending.complete(preview());
+    await tester.pumpAndSettle();
+    expect(maxActive, 1);
+    expect(find.text('Planilha do projeto'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('timeline opens separately and only editable dates open calendar',
       (tester) async {
     final data = snapshot();
@@ -574,7 +636,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Unauthenticated session never loads spreadsheet data', (tester) async {
+  testWidgets('Unauthenticated session never loads spreadsheet data',
+      (tester) async {
     var calls = 0;
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Recursos liberados para todos os usuarios autenticados: editor da planilha e suas guias, checklist por blocos, previa de percentuais, contatos de clientes e colaboradores, acompanhamento de plugins, conferencia e importacao de trabalhos do E-Desk.",
-    "O login continua obrigatorio. Projetos, contatos, credenciais, configuracoes e autorizacoes de arquivos permanecem separados por conta.",
-    "Atualize a integracao local para v48 para liberar tambem os recursos que dependem dela. Os vinculos de pastas e planilhas existentes foram preservados."
+    "Checklist: fechar ou aplicar ajustes no modal de tarefas agora funciona imediatamente, sem aguardar o calculo da previa no Excel.",
+    "Cliques repetidos na saida do modal nao fecham a tela principal. Respostas atrasadas da previa sao descartadas e as consultas ao Excel sao executadas em fila.",
+    "Esta correcao e do site e utiliza a integracao v48 existente; nao exige baixar novamente o pacote CMD."
   ]
 }

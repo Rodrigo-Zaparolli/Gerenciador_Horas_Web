@@ -25,6 +25,7 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
   final _scroll = ScrollController();
   late final Map<String, double> _values;
   bool _pendingOnly = false;
+  bool _closing = false;
   ChecklistLivePreview? _preview;
 
   @override
@@ -96,15 +97,19 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
         ));
       });
 
-  Future<void> apply() async {
-    await _preview?.pauseAndWait();
-    if (!mounted) return;
-    if (!widget.canApply()) {
-      Navigator.pop(context);
-      return;
-    }
-    Navigator.pop(context, Map<String, double>.from(_values));
+  void finish({required bool applyChanges}) {
+    if (_closing || !mounted) return;
+    _closing = true;
+    // Stop scheduling and invalidate replies without blocking navigation on Excel.
+    _preview?.clear();
+    Navigator.pop(
+        context,
+        applyChanges && widget.canApply()
+            ? Map<String, double>.from(_values)
+            : null);
   }
+
+  void apply() => finish(applyChanges: true);
 
   String percentage(double value) {
     final percent = value * 100;
@@ -178,10 +183,7 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
           ])),
       actions: [
         TextButton(
-            onPressed: () async {
-              await _preview?.pauseAndWait();
-              if (mounted) Navigator.pop(this.context);
-            },
+            onPressed: () => finish(applyChanges: false),
             child: const Text('Cancelar')),
         FilledButton.icon(
             onPressed: apply,
