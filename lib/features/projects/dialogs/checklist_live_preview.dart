@@ -67,12 +67,16 @@ class ChecklistLivePreview extends ChangeNotifier {
     }
   }
 
-  Future<void> pauseAndWait() async {
+  void pause() {
     _paused = true;
     _timer?.cancel();
     _generation++;
     _dirty = false;
     stale = true;
+  }
+
+  Future<void> pauseAndWait() async {
+    pause();
     await _job;
   }
 

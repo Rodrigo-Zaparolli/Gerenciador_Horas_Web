@@ -81,17 +81,22 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     return uid == owner && PilotFeatureAccess.allows(uid: uid, email: email);
   }
 
+  bool _stageDialogOpen = false;
   Future<void> _fileRequestTail = Future<void>.value();
 
   Future<Map<String, dynamic>> request(String action,
       {String? revision,
       List<Map<String, dynamic>>? changes,
-      Map<String, String>? selectedSheets}) {
+      Map<String, String>? selectedSheets,
+      bool Function()? isCurrent}) {
     final requestedOwner = owner;
     final names = Map<String, String>.from(selectedSheets ?? sheetNames);
     final edits = changes?.map((c) => Map<String, dynamic>.from(c)).toList();
     final result = _fileRequestTail.then((_) {
-      if (!mounted || !authorized || owner != requestedOwner) {
+      if (!mounted ||
+          !authorized ||
+          owner != requestedOwner ||
+          isCurrent != null && !isCurrent()) {
         throw StateError('A conta mudou ou o editor foi fechado.');
       }
       return _performRequest(action,
@@ -693,10 +698,13 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   }
 
   Future<void> editStage(String group, List<Map<String, dynamic>> tasks) async {
-    if (busy || !authorized) return;
+    if (busy || !authorized || _stageDialogOpen) return;
+    _stageDialogOpen = true;
+    var routeActive = true;
     final revision = data?['revision'];
-    await livePreview.pauseAndWait();
+    livePreview.pause();
     if (!mounted || !authorized || busy || data?['revision'] != revision) {
+      _stageDialogOpen = false;
       if (mounted && authorized) livePreview.resume();
       return;
     }
@@ -732,7 +740,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               }
               final response = await request('excel-editor-preview',
                   revision: revision as String,
-                  changes: changes.values.toList());
+                  changes: changes.values.toList(),
+                  isCurrent: () => routeActive);
               if (!mounted ||
                   !authorized ||
                   data?['revision'] != revision ||
@@ -757,6 +766,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                 data?['revision'] == revision),
       );
     } finally {
+      routeActive = false;
+      _stageDialogOpen = false;
       if (mounted && authorized) livePreview.resume();
     }
     if (result == null ||

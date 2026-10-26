@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Checklist: fechar ou aplicar ajustes no modal de tarefas agora funciona imediatamente, sem aguardar o calculo da previa no Excel.",
-    "Cliques repetidos na saida do modal nao fecham a tela principal. Respostas atrasadas da previa sao descartadas e as consultas ao Excel sao executadas em fila.",
-    "Esta correcao e do site e utiliza a integracao v48 existente; nao exige baixar novamente o pacote CMD."
+    "Checklist: etapas pendentes abrem imediatamente com as tarefas carregadas, sem aguardar a previa anterior do Excel.",
+    "E possivel alterar, aplicar, fechar e reabrir a etapa enquanto a previa calcula em segundo plano. Cliques rapidos nao abrem modais duplicados.",
+    "Previas de modais ja fechados sao descartadas antes de chegar ao Excel. O fechamento imediato e a protecao contra tela branca continuam preservados.",
+    "Correcao somente do site; utiliza a integracao v48 existente."
   ]
 }

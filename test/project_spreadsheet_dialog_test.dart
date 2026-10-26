@@ -59,6 +59,85 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  testWidgets(
+      'pending stage opens, applies and reopens while original Excel preview is blocked',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final original = Completer<Map<String, dynamic>>();
+    var previews = 0;
+    Map<String, dynamic> preview() => {
+          'preview': true,
+          'checklistSheet': 'Checklist-Processo',
+          'statusPreview': {'rows': []}
+        };
+    await tester.pumpWidget(MaterialApp(
+        home: ProjectSpreadsheetDialog(
+            project:
+                ProjectModel.fromJson({'id': '1', 'serviceType': 'Enterprise'}),
+            uidProvider: () => 'owner',
+            emailProvider: () => 'other@example.com',
+            transport: (args) async {
+              if (args['action'] == 'excel-editor-preview') {
+                previews++;
+                if (previews == 1) return original.future;
+                return preview();
+              }
+              return snapshot();
+            })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Checklist-Processo'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump();
+    expect(previews, 1);
+    expect(original.isCompleted, isFalse);
+    await tester.tap(find.text('Pendentes'));
+    await tester.pump();
+    final stage = find.byKey(const ValueKey('checklist-stage-Implantação'));
+    final open = tester.widget<ListTile>(stage).onTap!;
+    open();
+    open();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ChecklistStageDialog), findsOneWidget);
+    await tester.tap(stagePercentField());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('75%').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.tap(find.widgetWithText(FilledButton, 'Aplicar ajustes'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ChecklistStageDialog), findsNothing);
+    expect(original.isCompleted, isFalse);
+    await tester.tap(stage);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ChecklistStageDialog), findsOneWidget);
+    expect(
+        tester
+            .widget<DropdownButtonFormField<double>>(stagePercentField())
+            .initialValue,
+        .75);
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.tap(find.descendant(
+        of: find.byType(ChecklistStageDialog),
+        matching: find.text('Cancelar')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    original.complete(preview());
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(previews, 2); // Obsolete closed-stage requests never reach Excel.
+    expect(find.text('Planilha do projeto'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('closing stage releases UI while Excel requests stay serialized',
       (tester) async {
     tester.view.physicalSize = const Size(1366, 1000);
