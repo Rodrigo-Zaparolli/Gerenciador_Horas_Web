@@ -1,8 +1,7 @@
 {
   "changes": [
-    "Checklist: etapas pendentes abrem imediatamente com as tarefas carregadas, sem aguardar a previa anterior do Excel.",
-    "E possivel alterar, aplicar, fechar e reabrir a etapa enquanto a previa calcula em segundo plano. Cliques rapidos nao abrem modais duplicados.",
-    "Previas de modais ja fechados sao descartadas antes de chegar ao Excel. O fechamento imediato e a protecao contra tela branca continuam preservados.",
-    "Correcao somente do site; utiliza a integracao v48 existente."
+    "Checklist da planilha: tabela Status Projeto a esquerda e tarefas a direita em telas de notebook e desktop, aproveitando a altura do modal sem aumenta-la.",
+    "Tabela com colunas compactas e lista de tarefas com rolagem independente. Em telas menores, o conteudo fica empilhado com rolagem para manter o acesso a tabela e as tarefas.",
+    "Filtros, edicao das etapas e abertura/fechamento imediatos preservados. Ajuste somente do site; integracao v48 mantida."
   ]
 }

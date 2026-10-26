@@ -794,91 +794,103 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                 filter == 'Concluídas' && current(f) == 1 ||
                 filter == 'Pendentes' && current(f) != 1))
         .toList();
-    return LayoutBuilder(
-        builder: (context, constraints) => Column(children: [
+    final filters = Padding(
+        padding: const EdgeInsets.all(12),
+        child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+                spacing: 10,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  SizedBox(
+                      width: 260,
+                      child: TextField(
+                          decoration: InputDecoration(
+                              hintText: 'Buscar tarefa...',
+                              isDense: true,
+                              filled: true,
+                              fillColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerLow,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                              prefixIcon: Icon(Icons.search)),
+                          onChanged: (v) => setState(() => search = v))),
+                  for (final item in ['Todas', 'Pendentes', 'Concluídas'])
+                    ChoiceChip(
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        label: Text(item),
+                        selected: filter == item,
+                        onSelected: (_) => setState(() => filter = item)),
+                  Text('${shown.length} tarefas',
+                      style: Theme.of(context).textTheme.bodySmall),
+                ])));
+    final cards = <Widget>[
+      for (final group in shown.map((f) => f['group'] as String).toSet())
+        Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant)),
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              key: ValueKey('checklist-stage-$group'),
+              leading: const Icon(Icons.checklist_outlined),
+              title: Text(group,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                  '${shown.where((f) => f['group'] == group).length} tarefas'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: busy || !authorized
+                  ? null
+                  : () => editStage(
+                      group, all.where((f) => f['group'] == group).toList()),
+            ))
+    ];
+    return LayoutBuilder(builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 1100;
+      final preview = ChecklistStatusPanel(
+          controller: livePreview, unsaved: pending.isNotEmpty, compact: wide);
+      if (wide) {
+        return Row(
+            key: const ValueKey('checklist-side-by-side'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: preview),
+              const SizedBox(width: 8),
               SizedBox(
-                  height: (constraints.maxHeight *
-                          (constraints.maxHeight < 400 ? .42 : .52))
-                      .clamp(80.0, 310.0),
-                  child: ChecklistStatusPanel(
-                      controller: livePreview, unsaved: pending.isNotEmpty)),
-              Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                          spacing: 10,
-                          runSpacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            SizedBox(
-                                width: 260,
-                                child: TextField(
-                                    decoration: InputDecoration(
-                                        hintText: 'Buscar tarefa...',
-                                        isDense: true,
-                                        filled: true,
-                                        fillColor: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerLow,
-                                        border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        prefixIcon: Icon(Icons.search)),
-                                    onChanged: (v) =>
-                                        setState(() => search = v))),
-                            for (final item in [
-                              'Todas',
-                              'Pendentes',
-                              'Concluídas'
-                            ])
-                              ChoiceChip(
-                                  showCheckmark: false,
-                                  visualDensity: VisualDensity.compact,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                  label: Text(item),
-                                  selected: filter == item,
-                                  onSelected: (_) =>
-                                      setState(() => filter = item)),
-                            Text('${shown.length} tarefas',
-                                style: Theme.of(context).textTheme.bodySmall),
-                          ]))),
-              Expanded(
-                  child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                  width: 300,
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                    for (final group
-                        in shown.map((f) => f['group'] as String).toSet())
-                      Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: BorderSide(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant)),
-                          clipBehavior: Clip.antiAlias,
-                          child: ListTile(
-                            key: ValueKey('checklist-stage-$group'),
-                            leading: const Icon(Icons.checklist_outlined),
-                            title: Text(group,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
-                            subtitle: Text(
-                                '${shown.where((f) => f['group'] == group).length} tarefas'),
-                            trailing: const Icon(Icons.open_in_new),
-                            onTap: busy || !authorized
-                                ? null
-                                : () => editStage(
-                                    group,
-                                    all
-                                        .where((f) => f['group'] == group)
-                                        .toList()),
-                          ))
-                  ]))
-            ]));
+                        filters,
+                        Expanded(
+                            child: ListView(
+                                key: const ValueKey('checklist-task-list'),
+                                primary: false,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                children: cards)),
+                      ])),
+            ]);
+      }
+      return CustomScrollView(
+          key: const ValueKey('checklist-stacked-scroll'),
+          primary: false,
+          slivers: [
+            SliverToBoxAdapter(child: preview),
+            SliverToBoxAdapter(child: filters),
+            SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                sliver: SliverToBoxAdapter(child: Column(children: cards))),
+          ]);
+    });
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:gerenciador_horas/features/projects/dialogs/checklist_status_preview.dart';
 import 'dart:async';
 import 'package:gerenciador_horas/features/projects/dialogs/checklist_stage_dialog.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,76 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  for (final brightness in Brightness.values) {
+    testWidgets(
+        'six complete status rows and tasks fit side by side at notebook height $brightness',
+        (tester) async {
+      tester.view.physicalSize = const Size(1366, 600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const labels = [
+        'Gerencia do Projeto',
+        'Contato Inicial',
+        'Levantamento de Escopo',
+        'Desenvolvimento',
+        'Implantacao',
+        'Pos-Implantacao'
+      ];
+      await tester.pumpWidget(MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: ProjectSpreadsheetDialog(
+              project: ProjectModel.fromJson(
+                  {'id': '1', 'serviceType': 'Enterprise'}),
+              uidProvider: () => 'owner',
+              emailProvider: () => 'other@example.com',
+              transport: (args) async =>
+                  args['action'] == 'excel-editor-preview'
+                      ? {
+                          'preview': true,
+                          'checklistSheet': 'Checklist-Processo',
+                          'statusPreview': {
+                            'total': .64,
+                            'rows': [
+                              for (final label in labels)
+                                {
+                                  'label': label,
+                                  'percentage': .64,
+                                  'weight': .2,
+                                  'planned': .75,
+                                  'start': '2026-10-01',
+                                  'end': '2026-10-26'
+                                }
+                            ]
+                          }
+                        }
+                      : snapshot())));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Checklist-Processo'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 800));
+      await tester.pumpAndSettle();
+      expect(
+          find.byKey(const ValueKey('checklist-side-by-side')), findsOneWidget);
+      final panel = tester.getRect(find.byType(ChecklistStatusPanel));
+      final table = tester.getRect(find.byType(DataTable));
+      expect(table.right, lessThanOrEqualTo(panel.right));
+      for (final label in labels) {
+        final cell = find.descendant(
+            of: find.byType(DataTable), matching: find.text(label));
+        expect(tester.getRect(cell).bottom, lessThanOrEqualTo(panel.bottom));
+        expect(tester.getRect(cell).top, greaterThanOrEqualTo(panel.top));
+      }
+      final task = find.byKey(const ValueKey('checklist-stage-Implantação'));
+      expect(tester.getRect(task).left, greaterThanOrEqualTo(panel.right));
+      expect(
+          tester.getRect(task).bottom,
+          lessThanOrEqualTo(
+              tester.getTopLeft(find.text('Salvar na planilha')).dy));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
       'pending stage opens, applies and reopens while original Excel preview is blocked',
       (tester) async {
@@ -307,8 +378,20 @@ void main() {
         expect(find.text('Progresso total'), findsOneWidget);
         expect(tester.getBottomRight(find.text('Salvar na planilha')).dy,
             lessThan(size.height));
-        await tester.ensureVisible(
-            find.byKey(const ValueKey('checklist-stage-Implantação')));
+        final stageCard =
+            find.byKey(const ValueKey('checklist-stage-Implantação'));
+        if (size.width < 1100) {
+          await tester.scrollUntilVisible(stageCard, 180,
+              scrollable: find
+                  .descendant(
+                      of: find
+                          .byKey(const ValueKey('checklist-stacked-scroll')),
+                      matching: find.byType(Scrollable))
+                  .first);
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(stageCard);
+          await tester.pumpAndSettle();
+        }
         await tester
             .tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
         await tester.pumpAndSettle();
