@@ -31,7 +31,29 @@ try {
             Copy-Item -LiteralPath $packageSource -Destination (Join-Path $projectDirectory "build\web\downloads\$($downloadAliases[$sourceName])") -Force
         }
     }
-    $manifest = @{ release = $releaseIdentifier; created = [DateTime]::UtcNow.ToString('o'); changes = @($releaseNotes.changes) } | ConvertTo-Json
+    # Publish the download links with the release, rather than hardcoding a
+    # package version in the app's update modal.
+    $updatePackager = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'package_edesk_update.py') -Raw -Encoding UTF8
+    $updatePackageMatch = [regex]::Match($updatePackager, "target = ROOT / 'web/downloads/([^']+\.zip)'")
+    if (-not $updatePackageMatch.Success) { throw 'Pacote leve da integracao nao encontrado.' }
+    $updatePackageName = $updatePackageMatch.Groups[1].Value
+    if ($updatePackageName -notmatch "-$packageNumber\.zip$") { throw 'A versao do pacote leve difere da integracao.' }
+    $fullPackageName = "integracao-edesk-completa-windows-v$packageNumber.zip"
+    foreach ($downloadName in @($updatePackageName, $fullPackageName)) {
+        if (-not (Test-Path -LiteralPath (Join-Path $projectDirectory "build\web\downloads\$downloadName"))) {
+            throw "Download da integracao ausente: $downloadName"
+        }
+    }
+    $manifest = @{
+        release = $releaseIdentifier
+        created = [DateTime]::UtcNow.ToString('o')
+        changes = @($releaseNotes.changes)
+        integration = @{
+            version = $packageNumber
+            updateUrl = "/downloads/$updatePackageName"
+            completeUrl = "/downloads/$fullPackageName"
+        }
+    } | ConvertTo-Json -Depth 4
     [System.IO.File]::WriteAllText($manifestPath, $manifest, [System.Text.UTF8Encoding]::new($false))
 } finally {
     Pop-Location

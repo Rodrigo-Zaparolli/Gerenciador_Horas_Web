@@ -1,9 +1,7 @@
 {
   "changes": [
-    "Treinamento Catalog: abre a guia Cronogramas, inclusive em servicos combinados com Consultoria, sem exigir o modelo Enterprise.",
-    "Escolher guia fica visivel no editor. A guia selecionada fica salva por conta e projeto e e utilizada na proxima abertura.",
-    "Cronograma: datas, horarios HH:mm e percentuais de 0 a 100 editaveis; formulas, resultados calculados, cabecalhos e celulas protegidas permanecem bloqueados.",
-    "A consulta da preferencia nao impede fechar o modal. A leitura da guia pode ser encerrada sem aguardar o Excel; gravacoes aguardam confirmacao.",
-    "Requer integracao v49 para os tipos de dados do cronograma. Pastas, planilhas e permissoes de acesso existentes foram preservadas."
+    "O modal de atualizacao passa a oferecer download da integracao E-Desk, com botoes para atualizacao leve e instalacao completa.",
+    "A versao e os links da integracao sao preenchidos automaticamente em cada publicacao, comecando pela v49.",
+    "Baixar a integracao nao fecha o modal nem recarrega o app. Se a integracao ja esta na versao indicada, basta atualizar o site."
   ]
 }

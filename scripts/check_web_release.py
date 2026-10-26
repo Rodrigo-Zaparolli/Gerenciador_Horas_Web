@@ -23,6 +23,14 @@ download_page = (root / 'integracao-completa.html').read_text(encoding='utf-8')
 downloads = re.findall(r'href="(/downloads/[^"?]+\.zip)"', download_page)
 for download in downloads:
     assert (root / download.lstrip('/')).is_file(), f'Advertised download missing: {download}'
+integration = manifest.get('integration')
+if integration is not None:
+    assert re.fullmatch(r'[1-9][0-9]*', integration['version'])
+    for field in ['updateUrl', 'completeUrl']:
+        download = integration[field]
+        assert re.fullmatch(r'/downloads/[A-Za-z0-9._-]+\.zip', download)
+        assert download.endswith((f"-{integration['version']}.zip", f"-v{integration['version']}.zip"))
+        assert (root / download.lstrip('/')).is_file(), f'Update-modal download missing: {download}'
 print(f'LOCAL_RELEASE_OK: {release} SHA256={digest}')
 if args.public:
     import requests
@@ -31,6 +39,7 @@ if args.public:
         response = session.get(base + 'web-release.json', params={'check': time.time_ns()}, timeout=30)
         response.raise_for_status()
         assert response.json()['release'] == release, 'Public manifest differs'
+        assert response.json().get('integration') == integration, 'Public integration downloads differ'
         response = session.get(base + 'main.dart.js', params={'check': time.time_ns()}, timeout=120)
         response.raise_for_status()
         assert hashlib.sha256(response.content).hexdigest() == digest, 'Public compiled application differs'

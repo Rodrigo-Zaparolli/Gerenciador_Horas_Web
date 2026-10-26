@@ -1,3 +1,5 @@
+import 'integration_downloads.dart';
+import '../../shared/widgets/integration_download_panel.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -26,6 +28,8 @@ class WebReleaseMonitor extends StatefulWidget {
       required this.child,
       this.releaseLoader,
       this.notesLoader,
+      this.integrationLoader,
+      this.openIntegrationDownload,
       this.installedRelease,
       this.synchronize,
       this.reload,
@@ -33,6 +37,8 @@ class WebReleaseMonitor extends StatefulWidget {
   final Widget child;
   final Future<String?> Function()? releaseLoader;
   final Future<List<String>> Function()? notesLoader;
+  final Future<IntegrationDownloads?> Function()? integrationLoader;
+  final Future<bool> Function(Uri)? openIntegrationDownload;
   final String? installedRelease;
   final VoidCallback? synchronize;
   final VoidCallback? reload;
@@ -88,9 +94,11 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
     try {
       String? release;
       List<String> notes = [];
+      IntegrationDownloads? integration;
       if (widget.releaseLoader != null) {
         release = await widget.releaseLoader!();
         notes = await widget.notesLoader?.call() ?? [];
+        integration = await widget.integrationLoader?.call();
       } else {
         final response = await http
             .get(Uri.base.resolve('web-release.json').replace(queryParameters: {
@@ -99,6 +107,9 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
             .timeout(const Duration(seconds: 10));
         if (response.statusCode != 200) return;
         final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          integration = IntegrationDownloads.fromJson(decoded['integration']);
+        }
         if (decoded is Map && decoded['changes'] is List) {
           notes = (decoded['changes'] as List)
               .whereType<String>()
@@ -142,6 +153,10 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
                           const SizedBox(height: 12),
                         ] else
                           const Text('Uma nova versão do app está disponível.'),
+                        if (integration != null)
+                          IntegrationDownloadPanel(
+                              downloads: integration,
+                              openDownload: widget.openIntegrationDownload),
                         const Text(
                             'Os textos dos comentários e e-mails têm recuperação local. '
                             'Salve alterações em outros formulários e selecione novamente os anexos após atualizar.'),
