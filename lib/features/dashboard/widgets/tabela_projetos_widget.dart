@@ -1,3 +1,4 @@
+import '../../../data/services/project_link_edit.dart';
 import 'package:gerenciador_horas/core/theme/app_visuals.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
@@ -1205,8 +1206,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                               newItemController.clear();
 
                               try {
-                                await widget.firebaseService
-                                    .salvarProjeto(project);
+                                await widget.firebaseService.salvarProjeto(project);
 
                                 widget.onEditProject(project);
 
@@ -1430,6 +1430,8 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
   ///Abre o modal de editar
 //////////////////////
   void _showLinksDialog(ProjectModel project) {
+    final linkEdit = ProjectLinkEdit(project);
+    project = linkEdit.draft;
     final idController = TextEditingController(text: project.id);
     final clientController = TextEditingController(text: project.client);
     final folderController =
@@ -1446,6 +1448,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
     final linksScrollController = ScrollController();
 
     bool atualizandoFasesEdesk = false;
+    bool savingLinks = false;
 
     // ============================================================
     // Seleção temporária; permite enviar várias fases sem alterar os dados.
@@ -1622,7 +1625,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                               Icons.close_rounded,
                               color: CoresApp.textoSecundario,
                             ),
-                            onPressed: () {
+                            onPressed: savingLinks ? null : () {
                               Navigator.of(context).pop();
                             },
                           ),
@@ -2960,7 +2963,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: () => Navigator.of(
+                            onPressed: savingLinks ? null : () => Navigator.of(
                               dialogContext,
                             ).pop(),
                             child: Text(
@@ -2997,7 +3000,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                 fontSize: 12,
                               ),
                             ),
-                            onPressed: () async {
+                            onPressed: savingLinks ? null : () async {
                               // ======================================
                               // ATUALIZA HORAS DAS ETAPAS
                               // ======================================
@@ -3041,8 +3044,10 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                               // SALVA
                               // ======================================
 
-                              final previousFolderPath = project.folderPath;
-                              final previousExcelLink = project.excelLink;
+                              if (savingLinks) return;
+                              setDialogState(() => savingLinks = true);
+                              final previousFolderPath = linkEdit.previousFolder;
+                              final previousExcelLink = linkEdit.previousExcel;
                               try {
                                 final excelLink =
                                     ProjectFileService.editedReference(
@@ -3054,8 +3059,7 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                         previousFolderPath);
                                 project.excelLink = excelLink;
 
-                                await widget.firebaseService
-                                    .salvarProjeto(project);
+                                await linkEdit.save(widget.firebaseService);
 
                                 widget.onEditProject(
                                   project,
@@ -3079,6 +3083,9 @@ class _TabelaProjetosWidgetState extends State<TabelaProjetosWidget>
                                   Navigator.of(dialogContext).pop();
                                 }
                               } catch (e) {
+                                if (dialogContext.mounted) {
+                                  setDialogState(() => savingLinks = false);
+                                }
                                 var errorMessage = '$e';
                                 if (dialogContext.mounted) {
                                   ScaffoldMessenger.of(

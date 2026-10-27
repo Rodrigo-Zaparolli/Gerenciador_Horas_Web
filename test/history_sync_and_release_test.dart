@@ -196,6 +196,10 @@ void main() {
     response.complete('new');
     await tester.pumpAndSettle();
     expect(find.text('Nova versão disponível'), findsNothing);
+    EdeskActivity.active = 0;
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(find.text('Nova versão disponível'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
   testWidgets('same version and network failure do not interrupt work',
@@ -248,6 +252,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nova versão disponível'), findsNothing);
     expect(find.text('Editor aberto'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Editor aberto'))).pop();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(find.text('Nova versão disponível'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 }

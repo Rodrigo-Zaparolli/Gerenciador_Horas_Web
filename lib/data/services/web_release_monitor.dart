@@ -125,9 +125,14 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
           release.isEmpty ||
           release == currentRelease ||
           release == _dismissed ||
-          !mounted ||
-          EdeskActivity.active != 0 ||
+          !mounted) {
+        return;
+      }
+      if (EdeskActivity.active != 0 ||
           ModalRoute.of(context)?.isCurrent != true) {
+        // This release has not been shown. Retry on the next safe tick,
+        // rather than hiding it for the five-minute network-check interval.
+        _lastCheck = null;
         return;
       }
       final update = await showDialog<bool>(
@@ -179,7 +184,10 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
       } else {
         _dismissed = release;
       }
-    } catch (_) {/* Offline/update checks must not interrupt work. */} finally {
+    } catch (_) {
+      // A failed request must not suppress a subsequent online check.
+      _lastCheck = null;
+    } finally {
       _checking = false;
     }
   }

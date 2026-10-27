@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Cronograma aberto diretamente no modal Planilha do projeto, com identificacao do cliente e guias no topo, conforme a previa aprovada.",
-    "Tabela ocupa a largura disponivel, com edicao do Status e progresso por trabalho. Falhas de reconhecimento deixam de abrir silenciosamente o editor antigo.",
-    "Integracao v51 inicia sem abrir a pagina Conectar E-Desk. A nova apresentacao do Cronograma e compativel com a integracao v50."
+    "Corrigido o salvamento de pasta e planilha no editor de trabalhos da tela Projetos. Novas selecoes deixam de voltar aos caminhos anteriores.",
+    "Edicao isolada por projeto: a tela so recebe o cadastro alterado apos confirmacao do salvamento. Alteracoes simultaneas de vinculos geram aviso em vez de sobrescrever caminhos.",
+    "Avisos de atualizacao adiados por envio ou outro modal passam a tentar novamente no proximo intervalo seguro. Nenhum recarregamento automatico.",
+    "Ajustes somente no site, compativeis com a integracao v51 ja instalada."
   ]
 }
