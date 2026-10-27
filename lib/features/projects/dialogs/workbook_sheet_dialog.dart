@@ -1,3 +1,5 @@
+import 'workbook_confirmation.dart';
+import 'consultoria_row_drafts.dart';
 import 'project_worksheet_preference.dart';
 import 'spreadsheet_dialog_chrome.dart';
 import 'cronograma_table.dart';
@@ -32,6 +34,9 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   String? selected, error, savedWorksheet;
   Map<String, dynamic>? data;
   final Map<String, Map<String, dynamic>> edits = {};
+  final rows = ConsultoriaRowDrafts();
+  bool get dirty => edits.isNotEmpty || rows.dirty;
+  int get pendingCount => edits.length + rows.count;
   bool busy = false,
       saved = false,
       saving = false,
@@ -122,22 +127,15 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   }
 
   Future<bool> discard() async {
-    if (edits.isEmpty) return true;
+    if (!dirty) return true;
     return await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-                  title: const Text('Descartar alterações desta guia?'),
-                  content: const Text(
-                      'Há células editadas que ainda não foram salvas.'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Continuar editando')),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Descartar'))
-                  ],
-                )) ==
+            builder: (_) => const WorkbookConfirmation(
+                title: 'Descartar altera\u00e7\u00f5es desta guia?',
+                message:
+                    'H\u00e1 altera\u00e7\u00f5es que ainda n\u00e3o foram salvas na planilha.',
+                cancelLabel: 'Continuar editando',
+                confirmLabel: 'Descartar')) ==
         true;
   }
 
@@ -185,7 +183,8 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       if (name.toLowerCase().contains('consultoria') &&
           result['consultoriaTable'] != true) {
         if (result.containsKey('consultoriaTable')) {
-          throw StateError('A tabela de Consultoria desta guia n\u00e3o foi reconhecida. Confira a guia selecionada e o modelo da planilha. Nenhuma c\u00e9lula foi alterada.');
+          throw StateError(
+              'A tabela de Consultoria desta guia n\u00e3o foi reconhecida. Confira a guia selecionada e o modelo da planilha. Nenhuma c\u00e9lula foi alterada.');
         }
         throw StateError(
             'A tabela de Consultoria precisa da integra\u00e7\u00e3o v52. Atualize e reinicie a integra\u00e7\u00e3o; nenhuma c\u00e9lula foi alterada.');
@@ -198,6 +197,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           column = firstColumn;
           data = result;
           edits.clear();
+          rows.clear();
         });
         if (savedWorksheet != name && widget.onWorksheetOpened != null) {
           savedWorksheet = name;
@@ -224,7 +224,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   }
 
   Future<void> save() async {
-    if (busy || data == null || edits.isEmpty) return;
+    if (busy || data == null || !dirty) return;
     setState(() {
       busy = true;
       saving = true;
@@ -237,8 +237,16 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
         'firstRow': row,
         'firstColumn': column,
         'revision': data!['revision'],
-        'changes': edits.values.toList()
+        'changes': rows.payload(edits)
       });
+      if (rows.dirty &&
+          (result['rowsApplied'] is! Map ||
+              (result['rowsApplied'] as Map)['added'] != rows.added.length ||
+              (result['rowsApplied'] as Map)['deleted'] !=
+                  rows.deleted.length)) {
+        throw StateError(
+            'O Excel n\u00e3o confirmou a altera\u00e7\u00e3o das linhas. Recarregue para conferir antes de tentar novamente.');
+      }
       if (result['saved'] != true || result['worksheet'] != selected) {
         throw StateError('A gravação da guia não foi confirmada.');
       }
@@ -246,6 +254,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
         setState(() {
           data = result;
           edits.clear();
+          rows.clear();
           saved = true;
         });
       }
@@ -259,6 +268,55 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
         });
       }
     }
+  }
+
+  bool rowEditingAllowed() {
+    if (busy || !widget.allowed()) return false;
+    if (data?['consultoriaRowOperationsVersion'] != 1) {
+      setState(() => error =
+          'Atualize e reinicie a integra\u00e7\u00e3o v53 para adicionar ou excluir encontros.');
+      return false;
+    }
+    return true;
+  }
+
+  void addRow() {
+    if (!rowEditingAllowed() || selected == null) return;
+    setState(() => rows.add(
+        selected!,
+        (data?['consultoriaDetails'] as Map?)?['description']?.toString() ??
+            'Consultoria'));
+  }
+
+  Future<void> deleteRow(int row) async {
+    if (!rowEditingAllowed()) return;
+    if (!rows.added.containsKey(row)) {
+      final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (_) => const WorkbookConfirmation(
+              title: 'Excluir encontro?',
+              message:
+                  'A linha e seus dados ser\u00e3o removidos do Excel ao salvar na planilha. Voc\u00ea pode desfazer antes de salvar.',
+              confirmLabel: 'Marcar para excluir'));
+      if (confirmed != true || !mounted || !widget.allowed() || busy) return;
+    }
+    setState(() => rows.remove(row, edits));
+  }
+
+  void setField(Map<String, dynamic> field, dynamic value) {
+    if (busy || !widget.allowed()) return;
+    setState(() {
+      if (value == field['value']) {
+        edits.remove(field['cell']);
+      } else {
+        edits[field['cell']] = {
+          'sheet': selected,
+          'cell': field['cell'],
+          'before': field['value'],
+          'value': value
+        };
+      }
+    });
   }
 
   Future<void> edit(Map<String, dynamic> field) async {
@@ -346,8 +404,10 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final fields =
-        (data?['fields'] as List? ?? []).cast<Map<String, dynamic>>();
+    final fields = [
+      ...(data?['fields'] as List? ?? []).cast<Map<String, dynamic>>(),
+      ...rows.added.values.expand((f) => f)
+    ];
     final dialog = AlertDialog(
       title: Text(data?['scheduleTable'] == true
           ? 'Planilha do projeto · Cronograma'
@@ -473,21 +533,14 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                         vertical: vertical,
                         horizontal: horizontal,
                         onEdit: edit,
-                        onStatus: (field, value) {
-                          if (busy || !widget.allowed()) return;
-                          setState(() {
-                            if (value == field['value']) {
-                              edits.remove(field['cell']);
-                            } else {
-                              edits[field['cell']] = {
-                                'sheet': selected,
-                                'cell': field['cell'],
-                                'before': field['value'],
-                                'value': value
-                              };
-                            }
-                          });
-                        })
+                        addedRows: rows.added.keys.toSet(),
+                        deletedRows: rows.deleted,
+                        onAddRow: addRow,
+                        onDeleteRow: deleteRow,
+                        onUndoRow: (row) =>
+                            setState(() => rows.deleted.remove(row)),
+                        onEditValue: setField,
+                        onStatus: setField)
                     : widget.projectLayout && !rawGrid && fields.isNotEmpty
                         ? Center(
                             child: Column(
@@ -577,13 +630,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
             onPressed: saving ? null : close,
             child: Text(widget.projectLayout ? 'Cancelar' : 'Fechar')),
         FilledButton.icon(
-            onPressed: busy || edits.isEmpty ? null : save,
+            onPressed: busy || !dirty ? null : save,
             icon: const Icon(Icons.save_outlined),
             label: const Text('Salvar na planilha'))
       ],
     );
     return PopScope(
-        canPop: !saving && edits.isEmpty,
+        canPop: !saving && !dirty,
         child: !widget.projectLayout
             ? dialog
             : Dialog(
@@ -621,10 +674,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                                   const EdgeInsets.symmetric(horizontal: 16),
                               child: dialog.content!)),
                       SpreadsheetDialogFooter(
-                          pendingCount: edits.length,
-                          synchronization: saved
-                              ? '\u00daltima grava\u00e7\u00e3o confirmada'
-                              : 'Altere o Status de cada encontro para atualizar o progresso.',
+                          pendingCount: pendingCount,
+                          pendingLabel: rows.dirty ? rows.label : null,
+                          synchronization: rows.dirty
+                              ? 'As linhas ser\u00e3o adicionadas e removidas no Excel ao salvar.'
+                              : saved
+                                  ? '\u00daltima grava\u00e7\u00e3o confirmada'
+                                  : 'Altere o Status de cada encontro para atualizar o progresso.',
                           actions: [
                             OutlinedButton.icon(
                                 onPressed: busy

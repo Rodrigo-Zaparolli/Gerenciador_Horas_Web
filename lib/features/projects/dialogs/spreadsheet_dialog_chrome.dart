@@ -82,9 +82,11 @@ class SpreadsheetDialogFooter extends StatelessWidget {
   const SpreadsheetDialogFooter(
       {super.key,
       required this.pendingCount,
+      this.pendingLabel,
       required this.synchronization,
       required this.actions});
   final int pendingCount;
+  final String? pendingLabel;
   final String synchronization;
   final List<Widget> actions;
   @override
@@ -100,9 +102,10 @@ class SpreadsheetDialogFooter extends StatelessWidget {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
-            pendingCount == 0
-                ? 'Sem alterações pendentes'
-                : '$pendingCount ${pendingCount == 1 ? 'alteração pendente' : 'alterações pendentes'}',
+            pendingLabel ??
+                (pendingCount == 0
+                    ? 'Sem alterações pendentes'
+                    : '$pendingCount ${pendingCount == 1 ? 'alteração pendente' : 'alterações pendentes'}'),
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w600, fontSize: 12)),
         const SizedBox(height: 3),

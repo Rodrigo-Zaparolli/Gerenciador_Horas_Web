@@ -581,10 +581,13 @@ def worksheet_snapshot(book, body):
     table_headers = set()
     schedule_end = None
     consultation_end = None
+    consultation_table_name = None
     def header_text(raw):
         return re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', str(raw or '')).encode('ascii', 'ignore').decode().lower())
     for table in getattr(sheet, 'ListObjects', []):
         area = table.Range
+        list_rows = getattr(table,'ListRows',None)
+        data_rows = int(list_rows.Count) if list_rows is not None else int(area.Rows.Count)-1-int(bool(getattr(table,'ShowTotals',False)))
         if name.lower() == 'cronogramas' and row == 5 and column == 2 and int(area.Row) == 5 and int(area.Column) == 2 and str(sheet.Cells(5, 8).Value2).strip() == 'Status' and str(sheet.Cells(5, 9).Value2).startswith('Trabalho'):
             schedule_end = int(area.Row + area.Rows.Count - 1)
             if getattr(table, 'ShowTotals', False):
@@ -596,11 +599,12 @@ def worksheet_snapshot(book, body):
                 str(sheet.Cells(2, 3).Value2).strip().casefold() == 'consultoria' and
                 tuple(header_text(sheet.Cells(6,c).Value2) for c in range(2,10)) ==
                     ('data','manhainicio','manhafim','tardeinicio','tardefim','total','status','descricao') and
-                bool(sheet.Cells(7,7).HasFormula)):
+                (data_rows == 0 or bool(sheet.Cells(7,7).HasFormula))):
             if consultation_end is not None:
                 raise ValueError('Mais de uma tabela de Consultoria foi encontrada.')
-            consultation_end = int(area.Row + area.Rows.Count - 1) - int(bool(getattr(table, 'ShowTotals', False)))
-            if not 7 <= consultation_end <= 2006:
+            consultation_end = 6 + data_rows
+            consultation_table_name = getattr(table,'Name','')
+            if not 6 <= consultation_end <= 2006:
                 raise ValueError('Tabela de Consultoria fora do limite de 2000 encontros.')
         if getattr(table, 'ShowHeaders', True):
             table_headers.update((int(area.Row), c) for c in range(int(area.Column), int(area.Column + area.Columns.Count)))
@@ -640,8 +644,19 @@ def worksheet_snapshot(book, body):
                 'group': 'Guia', 'value': value(cell, kind) if kind != 'number' else float(raw),
                 'consultoriaStatus': consultation_end is not None and c == 8 and r > 6, 'scheduleStatus': schedule_end is not None and c == 8 and r > 5, 'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
             formulas.append([address, str(formula) if calculated else None])
+    description = 'Consultoria'
+    if consultation_end is not None:
+        if consultation_end > 6:
+            description = str(sheet.Cells(7,9).Value2 or 'Consultoria')
+        else:
+            for summary_table in getattr(sheet,'ListObjects',[]):
+                r=int(summary_table.Range.Row)
+                if r>6 and header_text(sheet.Cells(r,9).Value2)=='descricao':
+                    description=str(sheet.Cells(r+1,9).Value2 or 'Consultoria')
+                    break
     return {'fields': fields, 'tasks': [], 'consultoriaTable': consultation_end is not None,
-        'consultoriaDetails': {'client': str(sheet.Cells(2, 4).Text), 'contractedHours': value(sheet.Cells(3, 4), 'time')} if consultation_end is not None else None,
+        'consultoriaRowOperationsVersion': 1 if consultation_end is not None else None,
+        'consultoriaDetails': {'tableName': consultation_table_name, 'description': description, 'client': str(sheet.Cells(2, 4).Text), 'contractedHours': value(sheet.Cells(3, 4), 'time')} if consultation_end is not None else None,
         'scheduleTable': schedule_end is not None, 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
         'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}
 
@@ -675,7 +690,16 @@ def edit(path, body):
         shutil.copy2(path, staged)
         with workbook(staged, writable=True) as (app, book):
             before = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
-            changes = [] if previewing and body.get('changes') == [] else validated_changes(before, body.get('changes'))
+            from local_edesk.consultoria_rows import split_changes,plan as row_plan,apply as apply_rows
+            payload = body.get('changes')
+            normal, operations = ([],[]) if previewing and payload == [] else split_changes(payload)
+            if operations and not writing:
+                raise ValueError('Linhas so podem ser alteradas ao salvar a planilha.')
+            changes = validated_changes(before, normal) if normal else []
+            expected_rows = row_plan(before,changes,operations) if operations else None
+            previous_calculation = app.Calculation if expected_rows is not None else None
+            if expected_rows is not None:
+                app.Calculation = -4135  # Batch row edits without recalculating after every cell.
             for field, new in changes:
                 cell = book.Worksheets(field['sheet']).Range(field['cell'])
                 try:
@@ -685,7 +709,11 @@ def edit(path, body):
                 finally:
                     # Release the Range proxy before closing/uninitializing COM.
                     cell = None
+            if expected_rows is not None:
+                apply_rows(book,before,expected_rows)
             app.CalculateFull()
+            if expected_rows is not None:
+                app.Calculation = previous_calculation
             if previewing:
                 preview = status_preview(book, body.get('serviceType'), body.get('sheetNames'))
             else:
@@ -695,13 +723,20 @@ def edit(path, body):
                 raise ValueError('O arquivo mudou durante a prévia. Recarregue para conferir.')
             return {'preview': True, 'statusPreview': preview, 'revision': original,
                     'entrySheet': (body.get('sheetNames') or {}).get('entry', 'Informa\u00e7\u00f5es de entrada'), 'checklistSheet': checklist_sheet(body.get('serviceType'), body.get('sheetNames')), 'filename': path.name}
-        preserve_package(path, staged, changes)
+        if expected_rows is not None:
+            from local_edesk.consultoria_rows import preserve_assets_and_check
+            preserve_assets_and_check(path,staged,body['worksheet'])
+        else:
+            preserve_package(path, staged, changes)
         with workbook(staged) as (_, book):
             checked = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
-        if checked['formulaFingerprint'] != before['formulaFingerprint']:
+        if expected_rows is not None:
+            from local_edesk.consultoria_rows import verify as verify_rows
+            verify_rows(checked,expected_rows)
+        elif checked['formulaFingerprint'] != before['formulaFingerprint']:
             raise ValueError('Uma fórmula do modelo mudou. O original foi preservado.')
         mapped = {(f['sheet'], f['cell']): f['value'] for f in checked['fields'] + checked['tasks']}
-        if any(mapped.get((f['sheet'], f['cell'])) != new for f, new in changes):
+        if expected_rows is None and any(mapped.get((f['sheet'], f['cell'])) != new for f, new in changes):
             raise ValueError('Não foi possível conferir os valores salvos. O original foi preservado.')
         if vba(staged) != vba(path):
             raise ValueError('As macros da cópia mudaram. O original foi preservado.')
@@ -723,7 +758,7 @@ def edit(path, body):
         from local_edesk.backup_policy import prune_workbook_backups
         cleanup_warning = prune_workbook_backups(path, latest_backup=backup)
         return {**checked, 'revision': revision(path), 'filename': path.name,
-                'saved': True, 'backup': str(backup), 'backupCleanupWarning': cleanup_warning,
+                'saved': True, 'rowsApplied': {'added':len(expected_rows['added']),'deleted':len(expected_rows['deleted'])} if expected_rows is not None else None, 'backup': str(backup), 'backupCleanupWarning': cleanup_warning,
                 'savedAt': datetime.now().isoformat()}
     finally:
         if staged is not None:
