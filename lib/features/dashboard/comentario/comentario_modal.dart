@@ -11,6 +11,7 @@ import '../../../data/services/project_update_service.dart';
 import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
+import 'comment_tab.dart';
 import '../../edesk/comment_document_snapshot.dart';
 import '../../../data/services/recoverable_draft.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
@@ -7157,6 +7158,11 @@ class ComentarioModal {
                                                                         editorScrollController,
                                                                     config: quill
                                                                         .QuillEditorConfig(
+                                                                      // Quill 11.6 hook runs before its one-character Tab handling.
+                                                                      // ignore: experimental_member_use
+                                                                      onKeyPressed: (event, node) => handleCommentTab(editorController, event),
+                                                                      customShortcuts: kIsWeb ? browserCommentPasteShortcuts : null,
+                                                                      customActions: kIsWeb ? browserCommentPasteActions() : null,
                                                                       placeholder:
                                                                           'Digite sua resposta ou atualização para o E-Desk...',
                                                                       padding:

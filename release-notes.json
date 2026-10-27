@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Editar Apontamento agora permite corrigir o numero do trabalho no E-Desk, sem excluir nem criar outro lancamento de horas.",
-    "O numero corrigido aparece na conferencia e sera usado no envio. Data, horarios e demais dados do apontamento sao mantidos.",
+    "Comentario: corrigido o Ctrl+V no descritivo, usando a colagem do navegador no editor.",
+    "Tab avanca ate a proxima parada de quatro espacos; Shift+Tab volta o recuo sem apagar letras nem sair do editor. O espacamento acompanha a conferencia e o envio.",
     "Esta atualizacao nao exige baixar novamente a integracao local."
   ]
 }
