@@ -77,6 +77,7 @@ void main() {
               return {
                 'worksheet': args['worksheet'],
                 'worksheetTypesVersion': 2,
+                'scheduleTable': true,
                 'firstRow': args['firstRow'],
                 'firstColumn': args['firstColumn'],
                 'revision': 'revision',
@@ -94,11 +95,13 @@ void main() {
                                 : 'text',
                         'percent': r == 6 && c == 8,
                         'readOnly': false,
-                        'value': r == 6 && c == 3
-                            ? '08:00'
-                            : r == 6 && c == 8
-                                ? .99
-                                : '',
+                        'value': r == 6 && c == 9
+                            ? 'Consultoria Catalog'
+                            : r == 6 && c == 3
+                                ? '08:00'
+                                : r == 6 && c == 8
+                                    ? .99
+                                    : '',
                         'display': r == 6 && c == 3
                             ? '08:00'
                             : r == 6 && c == 8
@@ -113,7 +116,7 @@ void main() {
     expect(calls[1]['firstRow'], 5);
     expect(calls[1]['firstColumn'], 2);
     expect(remembered, ['Cronogramas']);
-    for (final step in [('08:00', '09:15'), ('99%', '50')]) {
+    for (final step in [('08:00', '09:15')]) {
       await tester.ensureVisible(find.text(step.$1));
       await tester.tap(find.text(step.$1));
       await tester.pumpAndSettle();
@@ -121,6 +124,12 @@ void main() {
       await tester.tap(find.text('Aplicar'));
       await tester.pumpAndSettle();
     }
+    final status = find.byKey(const ValueKey('schedule-status-H6'));
+    await tester.ensureVisible(status);
+    await tester.tap(status);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('50%').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar na planilha'));
     await tester.pumpAndSettle();
     final write = calls.singleWhere((c) => c['action'] == 'excel-editor-write');

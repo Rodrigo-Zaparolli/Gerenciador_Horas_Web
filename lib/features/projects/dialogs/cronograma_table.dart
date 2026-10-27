@@ -116,128 +116,132 @@ class CronogramaTable extends StatelessWidget {
     final progress = scheduleProgress(rows);
     final colors = Theme.of(context).colorScheme;
     const columns = ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-    return Scrollbar(
-        controller: vertical,
-        thumbVisibility: true,
-        child: SingleChildScrollView(
+    return LayoutBuilder(
+        builder: (context, constraints) => Scrollbar(
             controller: vertical,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Scrollbar(
-                      controller: horizontal,
-                      thumbVisibility: true,
-                      notificationPredicate: (n) => n.depth == 0,
-                      child: SingleChildScrollView(
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+                controller: vertical,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Scrollbar(
                           controller: horizontal,
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                              headingRowColor: WidgetStatePropertyAll(
-                                  colors.primaryContainer),
-                              dataRowMinHeight: 44,
-                              dataRowMaxHeight: 52,
-                              columnSpacing: 20,
-                              columns: [
-                                for (final title in [
-                                  'Data',
-                                  'Manhã início',
-                                  'Manhã fim',
-                                  'Tarde início',
-                                  'Tarde fim',
-                                  'Total',
-                                  'Status',
-                                  'Trabalho / Descrição'
-                                ])
-                                  DataColumn(label: Text(title))
-                              ],
-                              rows: [
-                                for (var index = 0;
-                                    index < rows.length;
-                                    index++)
-                                  DataRow(
-                                      color: WidgetStatePropertyAll(rows[index]
-                                              .fields
-                                              .values
-                                              .any((f) =>
-                                                  edits.containsKey(f['cell']))
-                                          ? colors.tertiaryContainer
-                                          : index.isOdd
-                                              ? colors.surfaceContainerLow
-                                              : null),
-                                      cells: [
-                                        for (final col in columns)
-                                          DataCell(
-                                              col == 'H' &&
-                                                      rows[index].fields[col]
-                                                              ?['readOnly'] !=
-                                                          true
-                                                  ? SizedBox(
-                                                      width: 134,
-                                                      child: DropdownButton<
-                                                              dynamic>(
-                                                          key: ValueKey(
-                                                              'schedule-status-${rows[index].fields[col]?['cell']}'),
-                                                          isExpanded: true,
-                                                          value: rows[index]
-                                                              .value(col),
-                                                          items: [
-                                                            for (final status
-                                                                in <dynamic>{
-                                                              0.0,
-                                                              .25,
-                                                              .5,
-                                                              .75,
-                                                              1.0,
-                                                              'Programado',
-                                                              'Cancelado',
-                                                              rows[index]
-                                                                  .value(col)
-                                                            })
-                                                              DropdownMenuItem(
-                                                                  value: status,
-                                                                  child: Text(status
-                                                                          is num
-                                                                      ? '${(status * 100).toStringAsFixed(status * 100 == (status * 100).roundToDouble() ? 0 : 1)}%'
-                                                                      : (status ??
-                                                                              '')
-                                                                          .toString()))
-                                                          ],
-                                                          onChanged: busy
-                                                              ? null
-                                                              : (v) => onStatus(
-                                                                  rows[index].fields[
-                                                                      col]!,
-                                                                  v)))
-                                                  : Text(display(
-                                                      rows[index], col)),
-                                              onTap: busy ||
-                                                      col == 'G' ||
-                                                      col == 'H' ||
-                                                      rows[index].fields[col] ==
-                                                          null ||
-                                                      rows[index].fields[col]!['readOnly'] ==
-                                                          true
-                                                  ? null
-                                                  : () => onEdit(rows[index].fields[col]!))
-                                      ])
-                              ]))),
-                  const SizedBox(height: 16),
-                  const Text('Progresso por trabalho · prévia',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const Text(
-                      'Ponderado pelas horas de cada encontro. As fórmulas do Excel são preservadas.'),
-                  for (final entry in progress.entries)
-                    Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                  '${entry.key} · ${entry.value == null ? 'Confira os horários' : '${(entry.value! * 100).toStringAsFixed(1).replaceAll('.', ',')}%'}'),
-                              const SizedBox(height: 4),
-                              LinearProgressIndicator(
-                                  value: (entry.value ?? 0).clamp(0, 1)),
-                            ])),
-                ])));
+                          thumbVisibility: true,
+                          notificationPredicate: (n) => n.depth == 0,
+                          child: SingleChildScrollView(
+                              controller: horizontal,
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                      minWidth: constraints.maxWidth),
+                                  child: DataTable(
+                                      headingRowColor: WidgetStatePropertyAll(
+                                          colors.primaryContainer),
+                                      dataRowMinHeight: 44,
+                                      dataRowMaxHeight: 52,
+                                      columnSpacing: 20,
+                                      columns: [
+                                        for (final title in [
+                                          'Data',
+                                          'Manhã início',
+                                          'Manhã fim',
+                                          'Tarde início',
+                                          'Tarde fim',
+                                          'Total',
+                                          'Status',
+                                          'Trabalho / Descrição'
+                                        ])
+                                          DataColumn(label: Text(title))
+                                      ],
+                                      rows: [
+                                        for (var index = 0;
+                                            index < rows.length;
+                                            index++)
+                                          DataRow(
+                                              color: WidgetStatePropertyAll(rows[
+                                                          index]
+                                                      .fields
+                                                      .values
+                                                      .any((f) =>
+                                                          edits.containsKey(
+                                                              f['cell']))
+                                                  ? colors.tertiaryContainer
+                                                  : index.isOdd
+                                                      ? colors
+                                                          .surfaceContainerLow
+                                                      : null),
+                                              cells: [
+                                                for (final col in columns)
+                                                  DataCell(
+                                                      col == 'H' &&
+                                                              rows[index].fields[col]?['readOnly'] !=
+                                                                  true
+                                                          ? SizedBox(
+                                                              width: 134,
+                                                              child:
+                                                                  DropdownButton<
+                                                                          dynamic>(
+                                                                      key: ValueKey(
+                                                                          'schedule-status-${rows[index].fields[col]?['cell']}'),
+                                                                      isExpanded:
+                                                                          true,
+                                                                      value: rows[index]
+                                                                          .value(
+                                                                              col),
+                                                                      items: [
+                                                                        for (final status
+                                                                            in <dynamic>{
+                                                                          0.0,
+                                                                          .25,
+                                                                          .5,
+                                                                          .75,
+                                                                          1.0,
+                                                                          'Programado',
+                                                                          'Cancelado',
+                                                                          rows[index]
+                                                                              .value(col)
+                                                                        })
+                                                                          DropdownMenuItem(
+                                                                              value: status,
+                                                                              child: Text(status is num ? '${(status * 100).toStringAsFixed(status * 100 == (status * 100).roundToDouble() ? 0 : 1)}%' : (status ?? '').toString()))
+                                                                      ],
+                                                                      onChanged: busy
+                                                                          ? null
+                                                                          : (v) => onStatus(
+                                                                              rows[index].fields[
+                                                                                  col]!,
+                                                                              v)))
+                                                          : Text(display(
+                                                              rows[index],
+                                                              col)),
+                                                      onTap: busy ||
+                                                              col == 'G' ||
+                                                              col == 'H' ||
+                                                              rows[index].fields[col] ==
+                                                                  null ||
+                                                              rows[index].fields[col]!['readOnly'] == true
+                                                          ? null
+                                                          : () => onEdit(rows[index].fields[col]!))
+                                              ])
+                                      ])))),
+                      const SizedBox(height: 16),
+                      const Text('Progresso por trabalho · prévia',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                          'Ponderado pelas horas de cada encontro. As fórmulas do Excel são preservadas.'),
+                      for (final entry in progress.entries)
+                        Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                      '${entry.key} · ${entry.value == null ? 'Confira os horários' : '${(entry.value! * 100).toStringAsFixed(1).replaceAll('.', ',')}%'}'),
+                                  const SizedBox(height: 4),
+                                  LinearProgressIndicator(
+                                      value: (entry.value ?? 0).clamp(0, 1)),
+                                ])),
+                    ]))));
   }
 }

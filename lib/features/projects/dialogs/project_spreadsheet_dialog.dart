@@ -76,6 +76,10 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
                 return ProjectSpreadsheetDialog(project: project);
               }
               return WorkbookSheetDialog(
+                projectId:
+                    initial.toLowerCase() == 'cronogramas' ? project.id : null,
+                client: project.client,
+                serviceType: project.serviceType,
                 initialWorksheet: initial,
                 allowed: () =>
                     FirebaseAuth.instance.currentUser?.uid == user.uid,
@@ -253,6 +257,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           context: context,
           barrierDismissible: false,
           builder: (_) => WorkbookSheetDialog(
+              projectId: widget.project.id,
+              client: widget.project.client,
+              serviceType: widget.project.serviceType,
+              initialWorksheet:
+                  defaultProjectWorksheet(widget.project.serviceType),
               onWorksheetOpened: widget.transport == null
                   ? (name) => ProjectWorksheetPreference.save(
                       owner!, widget.project.id, name)

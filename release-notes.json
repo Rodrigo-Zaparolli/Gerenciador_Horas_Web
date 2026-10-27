@@ -1,8 +1,7 @@
 {
   "changes": [
-    "Cronograma do Treinamento Catalog com tabela de datas, horarios e Status por encontro, no formato da planilha.",
-    "Previa do progresso de cada trabalho ponderada pelas horas, atualizada ao alterar o Status. Preserva valores existentes como 99%.",
-    "Salvamento nas celulas originais do Excel, preservando formulas, macros e backups. Requer atualizar a integracao local para v50.",
-    "Demais guias mantidas. Downloads leve e completo disponiveis no modal de atualizacao."
+    "Cronograma aberto diretamente no modal Planilha do projeto, com identificacao do cliente e guias no topo, conforme a previa aprovada.",
+    "Tabela ocupa a largura disponivel, com edicao do Status e progresso por trabalho. Falhas de reconhecimento deixam de abrir silenciosamente o editor antigo.",
+    "Integracao v51 inicia sem abrir a pagina Conectar E-Desk. A nova apresentacao do Cronograma e compativel com a integracao v50."
   ]
 }

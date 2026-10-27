@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/cronograma_table.dart';
@@ -25,6 +26,111 @@ List<Map<String, dynamic>> fields() => [
     ];
 
 void main() {
+  testWidgets('retry after failed direct read keeps schedule coordinates',
+      (tester) async {
+    var reads = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: WorkbookSheetDialog(
+            projectId: '2265173',
+            client: 'RIMO',
+            initialWorksheet: 'Cronogramas',
+            allowed: () => true,
+            call: (args) async {
+              if (args['action'] == 'excel-editor-sheets') {
+                return {
+                  'sheetNames': ['Cronogramas']
+                };
+              }
+              expect(args['firstRow'], 5);
+              expect(args['firstColumn'], 2);
+              if (reads++ == 0) throw StateError('Falha temporaria');
+              return {
+                'worksheet': 'Cronogramas',
+                'firstRow': 5,
+                'firstColumn': 2,
+                'worksheetTypesVersion': 2,
+                'scheduleTable': true,
+                'fields': fields(),
+                'revision': 'rev'
+              };
+            })));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Falha temporaria'), findsOneWidget);
+    await tester.tap(find.text('Recarregar do Excel'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('schedule-status-H6')), findsOneWidget);
+    expect(reads, 2);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'project header and tabs remain visible while schedule loads directly',
+      (tester) async {
+    final pending = Completer<Map<String, dynamic>>();
+    final calls = <String>[];
+    await tester.pumpWidget(MaterialApp(
+        home: WorkbookSheetDialog(
+            projectId: '2265173',
+            client: 'RIMO',
+            serviceType: 'Treinamento Catalog',
+            initialWorksheet: 'Cronogramas',
+            allowed: () => true,
+            call: (args) async {
+              calls.add(args['action']);
+              if (args['action'] == 'excel-editor-sheets') {
+                return {
+                  'sheetNames': ['Cronogramas']
+                };
+              }
+              return pending.future;
+            })));
+    await tester.pump();
+    expect(find.text('Planilha do projeto'), findsOneWidget);
+    expect(find.text('Cronograma'), findsOneWidget);
+    expect(find.text('Todas as guias da planilha'), findsNothing);
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(calls, ['excel-editor-read']);
+    pending.complete({
+      'worksheet': 'Cronogramas',
+      'firstRow': 5,
+      'firstColumn': 2,
+      'scheduleTable': true,
+      'worksheetTypesVersion': 2,
+      'revision': 'rev',
+      'fields': fields()
+    });
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('schedule-status-H6')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  for (final recognized in [false, null]) {
+    testWidgets(
+        'unrecognized schedule never falls back to old grid: $recognized',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+          home: WorkbookSheetDialog(
+        initialWorksheet: 'Cronogramas',
+        allowed: () => true,
+        call: (args) async => args['action'] == 'excel-editor-sheets'
+            ? {
+                'sheetNames': ['Cronogramas']
+              }
+            : {
+                'worksheet': 'Cronogramas',
+                'firstRow': 5,
+                'firstColumn': 2,
+                'worksheetTypesVersion': 2,
+                if (recognized != null) 'scheduleTable': recognized,
+                'fields': fields()
+              },
+      )));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('O editor antigo'), findsOneWidget);
+      expect(find.byType(DataTable), findsNothing);
+      final save = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Salvar na planilha'));
+      expect(save.onPressed, isNull);
+    });
+  }
   test(
       'weighted progress includes all encounters, cancellation and restored edits',
       () {
@@ -55,6 +161,9 @@ void main() {
       final pending = fields();
       await tester.pumpWidget(MaterialApp(
           home: WorkbookSheetDialog(
+              projectId: '2265173',
+              client: 'RIMO',
+              serviceType: 'Treinamento Catalog',
               initialWorksheet: 'Cronogramas',
               allowed: () => true,
               call: (args) async {

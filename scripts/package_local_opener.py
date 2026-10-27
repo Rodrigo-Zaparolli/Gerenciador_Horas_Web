@@ -75,7 +75,7 @@ def package(complete=False):
                 'INTEGRACAO E-DESK COMPLETA - WINDOWS 64 BITS\r\n\r\n'
                 '1. Use Extrair tudo para colocar o pacote em uma pasta permanente.\r\n'
                 '2. Execute Iniciar integracao E-Desk.cmd (o arquivo com esse nome na pasta extraida).\r\n'
-                '3. Na pagina aberta, verifique a conexao e permita o acesso local se solicitado.\r\n'
+                '3. A integracao inicia sem abrir o navegador. Abra o app e permita o acesso local se solicitado.\r\n'
                 '4. Volte ao app e atualize com Ctrl + F5.\r\n\r\n'
                 'Inclui Python, navegador e o script de horas fornecido. Nao precisa instalar Python.\r\n'
                 'Tambem abre pastas, planilhas e o espelho do Excel (Excel instalado necessario para o espelho).\r\n'
