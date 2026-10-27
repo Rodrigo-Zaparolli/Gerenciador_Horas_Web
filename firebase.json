@@ -101,6 +101,221 @@
         "source": "/downloads/edesk-extensao-1.0.2.zip",
         "destination": "/downloads/edesk-extensao-1.0.3.zip",
         "type": 301
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v36.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v37.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v38.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v39.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v40.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v41.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v42.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v43.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v44.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v45.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v46.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v47.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v48.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v49.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v50.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v51.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v52.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v53.zip",
+        "destination": "/downloads/abertura-local-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-47.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-48.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-49.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-50.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-51.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-52.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-53.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v36.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v37.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v38.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v39.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v40.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v41.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v42.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v43.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v44.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v45.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v46.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v47.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v48.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v49.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v50.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v51.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v52.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v53.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v54.zip",
+        "type": 302
       }
     ]
   }

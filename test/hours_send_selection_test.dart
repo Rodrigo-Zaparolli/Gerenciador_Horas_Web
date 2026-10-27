@@ -71,6 +71,7 @@ void main() {
       await tester.tap(find.byTooltip('Editar apontamento').last); await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).at(0), 'Revisada');
       await tester.enterText(find.byType(TextFormField).at(2), '10:00');
+      await tester.enterText(find.byKey(const ValueKey('time-log-work-number')), '3');
       await tester.tap(find.text('Salvar')); await tester.pumpAndSettle();
       expect(saved!.id, '1');
       expect(find.text('2 de 2 selecionado(s) · 03:00'), findsOneWidget);
@@ -81,6 +82,8 @@ void main() {
       await tester.tap(find.text('Confirmar e enviar')); await tester.pumpAndSettle();
       expect(result!.map((log) => log.id).toList(), failDelete ? ['0', '1'] : ['1']);
       expect(result!.last.endTime, '10:00');
+      expect(result!.last.targetId, 'project-1_3');
+      expect(logs[1].targetId, 'project-1');
       expect(logs[1].endTime, '09:00');
     });
   }

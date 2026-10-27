@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Consultoria: cada linha agora tem Adicionar linha abaixo e Excluir linha. A inclusao respeita a posicao escolhida na tabela do sistema e no Excel.",
-    "Inclusoes e exclusoes continuam pendentes ate Salvar na planilha, com possibilidade de desfazer. Atualize e reinicie a integracao v54 para inserir abaixo."
+    "Editar Apontamento agora permite corrigir o numero do trabalho no E-Desk, sem excluir nem criar outro lancamento de horas.",
+    "O numero corrigido aparece na conferencia e sera usado no envio. Data, horarios e demais dados do apontamento sao mantidos.",
+    "Esta atualizacao nao exige baixar novamente a integracao local."
   ]
 }

@@ -16,38 +16,62 @@ class TaskLogEditDialog extends StatefulWidget {
 class _TaskLogEditDialogState extends State<TaskLogEditDialog> {
   final form = GlobalKey<FormState>();
   late final task = TextEditingController(text: widget.log.taskName ?? '');
-  late final description = TextEditingController(text: widget.log.description ?? '');
+  late final description =
+      TextEditingController(text: widget.log.description ?? '');
   late final start = TextEditingController(text: widget.log.startTime);
   late final end = TextEditingController(text: widget.log.endTime);
+  late final originalWork = widget.log.targetId.contains('_')
+      ? widget.log.targetId.split('_').last.trim()
+      : '';
+  late final work = TextEditingController(text: originalWork);
+  String get requestId => widget.log.targetId.split('_').first.trim();
   bool saving = false;
   String? error;
 
   @override
   void dispose() {
-    for (final controller in [task, description, start, end]) { controller.dispose(); }
+    for (final controller in [task, description, start, end, work]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   Future<void> pick(TextEditingController controller) async {
     final minutes = WorkDuration.clock(controller.text) ?? 480;
-    final selected = await showTaskTimePicker(context: context,
-      initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60));
+    final selected = await showTaskTimePicker(
+        context: context,
+        initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60));
     if (!mounted || saving || selected == null) return;
-    setState(() => controller.text = WorkDuration.format(selected.hour * 60 + selected.minute));
+    setState(() => controller.text =
+        WorkDuration.format(selected.hour * 60 + selected.minute));
   }
 
   Future<void> submit() async {
     if (saving || !form.currentState!.validate()) return;
-    final minutes = WorkDuration.clock(end.text)! - WorkDuration.clock(start.text)!;
+    final minutes =
+        WorkDuration.clock(end.text)! - WorkDuration.clock(start.text)!;
     final original = widget.log;
-    final updated = TimeLog(id: original.id, targetId: original.targetId,
-      date: original.date, startTime: WorkDuration.format(WorkDuration.clock(start.text)!),
-      endTime: WorkDuration.format(WorkDuration.clock(end.text)!),
-      durationFormatted: WorkDuration.format(minutes), durationMinutes: minutes,
-      hours: minutes / 60, isRegistered: original.isRegistered,
-      projectId: original.projectId, projectName: original.projectName,
-      taskName: task.text, description: description.text, typeHs: original.typeHs);
-    setState(() { saving = true; error = null; });
+    final updated = TimeLog(
+        id: original.id,
+        targetId: work.text.trim() == originalWork
+            ? original.targetId
+            : '${requestId}_${work.text.trim()}',
+        date: original.date,
+        startTime: WorkDuration.format(WorkDuration.clock(start.text)!),
+        endTime: WorkDuration.format(WorkDuration.clock(end.text)!),
+        durationFormatted: WorkDuration.format(minutes),
+        durationMinutes: minutes,
+        hours: minutes / 60,
+        isRegistered: original.isRegistered,
+        projectId: original.projectId,
+        projectName: original.projectName,
+        taskName: task.text,
+        description: description.text,
+        typeHs: original.typeHs);
+    setState(() {
+      saving = true;
+      error = null;
+    });
     try {
       await widget.save(updated).timeout(const Duration(seconds: 30));
       if (!mounted) return;
@@ -64,46 +88,100 @@ class _TaskLogEditDialogState extends State<TaskLogEditDialog> {
     }
   }
 
-  Widget timeField(String label, TextEditingController controller) => TextFormField(
-    controller: controller, enabled: !saving, keyboardType: TextInputType.datetime,
-    decoration: InputDecoration(labelText: label, hintText: 'HH:MM',
-      suffixIcon: IconButton(tooltip: 'Selecionar $label', onPressed: saving ? null : () => pick(controller),
-        icon: const Icon(Icons.schedule))),
-    validator: (value) {
-      final clock = WorkDuration.clock(value ?? '');
-      if (clock == null) return 'Informe HH:MM válido.';
-      if (controller == end) {
-        final first = WorkDuration.clock(start.text);
-        if (first != null && clock <= first) return 'Término deve ser após o início.';
-      }
-      return null;
-    },
-  );
+  Widget timeField(String label, TextEditingController controller) =>
+      TextFormField(
+        controller: controller,
+        enabled: !saving,
+        keyboardType: TextInputType.datetime,
+        decoration: InputDecoration(
+            labelText: label,
+            hintText: 'HH:MM',
+            suffixIcon: IconButton(
+                tooltip: 'Selecionar $label',
+                onPressed: saving ? null : () => pick(controller),
+                icon: const Icon(Icons.schedule))),
+        validator: (value) {
+          final clock = WorkDuration.clock(value ?? '');
+          if (clock == null) return 'Informe HH:MM válido.';
+          if (controller == end) {
+            final first = WorkDuration.clock(start.text);
+            if (first != null && clock <= first) {
+              return 'Término deve ser após o início.';
+            }
+          }
+          return null;
+        },
+      );
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !saving,
-    child: AlertDialog(
-      title: const Text('Editar Apontamento'),
-      content: SizedBox(width: 420, child: SingleChildScrollView(child: Form(key: form,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextFormField(controller: task, enabled: !saving, decoration: const InputDecoration(labelText: 'Nome da Tarefa')),
-          const SizedBox(height: 16),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: timeField('Início', start)), const SizedBox(width: 12),
-            Expanded(child: timeField('Término', end)),
-          ]),
-          const SizedBox(height: 16),
-          TextFormField(controller: description, enabled: !saving, maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Descrição / Descritivo')),
-          if (error != null) Padding(padding: const EdgeInsets.only(top: 12),
-            child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-        ])))),
-      actions: [
-        TextButton(onPressed: saving ? null : () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-        FilledButton(onPressed: saving ? null : submit,
-          child: Text(saving ? 'Salvando…' : 'Salvar')),
-      ],
-    ),
-  );
+        canPop: !saving,
+        child: AlertDialog(
+          title: const Text('Editar Apontamento'),
+          content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                  child: Form(
+                      key: form,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        TextFormField(
+                            controller: task,
+                            enabled: !saving,
+                            decoration: const InputDecoration(
+                                labelText: 'Nome da Tarefa')),
+                        const SizedBox(height: 16),
+                        Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: timeField('Início', start)),
+                              const SizedBox(width: 12),
+                              Expanded(child: timeField('Término', end)),
+                            ]),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                            key: const ValueKey('time-log-work-number'),
+                            controller: work,
+                            enabled: !saving,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                                labelText: 'N\u00famero do trabalho no E-Desk',
+                                helperText:
+                                    'Solicita\u00e7\u00e3o: $requestId'),
+                            validator: (value) {
+                              final text = (value ?? '').trim();
+                              if (text.isEmpty && originalWork.isEmpty) {
+                                return null;
+                              }
+                              if (!RegExp(r'^[0-9]+$').hasMatch(text) ||
+                                  (int.tryParse(text) ?? 0) <= 0) {
+                                return 'Informe um n\u00famero de trabalho maior que zero.';
+                              }
+                              return null;
+                            }),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                            controller: description,
+                            enabled: !saving,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                                labelText: 'Descrição / Descritivo')),
+                        if (error != null)
+                          Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Text(error!,
+                                  style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .error))),
+                      ])))),
+          actions: [
+            TextButton(
+                onPressed: saving ? null : () => Navigator.of(context).pop(),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: saving ? null : submit,
+                child: Text(saving ? 'Salvando…' : 'Salvar')),
+          ],
+        ),
+      );
 }

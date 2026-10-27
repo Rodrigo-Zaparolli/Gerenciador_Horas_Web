@@ -55,6 +55,8 @@ try {
         }
     } | ConvertTo-Json -Depth 4
     [System.IO.File]::WriteAllText($manifestPath, $manifest, [System.Text.UTF8Encoding]::new($false))
+    & (Join-Path $projectDirectory 'python\python.exe') (Join-Path $PSScriptRoot 'prepare_hosting_downloads.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Falha ao preparar downloads atuais para o Hosting.' }
 } finally {
     Pop-Location
 }
