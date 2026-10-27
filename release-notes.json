@@ -1,7 +1,8 @@
 {
   "changes": [
-    "Corrigida a abertura de guias salvas diferentes de Cronogramas: o modal mantem a identificacao do projeto e as guias no topo.",
-    "Leituras recusadas porque o Excel esta ocupado aguardam e tentam novamente por tempo limitado. Fechar a janela cancela as proximas tentativas; gravacoes nao sao repetidas automaticamente.",
-    "Correcao somente no site, compativel com a integracao v51 ja instalada."
+    "Consultoria com tabela propria de datas, horarios, Total, Status textual e Descricao, sem grade de letras e numeros. Resumo mostra horas contratadas/programadas, inicio/fim, realizado/restante e percentual.",
+    "Catalog/Rimo mantem Status percentual e progresso ponderado por trabalho. O resumo permanece visivel enquanto os encontros rolam.",
+    "As guias mapeadas de informacoes de entrada, Checklist e Linha do Tempo voltam aos formularios originais. A grade de celulas fica como opcao avancada apenas nas guias ainda sem modelo proprio.",
+    "Atualize a integracao para v52 para reconhecer e salvar a tabela de Consultorias. Preserva vinculos de pasta/planilha, formulas, macros e backups."
   ]
 }

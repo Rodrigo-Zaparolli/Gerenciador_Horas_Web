@@ -1,3 +1,4 @@
+import 'project_worksheet_preference.dart';
 import 'spreadsheet_dialog_chrome.dart';
 import 'cronograma_table.dart';
 import 'dart:async';
@@ -12,7 +13,9 @@ class WorkbookSheetDialog extends StatefulWidget {
       this.client = '',
       this.serviceType = '',
       this.initialWorksheet,
-      this.onWorksheetOpened});
+      this.onWorksheetOpened,
+      this.onMappedWorksheet});
+  final Future<void> Function(String)? onMappedWorksheet;
   final String? projectId;
   final String client, serviceType;
   bool get projectLayout => projectId != null;
@@ -29,7 +32,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   String? selected, error, savedWorksheet;
   Map<String, dynamic>? data;
   final Map<String, Map<String, dynamic>> edits = {};
-  bool busy = false, saved = false, saving = false, closing = false;
+  bool busy = false,
+      saved = false,
+      saving = false,
+      closing = false,
+      rawGrid = false;
+  bool get structured =>
+      data?['scheduleTable'] == true || data?['consultoriaTable'] == true;
   int row = 1, column = 1, selectionEpoch = 0;
   final vertical = ScrollController(), horizontal = ScrollController();
 
@@ -139,6 +148,10 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       return;
     }
     if (!mounted || busy) return;
+    if (widget.onMappedWorksheet != null && mappedWorksheetTab(name) != null) {
+      await widget.onMappedWorksheet!(name);
+      return;
+    }
     setState(() {
       busy = true;
       error = null;
@@ -169,8 +182,17 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
             'Se a integração já está na v50, envie um print desta guia para conferir o modelo. '
             'Nenhuma alteração foi enviada.');
       }
+      if (name.toLowerCase().contains('consultoria') &&
+          result['consultoriaTable'] != true) {
+        if (result.containsKey('consultoriaTable')) {
+          throw StateError('A tabela de Consultoria desta guia n\u00e3o foi reconhecida. Confira a guia selecionada e o modelo da planilha. Nenhuma c\u00e9lula foi alterada.');
+        }
+        throw StateError(
+            'A tabela de Consultoria precisa da integra\u00e7\u00e3o v52. Atualize e reinicie a integra\u00e7\u00e3o; nenhuma c\u00e9lula foi alterada.');
+      }
       if (mounted) {
         setState(() {
+          rawGrid = false;
           selected = name;
           row = firstRow;
           column = firstColumn;
@@ -340,15 +362,21 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
               SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: [
-                    for (final name in [
+                    for (final name in {
                       names.firstWhere(
                           (n) => n.toLowerCase().contains('entrada'),
                           orElse: () => 'Informa\u00e7\u00f5es de entrada'),
                       names.firstWhere(
                           (n) => n.toLowerCase().contains('checklist'),
                           orElse: () => 'Checklist-Processo'),
-                      'Cronogramas'
-                    ])
+                      if (!widget.serviceType
+                              .toLowerCase()
+                              .contains('consultoria') ||
+                          widget.serviceType.toLowerCase().contains('catalog'))
+                        'Cronogramas',
+                      ...names.where(
+                          (n) => n.toLowerCase().contains('consultoria')),
+                    })
                       Container(
                           decoration: BoxDecoration(
                               border: Border(
@@ -399,7 +427,9 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                     'Toque em uma célula para editar. Fórmulas e células protegidas ficam bloqueadas.')),
-            if (data != null && data?['scheduleTable'] != true)
+            if (data != null &&
+                !structured &&
+                (!widget.projectLayout || rawGrid))
               Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
                 IconButton(
                     tooltip: 'Linhas anteriores',
@@ -431,9 +461,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                     icon: const Icon(Icons.chevron_right)),
               ]),
             Expanded(
-                child: data?['scheduleTable'] == true
+                child: structured
                     ? CronogramaTable(
                         fields: fields,
+                        consultoria: data?['consultoriaTable'] == true,
+                        contractHours: (data?['consultoriaDetails']
+                                as Map?)?['contractedHours']
+                            ?.toString(),
                         edits: edits,
                         busy: busy,
                         vertical: vertical,
@@ -454,68 +488,86 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                             }
                           });
                         })
-                    : fields.isEmpty
+                    : widget.projectLayout && !rawGrid && fields.isNotEmpty
                         ? Center(
-                            child: Text(busy
-                                ? 'Carregando a planilha...'
-                                : widget.projectLayout
-                                    ? 'Use Recarregar do Excel para tentar novamente.'
-                                    : 'Selecione uma guia para abrir.'))
-                        : Scrollbar(
-                            controller: vertical,
-                            thumbVisibility: true,
-                            child: SingleChildScrollView(
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                const Text(
+                                    'Esta guia ainda n\u00e3o possui uma tabela pr\u00f3pria neste editor.'),
+                                TextButton(
+                                    onPressed: () =>
+                                        setState(() => rawGrid = true),
+                                    child: const Text(
+                                        'Ver c\u00e9lulas (avan\u00e7ado)')),
+                              ]))
+                        : fields.isEmpty
+                            ? Center(
+                                child: Text(busy
+                                    ? 'Carregando a planilha...'
+                                    : widget.projectLayout
+                                        ? 'Use Recarregar do Excel para tentar novamente.'
+                                        : 'Selecione uma guia para abrir.'))
+                            : Scrollbar(
                                 controller: vertical,
+                                thumbVisibility: true,
                                 child: SingleChildScrollView(
-                                  controller: horizontal,
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(columns: [
-                                    const DataColumn(label: Text('Linha')),
-                                    for (var c = 0; c < 8; c++)
-                                      DataColumn(
-                                          label: Text(fields[c]['cell']
-                                              .toString()
-                                              .replaceAll(RegExp(r'\d+'), '')))
-                                  ], rows: [
-                                    for (var r = 0; r < fields.length ~/ 8; r++)
-                                      DataRow(cells: [
-                                        DataCell(Text('${row + r}')),
+                                    controller: vertical,
+                                    child: SingleChildScrollView(
+                                      controller: horizontal,
+                                      scrollDirection: Axis.horizontal,
+                                      child: DataTable(columns: [
+                                        const DataColumn(label: Text('Linha')),
                                         for (var c = 0; c < 8; c++)
-                                          DataCell(
-                                              SizedBox(
-                                                  width: 135,
-                                                  child: Row(children: [
-                                                    if (fields[r * 8 + c]
-                                                            ['readOnly'] ==
-                                                        true)
-                                                      const Icon(
-                                                          Icons.lock_outline,
-                                                          size: 12),
-                                                    Expanded(
-                                                        child: Text(
-                                                            (edits[fields[r * 8 + c]
-                                                                            ['cell']]
-                                                                        ?[
-                                                                        'value'] ??
-                                                                    fields[r * 8 + c]
-                                                                        [
-                                                                        'display'] ??
-                                                                    fields[r * 8 +
-                                                                            c][
-                                                                        'value'])
-                                                                .toString(),
-                                                            maxLines: 2,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis)),
-                                                  ])),
-                                              onTap: busy
-                                                  ? null
-                                                  : () =>
-                                                      edit(fields[r * 8 + c])),
-                                      ])
-                                  ]),
-                                )))),
+                                          DataColumn(
+                                              label: Text(fields[c]['cell']
+                                                  .toString()
+                                                  .replaceAll(
+                                                      RegExp(r'\d+'), '')))
+                                      ], rows: [
+                                        for (var r = 0;
+                                            r < fields.length ~/ 8;
+                                            r++)
+                                          DataRow(cells: [
+                                            DataCell(Text('${row + r}')),
+                                            for (var c = 0; c < 8; c++)
+                                              DataCell(
+                                                  SizedBox(
+                                                      width: 135,
+                                                      child: Row(children: [
+                                                        if (fields[r * 8 + c]
+                                                                ['readOnly'] ==
+                                                            true)
+                                                          const Icon(
+                                                              Icons
+                                                                  .lock_outline,
+                                                              size: 12),
+                                                        Expanded(
+                                                            child: Text(
+                                                                (edits[fields[r * 8 + c]['cell']]
+                                                                            ?[
+                                                                            'value'] ??
+                                                                        fields[r * 8 +
+                                                                                c]
+                                                                            [
+                                                                            'display'] ??
+                                                                        fields[r * 8 +
+                                                                                c]
+                                                                            [
+                                                                            'value'])
+                                                                    .toString(),
+                                                                maxLines: 2,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis)),
+                                                      ])),
+                                                  onTap: busy
+                                                      ? null
+                                                      : () => edit(
+                                                          fields[r * 8 + c])),
+                                          ])
+                                      ]),
+                                    )))),
             if (!widget.projectLayout)
               Text(
                   '${edits.length} alteração(ões) pendente(s)${saved ? ' · Última gravação confirmada' : ''}'),

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import tempfile
@@ -13,6 +14,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'web/downloads/integracao-edesk-completa-windows-v2.zip'
+PACKAGE_VERSION = re.search(r"EDESK_INTEGRATION_VERSION = '([^']+)'", (ROOT / 'scripts/start_full_integration.ps1').read_text(encoding='utf-8'))[1]
 VALIDATION = ROOT / 'build/full-integration-validation'
 VALIDATION.mkdir(parents=True, exist_ok=True)
 
@@ -38,7 +40,7 @@ with zipfile.ZipFile(PACKAGE) as archive:
         runtime = extracted / 'python/python.exe'
         env = dict(os.environ, PYTHONNOUSERSITE='1',
                    PLAYWRIGHT_BROWSERS_PATH=str(extracted / 'python/ms-playwright'),
-                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION='catalog-schedule-49',
+                   EDESK_LOCAL_MODE='true', EDESK_INTEGRATION_VERSION=PACKAGE_VERSION,
                    EDESK_DATA_DIR=str(extracted / 'test-state'))
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
@@ -126,7 +128,7 @@ print('EXTRACTED_RUNTIME_AND_BROWSER_OK')
             assert health['workAudit'] is True
             assert health['workEnumeration'] is True
             assert health['workInbox'] is True
-            assert health['integrationPackageVersion'] == 'catalog-schedule-49'
+            assert health['integrationPackageVersion'] == PACKAGE_VERSION
             assert health['nativeProjectLinkRecovery'] is True
             assert health['verifiedProjectMove'] is True
             assert health['nativeSpreadsheetSheetNames'] is True

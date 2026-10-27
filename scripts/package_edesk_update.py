@@ -1,4 +1,4 @@
-"""Build the small project-modal-51 update for an existing full installation."""
+"""Build the small worksheet-models-52 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO project-modal-51 — instalação completa já existente
+README = '''ATUALIZAÇÃO worksheet-models-52 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v52: tabela de Consultorias reconhecida por estrutura, Status Programado/Realizado/Cancelado, horarios e resumo preservando formulas e macros. O site usa os formularios mapeados para Entrada, Checklist e Linha do Tempo; Catalog continua com Status percentual.
 
 Novidade v51: inicializacao sem abrir a pagina Conectar E-Desk. O modal do projeto no site exibe cabecalho e guias, com Cronograma direto em tabela. A tabela continua compativel com a integracao v50.
 
@@ -182,7 +184,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-51.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-52.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

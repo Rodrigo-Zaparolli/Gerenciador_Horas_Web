@@ -13,6 +13,7 @@ import uuid
 from zipfile import ZipFile
 from types import SimpleNamespace
 import re
+import unicodedata
 import posixpath
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
@@ -100,6 +101,8 @@ def value(cell, kind):
     if kind == 'time':
         if raw is None or raw == '':
             return ''
+        if isinstance(raw, str):
+            return raw.strip()
         minutes = round(float(raw or 0) * 1440)
         return f'{minutes // 60:02}:{minutes % 60:02}'
     if kind == 'percent':
@@ -354,7 +357,10 @@ def validated_changes(current, changes):
         if field.get('generic') and kind == 'text' and field['value'] == '' and isinstance(new, (int, float)) and not isinstance(new, bool):
             kind = 'number'
             field = {**field, 'kind': kind}
-        if field.get('scheduleStatus'):
+        if field.get('consultoriaStatus'):
+            if not isinstance(new, str) or new not in {'Programado', 'Realizado', 'Cancelado'}:
+                raise ValueError('Selecione Programado, Realizado ou Cancelado.')
+        elif field.get('scheduleStatus'):
             if isinstance(new, str) and new in {'Programado', 'Cancelado', 'Reprogramado', ''}:
                 field = {**field, 'kind': 'text'}
             elif isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new) or not 0 <= new <= 1:
@@ -574,6 +580,9 @@ def worksheet_snapshot(book, body):
     sheet = book.Worksheets(name)
     table_headers = set()
     schedule_end = None
+    consultation_end = None
+    def header_text(raw):
+        return re.sub(r'[^a-z0-9]', '', unicodedata.normalize('NFKD', str(raw or '')).encode('ascii', 'ignore').decode().lower())
     for table in getattr(sheet, 'ListObjects', []):
         area = table.Range
         if name.lower() == 'cronogramas' and row == 5 and column == 2 and int(area.Row) == 5 and int(area.Column) == 2 and str(sheet.Cells(5, 8).Value2).strip() == 'Status' and str(sheet.Cells(5, 9).Value2).startswith('Trabalho'):
@@ -583,11 +592,24 @@ def worksheet_snapshot(book, body):
             # Never silently calculate a partial schedule.
             if schedule_end > 2005:
                 raise ValueError('Cronograma excede o limite de 2000 linhas.')
+        if (int(area.Row) == 6 and int(area.Column) == 2 and
+                str(sheet.Cells(2, 3).Value2).strip().casefold() == 'consultoria' and
+                tuple(header_text(sheet.Cells(6,c).Value2) for c in range(2,10)) ==
+                    ('data','manhainicio','manhafim','tardeinicio','tardefim','total','status','descricao') and
+                bool(sheet.Cells(7,7).HasFormula)):
+            if consultation_end is not None:
+                raise ValueError('Mais de uma tabela de Consultoria foi encontrada.')
+            consultation_end = int(area.Row + area.Rows.Count - 1) - int(bool(getattr(table, 'ShowTotals', False)))
+            if not 7 <= consultation_end <= 2006:
+                raise ValueError('Tabela de Consultoria fora do limite de 2000 encontros.')
         if getattr(table, 'ShowHeaders', True):
             table_headers.update((int(area.Row), c) for c in range(int(area.Column), int(area.Column + area.Columns.Count)))
     fields, formulas = [], []
-    for r in range(row, schedule_end + 1 if schedule_end is not None else row + 25):
-        for c in range(column, column + 8):
+    read_row = 6 if consultation_end is not None else row
+    read_column = 2 if consultation_end is not None else column
+    end_row = consultation_end if consultation_end is not None else schedule_end
+    for r in range(read_row, end_row + 1 if end_row is not None else row + 25):
+        for c in range(read_column, read_column + 8):
             cell = sheet.Cells(r, c)
             letters, index = '', c
             while index:
@@ -602,16 +624,25 @@ def worksheet_snapshot(book, body):
                 kind = 'date'
             if (kind == 'number' or raw is None) and ':' in fmt and re.search(r'[hs]', fmt):
                 kind = 'time'
+            if consultation_end is not None and r > 6:
+                if c == 2:
+                    kind = 'date'
+                elif 3 <= c <= 6:
+                    kind = 'time'
             try:
                 spill = bool(getattr(cell, 'HasSpill', False)) or bool(getattr(cell, 'HasArray', False))
             except Exception:
                 spill = False
             readonly = calculated or spill or (r, c) in table_headers or bool(sheet.ProtectContents and cell.Locked) or bool(cell.MergeCells and cell.MergeArea.Cells(1,1).Address != cell.Address) or isinstance(raw, bool)
+            if consultation_end is not None and c == 9 and r > 6:
+                readonly = True  # The template's description is fixed by its summary/validation.
             fields.append({'sheet': name, 'cell': address, 'kind': kind, 'label': address,
                 'group': 'Guia', 'value': value(cell, kind) if kind != 'number' else float(raw),
-                'scheduleStatus': schedule_end is not None and c == 8 and r > 5, 'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
+                'consultoriaStatus': consultation_end is not None and c == 8 and r > 6, 'scheduleStatus': schedule_end is not None and c == 8 and r > 5, 'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
             formulas.append([address, str(formula) if calculated else None])
-    return {'fields': fields, 'tasks': [], 'scheduleTable': schedule_end is not None, 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
+    return {'fields': fields, 'tasks': [], 'consultoriaTable': consultation_end is not None,
+        'consultoriaDetails': {'client': str(sheet.Cells(2, 4).Text), 'contractedHours': value(sheet.Cells(3, 4), 'time')} if consultation_end is not None else None,
+        'scheduleTable': schedule_end is not None, 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
         'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}
 
 

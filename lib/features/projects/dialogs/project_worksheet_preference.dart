@@ -3,9 +3,26 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 String? defaultProjectWorksheet(String serviceType) {
   final type = serviceType.toLowerCase().replaceAll(RegExp(r'[áàâãä]'), 'a');
+  if (type.contains('consultoria') &&
+      !type.contains('catalog') &&
+      !type.contains('plugin')) {
+    return 'Consultorias';
+  }
   return type.contains('treinamento') && type.contains('catalog')
       ? 'Cronogramas'
       : null;
+}
+
+int? mappedWorksheetTab(String? name) {
+  final value = (name ?? '').trim().toLowerCase();
+  if (value.contains('entrada')) return 0;
+  if (value == 'checklist-processo' ||
+      value == 'maker checklist-processo' ||
+      value == 'professional checklist-processo') {
+    return 1;
+  }
+  if (value.contains('linha do tempo')) return 2;
+  return null;
 }
 
 class ProjectWorksheetPreference {

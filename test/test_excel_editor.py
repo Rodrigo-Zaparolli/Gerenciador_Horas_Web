@@ -34,6 +34,33 @@ class ExcelEditorTests(unittest.TestCase):
             worksheet_snapshot(SimpleNamespace(Worksheets=lambda name:sheet),
                 {'worksheet':'Cronogramas','firstRow':5,'firstColumn':2})
 
+    def test_time_text_and_template_instructions_do_not_break_table_read(self):
+        self.assertEqual(value(SimpleNamespace(Value2='14:30'), 'time'), '14:30')
+        self.assertEqual(value(SimpleNamespace(Value2='# horario #'), 'time'), '# horario #')
+
+    def test_consultation_table_has_full_rows_typed_cells_and_text_status_domain(self):
+        from local_edesk.excel_editor import worksheet_snapshot
+        def cell(r,c):
+            values={(2,3):'Consultoria',(2,4):'CLIENTE',(3,4):19/24,
+                    (6,2):'Data',(6,3):'Manha Inicio',(6,4):'Manha Fim',(6,5):'Tarde Inicio',(6,6):'Tarde Fim',(6,7):'Total',(6,8):'Status',(6,9):'Descricao'}
+            raw=values.get((r,c), 'Programado' if c==8 and r>6 else 'Consultoria' if c==9 and r>6 else None)
+            return SimpleNamespace(Value2=raw,Formula='=0' if c==7 and r>6 else '',
+                HasFormula=c==7 and r>6,NumberFormat='General',Text=str(raw or ''),MergeCells=False)
+        table=SimpleNamespace(Range=SimpleNamespace(Row=6,Column=2,Rows=SimpleNamespace(Count=14),Columns=SimpleNamespace(Count=9)),ShowHeaders=True,ShowTotals=False)
+        sheet=SimpleNamespace(ListObjects=[table],Cells=cell,ProtectContents=False)
+        result=worksheet_snapshot(SimpleNamespace(Worksheets=lambda n:sheet), {'worksheet':'Consultorias'})
+        self.assertTrue(result['consultoriaTable']);self.assertFalse(result['scheduleTable'])
+        fields={f['cell']:f for f in result['fields']}
+        self.assertEqual(len(fields),112)
+        self.assertEqual(fields['B7']['kind'],'date');self.assertEqual(fields['C7']['kind'],'time')
+        self.assertTrue(fields['G7']['readOnly']);self.assertTrue(fields['B6']['readOnly'])
+        self.assertEqual(result['consultoriaDetails']['contractedHours'],'19:00')
+        for value in ['Programado','Realizado','Cancelado']:
+            self.assertEqual(validated_changes(result,[{'sheet':'Consultorias','cell':'H7','before':'Programado','value':value}])[0][1],value)
+        for value in [0,.5,True,'=1+1','100%','Outro']:
+            with self.assertRaises(ValueError):
+                validated_changes(result,[{'sheet':'Consultorias','cell':'H7','before':'Programado','value':value}])
+
     def test_schedule_status_allows_numeric_and_named_values_but_never_formulas(self):
         field = {'sheet': 'Cronogramas', 'cell': 'H6', 'value': .99,
                  'kind': 'number', 'scheduleStatus': True, 'readOnly': False}

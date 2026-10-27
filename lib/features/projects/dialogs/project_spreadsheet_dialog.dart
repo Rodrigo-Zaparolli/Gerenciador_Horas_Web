@@ -24,8 +24,10 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
       this.transport,
       this.contactsLoader,
       this.store,
-      this.sheetSettingsStore});
+      this.sheetSettingsStore,
+      this.initialTab = 0});
   final Future<List<CompanyContact>> Function()? contactsLoader;
+  final int initialTab;
   final SpreadsheetStore? store;
   final SpreadsheetSheetSettingsStore? sheetSettingsStore;
   final ProjectModel project;
@@ -37,65 +39,84 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
     if (!PilotFeatureAccess.allows(uid: user?.uid, email: user?.email)) return;
     final preference = ProjectWorksheetPreference.load(user!.uid, project.id)
         .catchError((Object _) => null);
+    String? routeWorksheet;
     await showDialog<Object?>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => FutureBuilder<String?>(
-            future: preference,
-            builder: (_, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return AlertDialog(
-                    title: const Text('Planilha do projeto'),
-                    content:
-                        const Row(mainAxisSize: MainAxisSize.min, children: [
-                      SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator()),
-                      SizedBox(width: 12),
-                      Flexible(child: Text('Carregando a guia preferida...'))
-                    ]),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Fechar'))
-                    ]);
-              }
-              if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
-                return AlertDialog(
-                    content: const Text('A conta mudou. Feche esta janela.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Fechar'))
-                    ]);
-              }
-              final initial =
-                  snapshot.data ?? defaultProjectWorksheet(project.serviceType);
-              if (initial == null) {
-                return ProjectSpreadsheetDialog(project: project);
-              }
-              return WorkbookSheetDialog(
-                projectId: project.id,
-                client: project.client,
-                serviceType: project.serviceType,
-                initialWorksheet: initial,
-                allowed: () =>
-                    FirebaseAuth.instance.currentUser?.uid == user.uid,
-                onWorksheetOpened: (name) =>
-                    ProjectWorksheetPreference.save(user.uid, project.id, name),
-                call: (args) => NativeLocalFiles.call(args['action'] as String,
-                    reference: project.excelLink,
+        builder: (dialogContext) => StatefulBuilder(
+            builder: (_, setRouteState) => FutureBuilder<String?>(
+                future: preference,
+                builder: (_, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return AlertDialog(
+                        title: const Text('Planilha do projeto'),
+                        content: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator()),
+                              SizedBox(width: 12),
+                              Flexible(
+                                  child: Text('Carregando a guia preferida...'))
+                            ]),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: const Text('Fechar'))
+                        ]);
+                  }
+                  if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+                    return AlertDialog(
+                        content:
+                            const Text('A conta mudou. Feche esta janela.'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: const Text('Fechar'))
+                        ]);
+                  }
+                  final initial = routeWorksheet ??
+                      snapshot.data ??
+                      defaultProjectWorksheet(project.serviceType);
+                  if (initial == null || mappedWorksheetTab(initial) != null) {
+                    return ProjectSpreadsheetDialog(
+                        project: project,
+                        initialTab: mappedWorksheetTab(initial) ?? 0);
+                  }
+                  return WorkbookSheetDialog(
+                    onMappedWorksheet: (name) async {
+                      if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
+                        return;
+                      }
+                      setRouteState(() => routeWorksheet = name);
+                      unawaited(ProjectWorksheetPreference.save(
+                              user.uid, project.id, name)
+                          .catchError((Object _) {}));
+                    },
                     projectId: project.id,
-                    projectField: 'excelLink',
-                    worksheet: args['worksheet'] as String?,
-                    firstRow: args['firstRow'] as int?,
-                    firstColumn: args['firstColumn'] as int?,
-                    revision: args['revision'] as String?,
-                    changes: (args['changes'] as List?)
-                        ?.cast<Map<String, dynamic>>()),
-              );
-            }));
+                    client: project.client,
+                    serviceType: project.serviceType,
+                    initialWorksheet: initial,
+                    allowed: () =>
+                        FirebaseAuth.instance.currentUser?.uid == user.uid,
+                    onWorksheetOpened: (name) =>
+                        ProjectWorksheetPreference.save(
+                            user.uid, project.id, name),
+                    call: (args) => NativeLocalFiles.call(
+                        args['action'] as String,
+                        reference: project.excelLink,
+                        projectId: project.id,
+                        projectField: 'excelLink',
+                        worksheet: args['worksheet'] as String?,
+                        firstRow: args['firstRow'] as int?,
+                        firstColumn: args['firstColumn'] as int?,
+                        revision: args['revision'] as String?,
+                        changes: (args['changes'] as List?)
+                            ?.cast<Map<String, dynamic>>()),
+                  );
+                })));
   }
 
   @override
@@ -104,6 +125,8 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
 }
 
 class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
+  final tabContentKey = GlobalKey();
+  int? requestedMappedTab;
   final Map<String, Map<String, dynamic>> pending = {};
   final Map<String, String> calculatedEmails = {};
   final Set<String> hiddenPasswords = {};
@@ -255,7 +278,21 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       final changed = await showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (_) => WorkbookSheetDialog(
+          builder: (sheetContext) => WorkbookSheetDialog(
+              onMappedWorksheet: (name) async {
+                requestedMappedTab = mappedWorksheetTab(name);
+                if (widget.transport == null) {
+                  unawaited(ProjectWorksheetPreference.save(
+                          owner!, widget.project.id, name)
+                      .catchError((Object _) {
+                    if (mounted) {
+                      setState(() => notice =
+                          'A guia abriu, mas sua prefer\u00eancia n\u00e3o foi salva.');
+                    }
+                  }));
+                }
+                Navigator.pop(sheetContext, false);
+              },
               projectId: widget.project.id,
               client: widget.project.client,
               serviceType: widget.project.serviceType,
@@ -282,6 +319,14 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                     changes: (args['changes'] as List?)
                         ?.cast<Map<String, dynamic>>());
               }));
+      if (requestedMappedTab != null &&
+          mounted &&
+          authorized &&
+          tabContentKey.currentContext != null) {
+        DefaultTabController.of(tabContentKey.currentContext!)
+            .animateTo(requestedMappedTab!);
+        requestedMappedTab = null;
+      }
       if (changed == true && mounted && authorized) {
         pending.clear();
         await load();
@@ -986,7 +1031,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
               height: size.height * .92,
               child: DefaultTabController(
                   length: 3,
-                  child: Column(children: [
+                  initialIndex: widget.initialTab,
+                  child: Column(key: tabContentKey, children: [
                     SpreadsheetDialogHeader(
                         projectId: widget.project.id,
                         client: widget.project.client,
