@@ -37,7 +37,10 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   void initState() {
     super.initState();
     if (widget.projectLayout && widget.initialWorksheet != null) {
-      unawaited(open(widget.initialWorksheet!, 5, 2).then((_) {
+      final schedule = widget.initialWorksheet!.toLowerCase() == 'cronogramas';
+      unawaited(
+          open(widget.initialWorksheet!, schedule ? 5 : 1, schedule ? 2 : 1)
+              .then((_) {
         if (mounted) return list(autoOpen: false);
       }));
     } else {
@@ -46,14 +49,31 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
   }
 
   Future<Map<String, dynamic>> request(Map<String, dynamic> args) async {
-    if (!widget.allowed()) {
-      throw StateError('A conta mudou. Feche esta janela.');
+    final reading = const {'excel-editor-read', 'excel-editor-sheets'}
+        .contains(args['action']);
+    for (var attempt = 0;; attempt++) {
+      if (!mounted || !widget.allowed()) {
+        throw StateError('A conta mudou ou o editor foi fechado.');
+      }
+      try {
+        final result = await widget.call(args);
+        if (!mounted || !widget.allowed()) {
+          throw StateError('A conta mudou ou o editor foi fechado.');
+        }
+        return result;
+      } catch (e) {
+        final occupied = e.toString().toLowerCase().contains(
+            'aguarde a leitura ou grava\u00e7\u00e3o da planilha em andamento');
+        if (!reading ||
+            !occupied ||
+            attempt >= 11 ||
+            !mounted ||
+            !widget.allowed()) {
+          rethrow;
+        }
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
     }
-    final result = await widget.call(args);
-    if (!widget.allowed()) {
-      throw StateError('A conta mudou. Feche esta janela.');
-    }
-    return result;
   }
 
   Future<void> list({bool autoOpen = true}) async {

@@ -1,8 +1,7 @@
 {
   "changes": [
-    "Corrigido o salvamento de pasta e planilha no editor de trabalhos da tela Projetos. Novas selecoes deixam de voltar aos caminhos anteriores.",
-    "Edicao isolada por projeto: a tela so recebe o cadastro alterado apos confirmacao do salvamento. Alteracoes simultaneas de vinculos geram aviso em vez de sobrescrever caminhos.",
-    "Avisos de atualizacao adiados por envio ou outro modal passam a tentar novamente no proximo intervalo seguro. Nenhum recarregamento automatico.",
-    "Ajustes somente no site, compativeis com a integracao v51 ja instalada."
+    "Corrigida a abertura de guias salvas diferentes de Cronogramas: o modal mantem a identificacao do projeto e as guias no topo.",
+    "Leituras recusadas porque o Excel esta ocupado aguardam e tentam novamente por tempo limitado. Fechar a janela cancela as proximas tentativas; gravacoes nao sao repetidas automaticamente.",
+    "Correcao somente no site, compativel com a integracao v51 ja instalada."
   ]
 }

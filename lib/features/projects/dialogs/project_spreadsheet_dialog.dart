@@ -76,8 +76,7 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
                 return ProjectSpreadsheetDialog(project: project);
               }
               return WorkbookSheetDialog(
-                projectId:
-                    initial.toLowerCase() == 'cronogramas' ? project.id : null,
+                projectId: project.id,
                 client: project.client,
                 serviceType: project.serviceType,
                 initialWorksheet: initial,
