@@ -13,6 +13,17 @@ class ConsultoriaRowsTests(unittest.TestCase):
                 'sheet':'Consultorias','kind':'text'} for r in [7,8] for c in 'BCDEFGHI']}
     def add(self,**values):
         return {'operation':'add-consultoria-row','id':'new-1','values':values}
+    def test_insert_below_existing_and_new_rows_even_if_anchor_deleted(self):
+        before=self.before()
+        ops=[dict(self.add(C='08:00'),after=7),
+             {'operation':'add-consultoria-row','id':'new-2','after':'new-1','values':{'C':'09:00'}},
+             {'operation':'delete-consultoria-row','row':7}]
+        result=plan(before,[],ops)
+        self.assertEqual([r['C'] for r in result['rows']],['08:00','09:00',''])
+        self.assertEqual([r['position'] for r in result['insertions']],[1,2])
+        for anchor in [6,99,True,'new-9']:
+            with self.assertRaises(ValueError):plan(before,[],[dict(self.add(),after=anchor)])
+
     def test_split_only_explicit_known_operations(self):
         cell={'cell':'B7'};op=self.add()
         self.assertEqual(split_changes([cell,op]),([cell],[op]))

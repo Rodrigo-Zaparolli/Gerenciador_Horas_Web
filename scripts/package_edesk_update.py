@@ -1,4 +1,4 @@
-"""Build the small consultoria-rows-53 update for an existing full installation."""
+"""Build the small consultoria-rows-below-54 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO consultoria-rows-53 — instalação completa já existente
+README = '''ATUALIZAÇÃO consultoria-rows-below-54 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -36,7 +36,7 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
 
-Novidade v53: adicionar, excluir e desfazer encontros de Consultoria pelo sistema. Ao salvar, altera as linhas da tabela no Excel, recalcula resumo e preserva macros, imagens e dados das outras guias com backup. Requer integracao v53 para operacoes de linhas.
+Novidade v54: adicionar, excluir e desfazer encontros de Consultoria pelo sistema. Ao salvar, altera as linhas da tabela no Excel, recalcula resumo e preserva macros, imagens e dados das outras guias com backup. Requer integracao v54 para operacoes de linhas.
 
 Novidade v52: tabela de Consultorias reconhecida por estrutura, Status Programado/Realizado/Cancelado, horarios e resumo preservando formulas e macros. O site usa os formularios mapeados para Entrada, Checklist e Linha do Tempo; Catalog continua com Status percentual.
 
@@ -186,7 +186,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-53.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-54.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

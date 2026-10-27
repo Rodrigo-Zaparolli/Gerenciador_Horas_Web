@@ -109,6 +109,7 @@ class CronogramaTable extends StatelessWidget {
       this.addedRows = const {},
       this.deletedRows = const {},
       this.onAddRow,
+      this.onAddRowBelow,
       this.onDeleteRow,
       this.onUndoRow,
       this.onEditValue});
@@ -121,7 +122,7 @@ class CronogramaTable extends StatelessWidget {
   final String? contractHours;
   final Set<int> addedRows, deletedRows;
   final VoidCallback? onAddRow;
-  final void Function(int)? onDeleteRow, onUndoRow;
+  final void Function(int)? onDeleteRow, onUndoRow, onAddRowBelow;
   final void Function(Map<String, dynamic>, dynamic)? onEditValue;
   final ScrollController vertical, horizontal;
 
@@ -323,161 +324,178 @@ class CronogramaTable extends StatelessWidget {
           constraints.maxHeight < 180 ? 360.0 : constraints.maxHeight;
       final content = SizedBox(
           height: height,
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (consultoria) ...[
-                  const Text('Treinamento / Acompanhamentos',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(
-                      'Horas contratadas: ${contractHours ?? "N\u00e3o informado"}'),
-                  Align(
-                      alignment: Alignment.centerRight,
-                      child: OutlinedButton.icon(
-                          key: const ValueKey('add-consultoria-row'),
-                          onPressed: busy ? null : onAddRow,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Adicionar encontro'))),
-                  const SizedBox(height: 8),
-                ],
-                Expanded(
-                    child: Scrollbar(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (consultoria) ...[
+              const Text('Treinamento / Acompanhamentos',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                  'Horas contratadas: ${contractHours ?? "N\u00e3o informado"}'),
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                      key: const ValueKey('add-consultoria-row'),
+                      onPressed: busy ? null : onAddRow,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Adicionar linha'))),
+              const SizedBox(height: 8),
+            ],
+            Expanded(
+                child: Scrollbar(
+                    controller: vertical,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
                         controller: vertical,
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                            controller: vertical,
-                            child: Scrollbar(
+                        child: Scrollbar(
+                            controller: horizontal,
+                            thumbVisibility: true,
+                            notificationPredicate: (n) => n.depth == 0,
+                            child: SingleChildScrollView(
                                 controller: horizontal,
-                                thumbVisibility: true,
-                                notificationPredicate: (n) => n.depth == 0,
-                                child: SingleChildScrollView(
-                                    controller: horizontal,
-                                    scrollDirection: Axis.horizontal,
-                                    child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                            minWidth: constraints.maxWidth),
-                                        child: DataTable(
-                                            headingRowColor:
-                                                WidgetStatePropertyAll(
-                                                    colors.primaryContainer),
-                                            dataRowMinHeight: 44,
-                                            dataRowMaxHeight: 52,
-                                            columnSpacing:
-                                                consultoria ? 12 : 20,
-                                            columns: [
-                                              for (final title in [
-                                                'Data',
-                                                'Manhã início',
-                                                'Manhã fim',
-                                                'Tarde início',
-                                                'Tarde fim',
-                                                'Total',
-                                                'Status',
-                                                consultoria
-                                                    ? 'Descri\u00e7\u00e3o'
-                                                    : 'Trabalho / Descri\u00e7\u00e3o'
-                                              ])
-                                                DataColumn(label: Text(title)),
-                                              if (consultoria)
-                                                const DataColumn(
-                                                    label: Text(
-                                                        'A\u00e7\u00f5es')),
-                                            ],
-                                            rows: [
-                                              for (var i = 0;
-                                                  i < rows.length;
-                                                  i++)
-                                                DataRow(
-                                                    color: WidgetStatePropertyAll(deletedRows
+                                scrollDirection: Axis.horizontal,
+                                child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                        minWidth: constraints.maxWidth),
+                                    child: DataTable(
+                                        headingRowColor: WidgetStatePropertyAll(
+                                            colors.primaryContainer),
+                                        dataRowMinHeight: 44,
+                                        dataRowMaxHeight: 52,
+                                        columnSpacing: consultoria ? 12 : 20,
+                                        columns: [
+                                          for (final title in [
+                                            'Data',
+                                            'Manhã início',
+                                            'Manhã fim',
+                                            'Tarde início',
+                                            'Tarde fim',
+                                            'Total',
+                                            'Status',
+                                            consultoria
+                                                ? 'Descri\u00e7\u00e3o'
+                                                : 'Trabalho / Descri\u00e7\u00e3o'
+                                          ])
+                                            DataColumn(label: Text(title)),
+                                          if (consultoria)
+                                            const DataColumn(
+                                                label: Text('A\u00e7\u00f5es')),
+                                        ],
+                                        rows: [
+                                          for (var i = 0; i < rows.length; i++)
+                                            DataRow(
+                                                color: WidgetStatePropertyAll(deletedRows
+                                                        .contains(rows[i].index)
+                                                    ? colors.errorContainer
+                                                    : addedRows.contains(
+                                                            rows[i].index)
+                                                        ? colors
+                                                            .primaryContainer
+                                                        : rows[i]
+                                                                .fields
+                                                                .values
+                                                                .any((f) => edits
+                                                                    .containsKey(f[
+                                                                        'cell']))
+                                                            ? colors
+                                                                .tertiaryContainer
+                                                            : i.isOdd
+                                                                ? colors
+                                                                    .surfaceContainerLow
+                                                                : null),
+                                                cells: [
+                                                  for (final col in columns)
+                                                    DataCell(cellWidget(context, rows[i], col),
+                                                        onTap: busy ||
+                                                                deletedRows.contains(
+                                                                    rows[i]
+                                                                        .index) ||
+                                                                col == 'G' ||
+                                                                col == 'H' ||
+                                                                rows[i].fields[col] ==
+                                                                    null ||
+                                                                rows[i].fields[col]![
+                                                                        'readOnly'] ==
+                                                                    true ||
+                                                                addedRows.contains(
+                                                                        rows[i]
+                                                                            .index) &&
+                                                                    ('BCDEF'
+                                                                        .contains(
+                                                                            col))
+                                                            ? null
+                                                            : () => onEdit(rows[i]
+                                                                .fields[col]!)),
+                                                  if (consultoria)
+                                                    DataCell(deletedRows
                                                             .contains(
                                                                 rows[i].index)
-                                                        ? colors.errorContainer
-                                                        : addedRows.contains(
-                                                                rows[i].index)
-                                                            ? colors
-                                                                .primaryContainer
-                                                            : rows[i]
-                                                                    .fields
-                                                                    .values
-                                                                    .any((f) =>
-                                                                        edits.containsKey(f[
-                                                                            'cell']))
-                                                                ? colors
-                                                                    .tertiaryContainer
-                                                                : i.isOdd
-                                                                    ? colors
-                                                                        .surfaceContainerLow
-                                                                    : null),
-                                                    cells: [
-                                                      for (final col in columns)
-                                                        DataCell(
-                                                            cellWidget(context,
-                                                                rows[i], col),
-                                                            onTap: busy ||
-                                                                    deletedRows.contains(
-                                                                        rows[i]
-                                                                            .index) ||
-                                                                    col ==
-                                                                        'G' ||
-                                                                    col ==
-                                                                        'H' ||
-                                                                    rows[i].fields[col] ==
-                                                                        null ||
-                                                                    rows[i].fields[col]!['readOnly'] ==
-                                                                        true ||
-                                                                    addedRows.contains(rows[i].index) &&
-                                                                        ('BCDEF'.contains(
-                                                                            col))
-                                                                ? null
-                                                                : () => onEdit(
-                                                                    rows[i].fields[
-                                                                        col]!)),
-                                                      if (consultoria)
-                                                        DataCell(deletedRows.contains(
-                                                                rows[i].index)
-                                                            ? Column(
-                                                                mainAxisAlignment:
-                                                                    MainAxisAlignment
-                                                                        .center,
-                                                                children: [
-                                                                    const Text(
-                                                                        'Excluir ao salvar',
-                                                                        style: TextStyle(
-                                                                            fontSize:
-                                                                                11)),
-                                                                    TextButton(
-                                                                        onPressed: busy
-                                                                            ? null
-                                                                            : () => onUndoRow?.call(rows[i]
-                                                                                .index),
-                                                                        style: TextButton.styleFrom(
-                                                                            minimumSize: const Size(64,
-                                                                                24),
-                                                                            padding: EdgeInsets
+                                                        ? Column(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .center,
+                                                            children: [
+                                                                const Text(
+                                                                    'Excluir ao salvar',
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            11)),
+                                                                TextButton(
+                                                                    onPressed: busy
+                                                                        ? null
+                                                                        : () => onUndoRow?.call(rows[i]
+                                                                            .index),
+                                                                    style: TextButton.styleFrom(
+                                                                        minimumSize: const Size(
+                                                                            64,
+                                                                            24),
+                                                                        padding:
+                                                                            EdgeInsets
                                                                                 .zero,
-                                                                            tapTargetSize: MaterialTapTargetSize
+                                                                        tapTargetSize:
+                                                                            MaterialTapTargetSize
                                                                                 .shrinkWrap),
-                                                                        child: const Text(
-                                                                            'Desfazer'))
-                                                                  ])
-                                                            : IconButton(
-                                                                key: ValueKey(
-                                                                    'delete-consultoria-row-${rows[i].index}'),
-                                                                tooltip:
-                                                                    'Excluir encontro',
-                                                                onPressed: busy
-                                                                    ? null
-                                                                    : () => onDeleteRow
-                                                                        ?.call(rows[i].index),
-                                                                icon: Icon(Icons.delete_outline, color: colors.error))),
-                                                    ]),
-                                            ]))))))),
-                const SizedBox(height: 12),
-                SizedBox(
-                    height: (height * .28).clamp(40.0, 190.0),
-                    child:
-                        SingleChildScrollView(primary: false, child: summary)),
-              ]));
+                                                                    child: const Text(
+                                                                        'Desfazer'))
+                                                              ])
+                                                        : Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                                IconButton(
+                                                                    key: ValueKey(
+                                                                        'add-below-consultoria-row-${rows[i].index}'),
+                                                                    tooltip:
+                                                                        'Adicionar linha abaixo',
+                                                                    onPressed: busy
+                                                                        ? null
+                                                                        : () => onAddRowBelow?.call(rows[i]
+                                                                            .index),
+                                                                    icon: const Icon(
+                                                                        Icons
+                                                                            .playlist_add)),
+                                                                IconButton(
+                                                                    key: ValueKey(
+                                                                        'delete-consultoria-row-${rows[i].index}'),
+                                                                    tooltip:
+                                                                        'Excluir linha',
+                                                                    onPressed: busy
+                                                                        ? null
+                                                                        : () => onDeleteRow?.call(rows[i]
+                                                                            .index),
+                                                                    icon: Icon(
+                                                                        Icons
+                                                                            .delete_outline,
+                                                                        color: colors
+                                                                            .error))
+                                                              ])),
+                                                ]),
+                                        ]))))))),
+            const SizedBox(height: 12),
+            SizedBox(
+                height: (height * .28).clamp(40.0, 190.0),
+                child: SingleChildScrollView(primary: false, child: summary)),
+          ]));
       return constraints.maxHeight < 180
           ? SingleChildScrollView(primary: false, child: content)
           : content;

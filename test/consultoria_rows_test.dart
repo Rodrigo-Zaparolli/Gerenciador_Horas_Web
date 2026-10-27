@@ -67,7 +67,7 @@ class RowBackend {
       'firstRow': 1,
       'firstColumn': 1,
       'consultoriaTable': true,
-      'consultoriaRowOperationsVersion': capable ? 1 : null,
+      'consultoriaRowOperationsVersion': capable ? 2 : null,
       'revision': 'rev-${writes.length}',
       'consultoriaDetails': {
         'contractedHours': '19:00',
@@ -107,6 +107,40 @@ Future<void> mount(WidgetTester tester, RowBackend backend,
 }
 
 void main() {
+  testWidgets('row action inserts directly below selected row and sends anchor',
+      (tester) async {
+    final backend = RowBackend();
+    await mount(tester, backend);
+    final insert = find.byKey(const ValueKey('add-below-consultoria-row-7'));
+    await tester.ensureVisible(insert);
+    await tester.pumpAndSettle();
+    await tester.tap(insert);
+    await tester.pumpAndSettle();
+    final fresh = find.byKey(const ValueKey('new-time-C1000001'));
+    final next = find.byKey(const ValueKey('add-below-consultoria-row-8'));
+    expect(tester.getTopLeft(fresh).dy, lessThan(tester.getTopLeft(next).dy));
+    await tester.tap(find.text('Salvar na planilha'));
+    await tester.pumpAndSettle();
+    expect(backend.writes.single.single['after'], 7);
+  });
+  test('insert below keeps preview order, anchors and removal of new parent',
+      () {
+    final drafts = ConsultoriaRowDrafts();
+    drafts.add('Consultorias', 'Consultoria', below: 7);
+    drafts.add('Consultorias', 'Consultoria', below: 1000001);
+    final fields = drafts.orderedFields(consultationFields());
+    final indices = fields
+        .map((f) => ConsultoriaRowDrafts.rowOf(f['cell']))
+        .toSet()
+        .toList();
+    expect(indices.indexOf(1000001), indices.indexOf(7) + 1);
+    expect(indices.indexOf(1000002), indices.indexOf(1000001) + 1);
+    expect(drafts.payload({})[1]['after'], 'new-1');
+    drafts.remove(1000001, {});
+    expect(drafts.payload({}).single['after'], 7);
+    expect(drafts.label, '1 linha adicionada');
+  });
+
   testWidgets('cancel asks to discard row-only drafts without writing to Excel',
       (tester) async {
     final backend = RowBackend();
@@ -136,7 +170,7 @@ void main() {
         findsOneWidget);
     await tester.tap(find.text('Continuar editando'));
     await tester.pumpAndSettle();
-    expect(find.text('1 encontro adicionado'), findsOneWidget);
+    expect(find.text('1 linha adicionada'), findsOneWidget);
     await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
     final confirm = tester
@@ -192,7 +226,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Marcar para excluir'));
       await tester.pumpAndSettle();
-      expect(find.text('1 encontro adicionado \u00b7 1 exclus\u00e3o pendente'),
+      expect(find.text('1 linha adicionada \u00b7 1 exclus\u00e3o pendente'),
           findsOneWidget);
       await tester.tap(find.text('Salvar na planilha'));
       await tester.pumpAndSettle();
@@ -230,7 +264,7 @@ void main() {
     await tester.tap(find.text('Salvar na planilha'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Arquivo bloqueado'), findsOneWidget);
-    expect(find.text('1 encontro adicionado'), findsOneWidget);
+    expect(find.text('1 linha adicionada'), findsOneWidget);
     expect(backend.writes.length, 1);
     expect(tester.takeException(), isNull);
   });
@@ -241,7 +275,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('v53'), findsOneWidget);
     expect(backend.writes, isEmpty);
-    expect(find.text('1 encontro adicionado'), findsNothing);
+    expect(find.text('1 linha adicionada'), findsNothing);
   });
   testWidgets('save pending disables a second write', (tester) async {
     final backend = RowBackend();

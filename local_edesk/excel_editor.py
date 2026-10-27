@@ -655,7 +655,7 @@ def worksheet_snapshot(book, body):
                     description=str(sheet.Cells(r+1,9).Value2 or 'Consultoria')
                     break
     return {'fields': fields, 'tasks': [], 'consultoriaTable': consultation_end is not None,
-        'consultoriaRowOperationsVersion': 1 if consultation_end is not None else None,
+        'consultoriaRowOperationsVersion': 2 if consultation_end is not None else None,
         'consultoriaDetails': {'tableName': consultation_table_name, 'description': description, 'client': str(sheet.Cells(2, 4).Text), 'contractedHours': value(sheet.Cells(3, 4), 'time')} if consultation_end is not None else None,
         'scheduleTable': schedule_end is not None, 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
         'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}

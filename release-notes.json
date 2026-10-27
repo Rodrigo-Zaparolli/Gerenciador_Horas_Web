@@ -1,8 +1,6 @@
 {
   "changes": [
-    "Consultoria agora permite adicionar encontros e marcar linhas para exclusao, com confirmacao e opcao de desfazer antes de salvar.",
-    "Salvar na planilha aplica as inclusoes, exclusoes e edicoes juntas na tabela do Excel e recalcula o resumo de horas e percentual. Cria backup e preserva macros, imagens e dados das outras guias.",
-    "Campos novos e alteracoes pendentes permanecem no editor se a gravacao falhar. A revisao do arquivo impede repetir uma inclusao ja concluida.",
-    "Atualize e reinicie a integracao v53 para habilitar inclusao e exclusao de encontros. Vinculos de pasta e planilha permanecem preservados."
+    "Consultoria: cada linha agora tem Adicionar linha abaixo e Excluir linha. A inclusao respeita a posicao escolhida na tabela do sistema e no Excel.",
+    "Inclusoes e exclusoes continuam pendentes ate Salvar na planilha, com possibilidade de desfazer. Atualize e reinicie a integracao v54 para inserir abaixo."
   ]
 }

@@ -30,7 +30,7 @@ def split_changes(payload):
 
 def plan(before, changes, operations):
     from local_edesk.excel_editor import validated_changes
-    if not before.get('consultoriaTable') or before.get('consultoriaRowOperationsVersion') != 1:
+    if not before.get('consultoriaTable') or before.get('consultoriaRowOperationsVersion') not in (1,2):
         raise ValueError('Adicionar e excluir encontros exige uma tabela de Consultoria reconhecida.')
     rows={}
     for field in before['fields']:
@@ -43,6 +43,8 @@ def plan(before, changes, operations):
             raise ValueError('Celula fora da tabela de encontros.')
         rows[int(match[2])][match[1]]=new
     deleted, added, ids=set(),[],set()
+    order=list(sorted(rows))
+    items=dict(rows)
     for op in operations:
         if op['operation']=='delete-consultoria-row':
             row=op.get('row')
@@ -67,11 +69,18 @@ def plan(before, changes, operations):
             if not isinstance(description,str) or len(description)>10000 or description.lstrip().startswith(('=','+','-','@')):
                 raise ValueError('A descricao do modelo nao e um texto valido para novos encontros.')
             item['I']=description
+            anchor=op.get('after')
+            if anchor is not None and (type(anchor) not in (int,str) or anchor not in order):
+                raise ValueError('Linha de referencia para inserir abaixo invalida.')
+            order.insert(order.index(anchor)+1 if anchor is not None else len(order),identity)
+            items[identity]=item
             added.append(item)
-    result=[v for r,v in sorted(rows.items()) if r not in deleted]+added
+    order=[r for r in order if r not in deleted]
+    result=[items[r] for r in order]
+    insertions=[{'position':i+1,'item':items[r]} for i,r in enumerate(order) if isinstance(r,str)]
     if len(result)>2000:
         raise ValueError('Limite de 2000 encontros excedido.')
-    return {'rows':result,'deleted':sorted(deleted,reverse=True),'added':added}
+    return {'rows':result,'deleted':sorted(deleted,reverse=True),'added':added,'insertions':insertions}
 
 def apply(book,before,expected):
     from local_edesk.excel_editor import stored_date,stored_time
@@ -85,8 +94,9 @@ def apply(book,before,expected):
         formula='=(RC[-3]-RC[-4])+(RC[-1]-RC[-2])'
     for row in expected['deleted']:
         table.ListRows(row-6).Delete()
-    for item in expected['added']:
-        new_row=table.ListRows.Add(AlwaysInsert=True)
+    for insertion in expected['insertions']:
+        item=insertion['item']
+        new_row=table.ListRows.Add(Position=insertion['position'],AlwaysInsert=True)
         r=int(new_row.Range.Row)
         for c,fmt in zip(range(2,11),formats):
             if str(fmt).casefold() in {'general','geral'}:

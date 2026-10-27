@@ -272,7 +272,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
 
   bool rowEditingAllowed() {
     if (busy || !widget.allowed()) return false;
-    if (data?['consultoriaRowOperationsVersion'] != 1) {
+    if (!const [1, 2].contains(data?['consultoriaRowOperationsVersion'])) {
       setState(() => error =
           'Atualize e reinicie a integra\u00e7\u00e3o v53 para adicionar ou excluir encontros.');
       return false;
@@ -280,12 +280,18 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     return true;
   }
 
-  void addRow() {
+  void addRow([int? below]) {
     if (!rowEditingAllowed() || selected == null) return;
+    if (below != null && data?['consultoriaRowOperationsVersion'] != 2) {
+      setState(() => error =
+          'Atualize e reinicie a integra\u00e7\u00e3o v54 para adicionar linha abaixo.');
+      return;
+    }
     setState(() => rows.add(
         selected!,
         (data?['consultoriaDetails'] as Map?)?['description']?.toString() ??
-            'Consultoria'));
+            'Consultoria',
+        below: below));
   }
 
   Future<void> deleteRow(int row) async {
@@ -294,7 +300,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       final confirmed = await showDialog<bool>(
           context: context,
           builder: (_) => const WorkbookConfirmation(
-              title: 'Excluir encontro?',
+              title: 'Excluir linha?',
               message:
                   'A linha e seus dados ser\u00e3o removidos do Excel ao salvar na planilha. Voc\u00ea pode desfazer antes de salvar.',
               confirmLabel: 'Marcar para excluir'));
@@ -404,10 +410,8 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final fields = [
-      ...(data?['fields'] as List? ?? []).cast<Map<String, dynamic>>(),
-      ...rows.added.values.expand((f) => f)
-    ];
+    final fields = rows.orderedFields(
+        (data?['fields'] as List? ?? []).cast<Map<String, dynamic>>());
     final dialog = AlertDialog(
       title: Text(data?['scheduleTable'] == true
           ? 'Planilha do projeto · Cronograma'
@@ -536,6 +540,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                         addedRows: rows.added.keys.toSet(),
                         deletedRows: rows.deleted,
                         onAddRow: addRow,
+                        onAddRowBelow: addRow,
                         onDeleteRow: deleteRow,
                         onUndoRow: (row) =>
                             setState(() => rows.deleted.remove(row)),
