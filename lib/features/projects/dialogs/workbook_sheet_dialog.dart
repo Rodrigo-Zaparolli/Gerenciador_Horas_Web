@@ -1,3 +1,4 @@
+import 'cronograma_table.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -272,7 +273,9 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     return PopScope(
         canPop: !saving && edits.isEmpty,
         child: AlertDialog(
-          title: const Text('Todas as guias da planilha'),
+          title: Text(data?['scheduleTable'] == true
+              ? 'Planilha do projeto · Cronograma'
+              : 'Todas as guias da planilha'),
           content: SizedBox(
               width: 1100,
               height: MediaQuery.sizeOf(context).height * .65,
@@ -295,7 +298,12 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                         onChanged: busy
                             ? null
                             : (name) {
-                                if (name != null) open(name, 1, 1);
+                                if (name != null) {
+                                  final schedule =
+                                      name.toLowerCase() == 'cronogramas';
+                                  open(
+                                      name, schedule ? 5 : 1, schedule ? 2 : 1);
+                                }
                               }),
                     if (error != null)
                       Text(error!,
@@ -305,7 +313,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                             'Toque em uma célula para editar. Fórmulas e células protegidas ficam bloqueadas.')),
-                    if (data != null)
+                    if (data != null && data?['scheduleTable'] != true)
                       Wrap(
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
@@ -339,69 +347,89 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                                 icon: const Icon(Icons.chevron_right)),
                           ]),
                     Expanded(
-                        child: fields.isEmpty
-                            ? const Center(
-                                child: Text('Selecione uma guia para abrir.'))
-                            : Scrollbar(
-                                controller: vertical,
-                                thumbVisibility: true,
-                                child: SingleChildScrollView(
+                        child: data?['scheduleTable'] == true
+                            ? CronogramaTable(
+                                fields: fields,
+                                edits: edits,
+                                busy: busy,
+                                vertical: vertical,
+                                horizontal: horizontal,
+                                onEdit: edit,
+                                onStatus: (field, value) {
+                                  if (busy || !widget.allowed()) return;
+                                  setState(() {
+                                    if (value == field['value']) {
+                                      edits.remove(field['cell']);
+                                    } else {
+                                      edits[field['cell']] = {
+                                        'sheet': selected,
+                                        'cell': field['cell'],
+                                        'before': field['value'],
+                                        'value': value
+                                      };
+                                    }
+                                  });
+                                })
+                            : fields.isEmpty
+                                ? const Center(
+                                    child:
+                                        Text('Selecione uma guia para abrir.'))
+                                : Scrollbar(
                                     controller: vertical,
+                                    thumbVisibility: true,
                                     child: SingleChildScrollView(
-                                      controller: horizontal,
-                                      scrollDirection: Axis.horizontal,
-                                      child: DataTable(columns: [
-                                        const DataColumn(label: Text('Linha')),
-                                        for (var c = 0; c < 8; c++)
-                                          DataColumn(
-                                              label: Text(fields[c]['cell']
-                                                  .toString()
-                                                  .replaceAll(
-                                                      RegExp(r'\d+'), '')))
-                                      ], rows: [
-                                        for (var r = 0;
-                                            r < fields.length ~/ 8;
-                                            r++)
-                                          DataRow(cells: [
-                                            DataCell(Text('${row + r}')),
+                                        controller: vertical,
+                                        child: SingleChildScrollView(
+                                          controller: horizontal,
+                                          scrollDirection: Axis.horizontal,
+                                          child: DataTable(columns: [
+                                            const DataColumn(
+                                                label: Text('Linha')),
                                             for (var c = 0; c < 8; c++)
-                                              DataCell(
-                                                  SizedBox(
-                                                      width: 135,
-                                                      child: Row(children: [
-                                                        if (fields[r * 8 + c]
-                                                                ['readOnly'] ==
-                                                            true)
-                                                          const Icon(
-                                                              Icons
-                                                                  .lock_outline,
-                                                              size: 12),
-                                                        Expanded(
-                                                            child: Text(
-                                                                (edits[fields[r * 8 + c]['cell']]
-                                                                            ?[
-                                                                            'value'] ??
-                                                                        fields[r * 8 +
-                                                                                c]
-                                                                            [
-                                                                            'display'] ??
-                                                                        fields[r * 8 +
-                                                                                c]
-                                                                            [
-                                                                            'value'])
-                                                                    .toString(),
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis)),
-                                                      ])),
-                                                  onTap: busy
-                                                      ? null
-                                                      : () => edit(
-                                                          fields[r * 8 + c])),
-                                          ])
-                                      ]),
-                                    )))),
+                                              DataColumn(
+                                                  label: Text(fields[c]['cell']
+                                                      .toString()
+                                                      .replaceAll(
+                                                          RegExp(r'\d+'), '')))
+                                          ], rows: [
+                                            for (var r = 0;
+                                                r < fields.length ~/ 8;
+                                                r++)
+                                              DataRow(cells: [
+                                                DataCell(Text('${row + r}')),
+                                                for (var c = 0; c < 8; c++)
+                                                  DataCell(
+                                                      SizedBox(
+                                                          width: 135,
+                                                          child: Row(children: [
+                                                            if (fields[r * 8 +
+                                                                        c][
+                                                                    'readOnly'] ==
+                                                                true)
+                                                              const Icon(
+                                                                  Icons
+                                                                      .lock_outline,
+                                                                  size: 12),
+                                                            Expanded(
+                                                                child: Text(
+                                                                    (edits[fields[r * 8 + c]['cell']]?['value'] ??
+                                                                            fields[r * 8 + c][
+                                                                                'display'] ??
+                                                                            fields[r * 8 + c][
+                                                                                'value'])
+                                                                        .toString(),
+                                                                    maxLines: 2,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis)),
+                                                          ])),
+                                                      onTap: busy
+                                                          ? null
+                                                          : () => edit(fields[
+                                                              r * 8 + c])),
+                                              ])
+                                          ]),
+                                        )))),
                     Text(
                         '${edits.length} alteração(ões) pendente(s)${saved ? ' · Última gravação confirmada' : ''}'),
                   ])),

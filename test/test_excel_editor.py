@@ -14,6 +14,38 @@ os.environ['EDESK_LOCAL_MODE'] = 'true'
 
 
 class ExcelEditorTests(unittest.TestCase):
+    def test_schedule_snapshot_reads_the_whole_table_beyond_generic_page(self):
+        from local_edesk.excel_editor import worksheet_snapshot
+        def cell(r,c):
+            raw = {8:'Status', 9:'Trabalho / Descricao'}.get(c, '') if r == 5 else ''
+            return SimpleNamespace(Value2=raw, Formula='', HasFormula=False,
+                NumberFormat='General', Text=raw, MergeCells=False)
+        area = SimpleNamespace(Row=5, Column=2, Rows=SimpleNamespace(Count=41), Columns=SimpleNamespace(Count=8))
+        table = SimpleNamespace(Range=area, ShowHeaders=True, ShowTotals=False)
+        sheet = SimpleNamespace(ListObjects=[table],Cells=cell,ProtectContents=False)
+        snapshot = worksheet_snapshot(SimpleNamespace(Worksheets=lambda name:sheet),
+            {'worksheet':'Cronogramas','firstRow':5,'firstColumn':2})
+        self.assertTrue(snapshot['scheduleTable'])
+        self.assertEqual(len(snapshot['fields']),41*8)
+        self.assertEqual(snapshot['fields'][-1]['cell'],'I45')
+        self.assertTrue(snapshot['fields'][0]['readOnly'])
+        area.Rows.Count=3000
+        with self.assertRaises(ValueError):
+            worksheet_snapshot(SimpleNamespace(Worksheets=lambda name:sheet),
+                {'worksheet':'Cronogramas','firstRow':5,'firstColumn':2})
+
+    def test_schedule_status_allows_numeric_and_named_values_but_never_formulas(self):
+        field = {'sheet': 'Cronogramas', 'cell': 'H6', 'value': .99,
+                 'kind': 'number', 'scheduleStatus': True, 'readOnly': False}
+        current = {'fields': [field], 'tasks': []}
+        for value in [0, .25, .5, .75, 1, .99, 'Programado', 'Cancelado']:
+            result = validated_changes(current, [{'sheet':'Cronogramas', 'cell':'H6', 'before':.99, 'value':value}])
+            self.assertEqual(result[0][1], value)
+            self.assertEqual(result[0][0]['kind'], 'text' if isinstance(value,str) else 'number')
+        for value in [True, -1, 2, float('nan'), '=1+1', 'Outro']:
+            with self.assertRaises(ValueError):
+                validated_changes(current, [{'sheet':'Cronogramas', 'cell':'H6', 'before':.99, 'value':value}])
+
     def test_maiQuel_access_uses_verified_identity_and_exact_email(self):
         self.assertTrue(allowed({'sub': 'maiQuel', 'email': ' MAIQUEL.ELSTE@CYNCLY.COM '}))
         self.assertFalse(allowed({'sub': '', 'email': 'maiQuel.elste@cyncly.com'}))
@@ -193,7 +225,8 @@ class ExcelEditorTests(unittest.TestCase):
             workbook = '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="entry" sheetId="1" r:id="rId1"/></sheets></workbook>'
             rels = '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>'
             original = '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="2"><c r="C2" s="4"/><c r="D2"><f>1+1</f><v>0</v></c></row></sheetData></worksheet>'
-            calculated = original.replace('<v>0</v>', '<v>2</v>')
+            original = original.replace('</sheetData>', '<row r="3"><c r="H3"><f t="array" ref="H3:H4">SUMIFS(A:A,B:B,C3)</f><v>0</v></c></row><row r="4"><c r="H4"><v>0</v></c><c r="I4"><v>9</v></c></row></sheetData>')
+            calculated = original.replace('<v>0</v>', '<v>2</v>').replace('<v>9</v>', '<v>99</v>')
             for path, xml in [(source, original), (target, calculated)]:
                 with ZipFile(path, 'w') as archive:
                     archive.writestr('xl/workbook.xml', workbook)
@@ -212,6 +245,9 @@ class ExcelEditorTests(unittest.TestCase):
                 self.assertEqual(cells[0].find('s:is/s:t', ns).text, 'Text <&>')
                 self.assertEqual(cells[1].find('s:f', ns).text, '1+1')
                 self.assertEqual(cells[1].find('s:v', ns).text, '2')
+                self.assertEqual(cells[2].find('s:f', ns).attrib['ref'], 'H3:H4')
+                self.assertEqual(cells[3].find('s:v', ns).text, '2')
+                self.assertEqual(cells[4].find('s:v', ns).text, '9')
 
     def test_date_yesno_and_percentage_domains(self):
         for kind, valid, invalid in [

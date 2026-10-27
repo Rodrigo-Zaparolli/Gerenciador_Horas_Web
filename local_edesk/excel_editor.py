@@ -354,7 +354,14 @@ def validated_changes(current, changes):
         if field.get('generic') and kind == 'text' and field['value'] == '' and isinstance(new, (int, float)) and not isinstance(new, bool):
             kind = 'number'
             field = {**field, 'kind': kind}
-        if kind == 'number':
+        if field.get('scheduleStatus'):
+            if isinstance(new, str) and new in {'Programado', 'Cancelado', 'Reprogramado', ''}:
+                field = {**field, 'kind': 'text'}
+            elif isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new) or not 0 <= new <= 1:
+                raise ValueError('Status invalido. Use percentual de 0 a 100, Programado ou Cancelado.')
+            else:
+                field = {**field, 'kind': 'number'}
+        elif kind == 'number':
             if isinstance(new, bool) or not isinstance(new, (int, float)) or not math.isfinite(new):
                 raise ValueError('Numero invalido.')
             if field.get('percent') and not 0 <= new <= 1:
@@ -452,8 +459,27 @@ def preserve_package(source, target, changes):
                 old_root = ET.fromstring(raw)
                 cell_updates = {}
                 calculated = {c.attrib['r']: c for c in ET.fromstring(saved.read(saved_sheets[name])).findall('.//s:sheetData/s:row/s:c', ns)}
+                # Dynamic-array children have cached results without their own
+                # formula node. Preserve the original formulas/metadata while
+                # refreshing all cached values inside their original spill area.
+                def position(address):
+                    match = re.fullmatch(r'([A-Z]+)([1-9][0-9]*)', address)
+                    if not match:
+                        raise ValueError('Referencia de matriz invalida.')
+                    col = 0
+                    for letter in match[1]:
+                        col = col * 26 + ord(letter) - 64
+                    return col, int(match[2])
+                array_areas = []
+                for formula in old_root.findall('.//s:sheetData/s:row/s:c/s:f', ns):
+                    ref = formula.attrib.get('ref')
+                    if formula.attrib.get('t') == 'array' and ref:
+                        parts = ref.replace('$', '').split(':')
+                        array_areas.append((position(parts[0]), position(parts[-1])))
                 for cell in old_root.findall('.//s:sheetData/s:row/s:c', ns):
-                    if cell.find('s:f', ns) is None:
+                    col, row_number = position(cell.attrib['r'])
+                    array_child = any(a[0] <= col <= b[0] and a[1] <= row_number <= b[1] for a,b in array_areas)
+                    if cell.find('s:f', ns) is None and not array_child:
                         continue
                     current = calculated.get(cell.attrib['r'])
                     if current is None:
@@ -547,12 +573,20 @@ def worksheet_snapshot(book, body):
         raise ValueError('Intervalo de consulta invalido.')
     sheet = book.Worksheets(name)
     table_headers = set()
+    schedule_end = None
     for table in getattr(sheet, 'ListObjects', []):
         area = table.Range
+        if name.lower() == 'cronogramas' and row == 5 and column == 2 and int(area.Row) == 5 and int(area.Column) == 2 and str(sheet.Cells(5, 8).Value2).strip() == 'Status' and str(sheet.Cells(5, 9).Value2).startswith('Trabalho'):
+            schedule_end = int(area.Row + area.Rows.Count - 1)
+            if getattr(table, 'ShowTotals', False):
+                schedule_end -= 1
+            # Never silently calculate a partial schedule.
+            if schedule_end > 2005:
+                raise ValueError('Cronograma excede o limite de 2000 linhas.')
         if getattr(table, 'ShowHeaders', True):
             table_headers.update((int(area.Row), c) for c in range(int(area.Column), int(area.Column + area.Columns.Count)))
     fields, formulas = [], []
-    for r in range(row, row + 25):
+    for r in range(row, schedule_end + 1 if schedule_end is not None else row + 25):
         for c in range(column, column + 8):
             cell = sheet.Cells(r, c)
             letters, index = '', c
@@ -575,9 +609,9 @@ def worksheet_snapshot(book, body):
             readonly = calculated or spill or (r, c) in table_headers or bool(sheet.ProtectContents and cell.Locked) or bool(cell.MergeCells and cell.MergeArea.Cells(1,1).Address != cell.Address) or isinstance(raw, bool)
             fields.append({'sheet': name, 'cell': address, 'kind': kind, 'label': address,
                 'group': 'Guia', 'value': value(cell, kind) if kind != 'number' else float(raw),
-                'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
+                'scheduleStatus': schedule_end is not None and c == 8 and r > 5, 'percent': kind == 'number' and '%' in fmt, 'generic':True, 'readOnly': readonly, 'dateStorage':'number', 'display': str(cell.Text)})
             formulas.append([address, str(formula) if calculated else None])
-    return {'fields': fields, 'tasks': [], 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
+    return {'fields': fields, 'tasks': [], 'scheduleTable': schedule_end is not None, 'worksheetTypesVersion': 2, 'worksheet': name, 'firstRow':row, 'firstColumn':column,
         'formulaFingerprint': hashlib.sha256(json.dumps(formulas).encode()).hexdigest()}
 
 

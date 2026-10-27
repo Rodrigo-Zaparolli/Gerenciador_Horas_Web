@@ -64,12 +64,12 @@
     "redirects": [
       {
         "source": "/downloads/integracao-edesk-completa-windows-v2.zip",
-        "destination": "/downloads/integracao-edesk-completa-windows-v49.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v50.zip",
         "type": 302
       },
       {
         "source": "/downloads/abertura-local-windows.zip",
-        "destination": "/downloads/abertura-local-windows-v49.zip",
+        "destination": "/downloads/abertura-local-windows-v50.zip",
         "type": 302
       },
       {

@@ -1,4 +1,4 @@
-"""Build the small catalog-schedule-49 update for an existing full installation."""
+"""Build the small catalog-table-50 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO catalog-schedule-49 — instalação completa já existente
+README = '''ATUALIZAÇÃO catalog-table-50 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v50: tabela do Cronograma com Status por encontro e progresso ponderado por horas. Leitura completa da tabela, sem resumo parcial por pagina.
 
 Novidade v49: cronograma de Treinamento Catalog com horarios HH:mm e percentuais de 0 a 100. Preserva formulas, cabecalhos de tabelas, macros e protecoes. O site permite escolher e guardar a guia por projeto.
 
@@ -178,7 +180,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-49.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-50.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

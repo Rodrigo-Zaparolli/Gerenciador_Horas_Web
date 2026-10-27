@@ -1,7 +1,8 @@
 {
   "changes": [
-    "O modal de atualizacao passa a oferecer download da integracao E-Desk, com botoes para atualizacao leve e instalacao completa.",
-    "A versao e os links da integracao sao preenchidos automaticamente em cada publicacao, comecando pela v49.",
-    "Baixar a integracao nao fecha o modal nem recarrega o app. Se a integracao ja esta na versao indicada, basta atualizar o site."
+    "Cronograma do Treinamento Catalog com tabela de datas, horarios e Status por encontro, no formato da planilha.",
+    "Previa do progresso de cada trabalho ponderada pelas horas, atualizada ao alterar o Status. Preserva valores existentes como 99%.",
+    "Salvamento nas celulas originais do Excel, preservando formulas, macros e backups. Requer atualizar a integracao local para v50.",
+    "Demais guias mantidas. Downloads leve e completo disponiveis no modal de atualizacao."
   ]
 }
