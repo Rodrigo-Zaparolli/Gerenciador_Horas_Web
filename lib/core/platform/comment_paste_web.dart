@@ -7,6 +7,11 @@ void Function() listenForCommentPaste({required bool Function() accepts,
   required void Function(String) onText, required void Function(Uint8List) onImage}) {
   final listener = ((web.Event raw) {
     if (!accepts()) return;
+    final target = raw.target;
+    if (target != null && target.isA<web.Element>() &&
+        (target as web.Element).closest('[data-comment-native-editor]') != null) {
+      return;
+    }
     final event = raw as web.ClipboardEvent;
     final text = normalizeCommentPastedText(
         event.clipboardData?.getData('text/plain') ?? '');

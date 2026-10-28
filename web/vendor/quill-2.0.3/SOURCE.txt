@@ -1,0 +1,5 @@
+Quill 2.0.3
+https://quilljs.com/
+https://github.com/slab/quill/tree/v2.0.3
+Verified npm tarball integrity: sha512-xEYQBqfYx/sfb33VJiKnSJp8ehloavImQ2A6564GAbqG55PGw1dAWUn1MUbQB62t0azawUS2CZZhWCjO8gRvTw==
+License: BSD-3-Clause (see LICENSE).

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Comentario: botao Corrigir escrita na barra do editor para revisar portugues com as sugestoes do Edge ou Chrome, preservando imagens e formatacao.",
-    "Conferencia E-Desk: datas ajustadas lidas em Fases, horas trabalhadas verificadas nos lancamentos, horas previstas, saldo e excedentes e identificacao de trabalhos concluidos.",
-    "A conferencia permanece somente leitura e marca os dados que nao puderam ser consultados. Atualize e reinicie a integracao v55 para usar a nova conferencia. A correcao do Ctrl+V do Windows permanece incluida."
+    "Correcao ortografica no proprio texto do comentario: palavras podem ser sublinhadas durante a digitacao, com sugestoes no botao direito do Edge ou Chrome. Nao e preciso abrir a janela de revisao.",
+    "Editor do comentario integrado ao navegador, preservando imagens, formatacao, modelos e a conferencia de envio. Mantidos Ctrl+V, Tab de quatro espacos e Shift+Tab.",
+    "O corretor usa o idioma portugues do navegador. Esta atualizacao nao exige baixar novamente a integracao local."
   ]
 }
