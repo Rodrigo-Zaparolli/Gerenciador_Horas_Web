@@ -176,3 +176,7 @@ flutter:
     - assets/images/tarefas_executadas.png
     - assets/images/orientacoes.png
     - assets/images/check_list.png
+
+dependency_overrides:
+  firebase_auth_web:
+    path: third_party/firebase_auth_web

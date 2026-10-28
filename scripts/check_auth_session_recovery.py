@@ -66,6 +66,12 @@ try:
             clean.wait_for_function("document.querySelector('#status').textContent.includes('localStorage')")
             assert clean.locator('#return').is_hidden()
             assert clean.get_by_role('button', name='Recuperar meu acesso').is_enabled()
+            clean.reload()
+            clean.evaluate("Object.defineProperty(indexedDB,'open',{value(){throw new DOMException('fixture blocked','SecurityError')}})")
+            clean.get_by_role('button', name='Recuperar meu acesso').click()
+            clean.locator('#return').wait_for(state='visible')
+            assert clean.evaluate("localStorage.getItem('gerenciador_horas.auth.storage')") == 'local'
+            assert 'compat' in clean.locator('#status').inner_text()
             fresh.close()
             print('AUTH_RECOVERY_ABSENT_DATABASE_BLOCKED_STORAGE_PASS', channel, flush=True)
             browser.close()

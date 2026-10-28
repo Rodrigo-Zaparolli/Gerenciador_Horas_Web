@@ -1,6 +1,6 @@
 {
   "changes": [
-    "Recuperacao de acesso na tela de login para redefinir apenas a sessao deste sistema, preservando vinculos de pastas, planilhas e configuracoes.",
-    "Mensagem de erro de autenticacao com orientacao para recuperar o acesso. Nao requer atualizar a integracao local."
+    "Recuperacao de login com armazenamento persistente alternativo quando o IndexedDB do navegador esta indisponivel. O modo compativel e usado desde a inicializacao e preserva Manter conectado.",
+    "Preservados os vinculos de pastas, planilhas, rascunhos e configuracoes. Nao e necessario atualizar a integracao local."
   ]
 }

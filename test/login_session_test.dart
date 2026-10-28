@@ -82,6 +82,26 @@ void main() {
       'login:user@example.com',
     ]);
   });
+  test('Recovered profile never selects IndexedDB during sign-in', () async {
+    final auth = Auth()..failIndexedDb = true;
+    await LoginSession.signIn(
+        auth: auth,
+        email: 'user@example.com',
+        password: 'test',
+        keepConnected: true,
+        web: true,
+        preferLocalStorage: true);
+    expect(auth.events, [Persistence.LOCAL, 'login:user@example.com']);
+    auth.events.clear();
+    await LoginSession.signIn(
+        auth: auth,
+        email: 'user@example.com',
+        password: 'test',
+        keepConnected: false,
+        web: true,
+        preferLocalStorage: true);
+    expect(auth.events, [Persistence.SESSION, 'login:user@example.com']);
+  });
   test('Native authentication keeps its existing platform behavior', () async {
     final auth = Auth();
     await LoginSession.signIn(
