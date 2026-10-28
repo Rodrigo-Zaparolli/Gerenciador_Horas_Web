@@ -19,6 +19,52 @@ Future<void> choose(WidgetTester tester, String cell, String value) async {
 }
 
 void main() {
+  testWidgets('progress changes immediately while Excel calculation is pending',
+      (tester) async {
+    final pending = Completer<Map<String, dynamic>>();
+    await tester.pumpWidget(MaterialApp(
+        home: ChecklistStageDialog(
+      stage: 'Implantacao',
+      canApply: () => true,
+      tasks: const [
+        {'sheet': 'Checklist', 'cell': 'E1', 'label': 'Editable'},
+        {'sheet': 'Checklist', 'cell': 'E2', 'label': 'Done'}
+      ],
+      values: const {'Checklist!E1': 0, 'Checklist!E2': 1},
+      initialPreview: const {
+        'rows': [
+          {'label': 'Implantacao', 'percentage': .75}
+        ],
+        'taskProgress': {
+          'Checklist!E1': {'weight': .25, 'value': 0},
+          'Checklist!E2': {'weight': .75, 'value': 1}
+        }
+      },
+      calculatePreview: (_) => pending.future,
+    )));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<LinearProgressIndicator>(
+                find.byKey(const ValueKey('stage-live-progress')))
+            .value,
+        .75);
+    await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+    await tester.pumpAndSettle();
+    await choose(tester, 'E1', '50');
+    expect(pending.isCompleted, isFalse);
+    expect(
+        tester
+            .widget<LinearProgressIndicator>(
+                find.byKey(const ValueKey('stage-live-progress')))
+            .value,
+        .875);
+    expect(find.text('87,50%'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    pending.complete({'rows': []});
+    await tester.pump();
+  });
+
   testWidgets(
       'header shows only opened work immediately while Excel calculates',
       (tester) async {

@@ -1,4 +1,4 @@
-"""Build the small excel-preview-56 update for an existing full installation."""
+"""Build the small stage-progress-57 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO excel-preview-56 — instalação completa já existente
+README = '''ATUALIZAÇÃO stage-progress-57 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v57: informa os pesos reais das tarefas para a barra de progresso reagir durante a edicao, sem aguardar o Excel a cada escolha.
 
 Novidade v56: leitura inicial do Status Projeto sem copia gravavel nem recalculo completo. Falhas na limpeza temporaria nao prendem mais o bloqueio da planilha. Reinicie a integracao apos substituir os arquivos.
 
@@ -190,7 +192,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-56.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-57.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

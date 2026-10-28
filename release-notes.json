@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Integracao v56 corrige um bloqueio persistente da planilha: uma falha ao limpar a copia temporaria nao impede as proximas operacoes.",
-    "Leitura inicial do Status Projeto sem criar copia gravavel nem forcar recalculo completo quando nao existem alteracoes pendentes.",
-    "Esta correcao exige baixar a atualizacao leve v56, parar a integracao, substituir os arquivos na mesma pasta e iniciar novamente. Pastas, planilhas e autorizacoes locais sao preservadas."
+    "Integracao v57: percentual da etapa calculado com todas as tarefas e seus pesos, sem confundir um bloco concluido com o trabalho inteiro.",
+    "Barra do trabalho atualizada imediatamente durante os ajustes; indicacao de confirmacao pela planilha.",
+    "Para aplicar o calculo corrigido, atualize e reinicie a integracao v57 e recarregue a planilha."
   ]
 }

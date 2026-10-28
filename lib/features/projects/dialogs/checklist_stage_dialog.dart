@@ -1,3 +1,4 @@
+import 'checklist_stage_progress.dart';
 import 'package:flutter/material.dart';
 import 'checklist_live_preview.dart';
 
@@ -64,13 +65,20 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
               row['label']?.toString().trim().toLowerCase() ==
               widget.stage.trim().toLowerCase())
           .toList();
-      final value = matches.length == 1 ? matches.single['percentage'] : null;
+      final immediate =
+          immediateStageProgress(widget.stage, widget.tasks, _values, data);
+      final value = immediate ??
+          (matches.length == 1 ? matches.single['percentage'] : null);
       final valid = value is num && value.isFinite && value >= 0 && value <= 1;
       final colors = Theme.of(context).colorScheme;
       final status = preview?.error != null
-          ? 'N\u00e3o foi poss\u00edvel atualizar a pr\u00e9via.'
+          ? (immediate != null
+              ? 'Pr\u00e9via dos ajustes; confirma\u00e7\u00e3o da planilha pendente.'
+              : 'N\u00e3o foi poss\u00edvel atualizar a pr\u00e9via.')
           : preview != null && (preview.updating || preview.stale)
-              ? 'Atualizando na planilha...'
+              ? (immediate != null
+                  ? 'Pr\u00e9via imediata dos ajustes'
+                  : 'Atualizando na planilha...')
               : valid
                   ? 'Progresso deste trabalho'
                   : 'Percentual ainda indispon\u00edvel';
@@ -83,7 +91,9 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
               borderRadius: BorderRadius.circular(6),
               backgroundColor: colors.primary.withValues(alpha: .14),
               semanticsLabel: 'Progresso de ${widget.stage}',
-              semanticsValue: valid ? percentage(value.toDouble()) : null,
+              semanticsValue: valid
+                  ? '${(value.toDouble() * 100).toStringAsFixed(2)}%'
+                  : null,
             )),
             const SizedBox(width: 12),
             SizedBox(
@@ -127,7 +137,9 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                     IconButton(
                         tooltip: 'Atualizar pr\u00e9via',
                         onPressed: preview.updating ? null : preview.refresh,
-                        icon: const Icon(Icons.refresh, size: 18)),
+                        icon: Icon(preview.updating || preview.stale
+                            ? Icons.sync
+                            : Icons.refresh, size: 18)),
                 ])),
       ));
     }

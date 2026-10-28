@@ -305,6 +305,30 @@ def status_preview(book, service_type, sheet_names=None):
     first, last = checklist_table(sheet)
     def number(value):
         return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and -1e-9 <= value <= 1 + 1e-9 else None
+    progress = {}
+    tasks = checklist_tasks(sheet, first, last)
+    for task in tasks:
+        row = int(task['cell'][1:])
+        raw = sheet.Cells(row, 17).Value2  # % Tar. no Trab.: actual Excel coefficient.
+        weight = 0.0 if raw == '-' else number(raw)
+        if weight is not None:
+            progress[f"{task['sheet']}!{task['cell']}"] = {'weight': weight, 'value': task['value']}
+    # Column C can contain a sub-work total. Aggregate the complete stage
+    # from Excel's Q coefficients, never from the first displayed block.
+    aggregates = {}
+    for task in tasks:
+        aggregates.setdefault(task.get('group', ''), []).append(task)
+    def complete_stage(row):
+        members = aggregates.get(row['label'], [])
+        if members:
+            row['percentage'] = None
+        items = [progress.get(f"{t['sheet']}!{t['cell']}") for t in members]
+        if items and all(item is not None for item in items):
+            weight = sum(item['weight'] for item in items)
+            if abs(weight - 1) <= 1e-6:
+                row['percentage'] = min(1.0, max(0.0, sum(
+                    item['weight'] * item['value'] for item in items)))
+        return row
     total = number(sheet.Cells(first - 1, 5).Value2)
     rows = []
     if first >= 16:
@@ -324,7 +348,7 @@ def status_preview(book, service_type, sheet_names=None):
                     'end': value(dados.Cells(row, 36), 'date'),
                     'weight': number(dados.Cells(row, 37).Value2),
                     'planned': number(dados.Cells(row, 38).Value2)})
-            return {'total': total, 'rows': rows, 'source': 'Dados!AG5:AL11'}
+            return {'total': total, 'rows': [complete_stage(row) for row in rows], 'source': 'Dados!AG5:AL11', 'taskProgress': progress}
     # Maker has no Status Projeto block linked to its checklist in the template.
     # Read its own calculated stage cells, never the Enterprise summary.
     for row in range(first + 1, last + 1):
@@ -335,7 +359,7 @@ def status_preview(book, service_type, sheet_names=None):
                 if str(sheet.Cells(r, 4).Value2 or '').strip() == label]
             weight = sum(float(v) for v in weights if isinstance(v, (int, float)) and not isinstance(v, bool))
             rows.append({'label': label, 'percentage': percentage, 'weight': number(weight)})
-    return {'total': total, 'rows': rows, 'source': sheet.Name}
+    return {'total': total, 'rows': [complete_stage(row) for row in rows], 'source': sheet.Name, 'taskProgress': progress}
 
 
 def validated_changes(current, changes):
@@ -682,6 +706,9 @@ def edit(path, body):
         if not writing and not previewing:
             with workbook(path) as (_, book):
                 data = worksheet_snapshot(book, body) if body.get('worksheet') is not None else snapshot(book, body.get('serviceType'), body.get('sheetNames'))
+                if body.get('worksheet') is None:
+                    data.update({'statusPreview': status_preview(book, body.get('serviceType'), body.get('sheetNames')),
+                                 'statusPreviewRevision': original, 'statusPreviewSheets': body.get('sheetNames') or {}})
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a leitura. Recarregue.')
             return {**data, 'revision': original, 'filename': path.name}
