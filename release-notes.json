@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Editor de comentarios com teclado nativo protegido contra atalhos do Flutter, incluindo Espaco, Enter, Tab e Ctrl+V.",
-    "Corretor de portugues integrado ao app: palavras incorretas sublinhadas durante a digitacao e sugestoes no botao direito, sem depender do dicionario instalado no navegador.",
-    "A verificacao ocorre localmente no navegador. As marcas de correcao nao sao gravadas no comentario nem enviadas ao E-Desk. Nao e necessario atualizar a integracao local."
+    "Modal de tarefas do checklist com barra e porcentagem no cabecalho, mostrando somente o trabalho aberto.",
+    "A previa mantem o ultimo percentual disponivel enquanto a planilha recalcula os ajustes individuais ou em bloco. Para gravar os ajustes no Excel, use Salvar na planilha."
   ]
 }

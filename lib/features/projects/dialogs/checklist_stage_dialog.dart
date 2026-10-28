@@ -8,7 +8,9 @@ class ChecklistStageDialog extends StatefulWidget {
       required this.tasks,
       required this.values,
       required this.canApply,
-      this.calculatePreview});
+      this.calculatePreview,
+      this.initialPreview});
+  final Map<String, dynamic>? initialPreview;
   final String stage;
   final List<Map<String, dynamic>> tasks;
   final Map<String, double> values;
@@ -52,50 +54,89 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
     }
   }
 
-  Widget stagePreview() => ListenableBuilder(
-      listenable: _preview!,
-      builder: (context, _) {
-        final preview = _preview!;
-        final rows = (preview.data?['rows'] as List? ?? []).whereType<Map>();
-        final matches = rows
-            .where((row) =>
-                row['label']?.toString().trim().toLowerCase() ==
-                widget.stage.trim().toLowerCase())
-            .toList();
-        final value = matches.length == 1 ? matches.single['percentage'] : null;
-        final valid = value is num;
-        return Card(
-            child: Padding(
-          padding: const EdgeInsets.all(12),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              Expanded(
-                  child: Text(widget.stage,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
-              if (valid)
-                Text(percentage(value.toDouble()),
-                    key: const ValueKey('stage-live-percentage')),
-              IconButton(
-                  tooltip: 'Atualizar prévia',
-                  onPressed: preview.updating ? null : preview.refresh,
-                  icon: const Icon(Icons.refresh, size: 18)),
-            ]),
-            if (valid)
-              LinearProgressIndicator(
-                  value: value.toDouble().clamp(0, 1), minHeight: 8),
-            Text(
-                preview.error != null
-                    ? 'Não foi possível calcular a prévia. Tente atualizar.'
-                    : preview.updating || preview.stale
-                        ? 'Calculando na planilha...'
-                        : valid
-                            ? 'Prévia dos ajustes desta etapa'
-                            : 'Etapa sem correspondência na tabela Status Projeto.',
-                style: Theme.of(context).textTheme.bodySmall),
-          ]),
-        ));
-      });
+  Widget stagePreview() {
+    Widget content(BuildContext context) {
+      final preview = _preview;
+      final data = preview?.data ?? widget.initialPreview;
+      final matches = (data?['rows'] as List? ?? [])
+          .whereType<Map>()
+          .where((row) =>
+              row['label']?.toString().trim().toLowerCase() ==
+              widget.stage.trim().toLowerCase())
+          .toList();
+      final value = matches.length == 1 ? matches.single['percentage'] : null;
+      final valid = value is num && value.isFinite && value >= 0 && value <= 1;
+      final colors = Theme.of(context).colorScheme;
+      final status = preview?.error != null
+          ? 'N\u00e3o foi poss\u00edvel atualizar a pr\u00e9via.'
+          : preview != null && (preview.updating || preview.stale)
+              ? 'Atualizando na planilha...'
+              : valid
+                  ? 'Progresso deste trabalho'
+                  : 'Percentual ainda indispon\u00edvel';
+      Widget progress() => Row(children: [
+            Expanded(
+                child: LinearProgressIndicator(
+              key: const ValueKey('stage-live-progress'),
+              value: valid ? value.toDouble() : 0,
+              minHeight: 10,
+              borderRadius: BorderRadius.circular(6),
+              backgroundColor: colors.primary.withValues(alpha: .14),
+              semanticsLabel: 'Progresso de ${widget.stage}',
+              semanticsValue: valid ? percentage(value.toDouble()) : null,
+            )),
+            const SizedBox(width: 12),
+            SizedBox(
+                width: 76,
+                child: Text(
+                  valid ? percentage(value.toDouble()) : '\u2014',
+                  key: const ValueKey('stage-live-percentage'),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface),
+                )),
+          ]);
+      final title =
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(widget.stage, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(status, style: Theme.of(context).textTheme.bodySmall),
+      ]);
+      return Card(
+          child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+            builder: (context, size) => Row(children: [
+                  Expanded(
+                      child: size.maxWidth >= 540
+                          ? Row(children: [
+                              SizedBox(width: 220, child: title),
+                              const SizedBox(width: 16),
+                              Expanded(child: progress()),
+                            ])
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                  title,
+                                  const SizedBox(height: 10),
+                                  progress(),
+                                ])),
+                  if (preview != null)
+                    IconButton(
+                        tooltip: 'Atualizar pr\u00e9via',
+                        onPressed: preview.updating ? null : preview.refresh,
+                        icon: const Icon(Icons.refresh, size: 18)),
+                ])),
+      ));
+    }
+
+    return _preview == null
+        ? content(context)
+        : ListenableBuilder(
+            listenable: _preview!, builder: (context, _) => content(context));
+  }
 
   void finish({required bool applyChanges}) {
     if (_closing || !mounted) return;
@@ -145,7 +186,8 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
           height: (MediaQuery.sizeOf(context).height * .60).clamp(160.0, 570.0),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            if (_preview != null) stagePreview(),
+            if (_preview != null || widget.initialPreview != null)
+              stagePreview(),
             Text('${shown.length} de ${widget.tasks.length} tarefas'),
             SwitchListTile.adaptive(
                 key: const ValueKey('stage-pending-only'),
