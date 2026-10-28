@@ -17,10 +17,18 @@ try:
    page.goto(f'http://127.0.0.1:{server.server_port}/')
    editor=page.locator('.ql-editor');editor.wait_for(timeout=30000);assert editor.evaluate('e=>e.spellcheck') is True
    assert editor.get_attribute('lang')=='pt-BR'
-   editor.click();page.keyboard.type('comentarrio');page.wait_for_timeout(200)
+   editor.evaluate('e=>e.spellcheck=false');editor.click();page.keyboard.type('comentario');page.wait_for_timeout(200)
    def state():return json.loads(page.locator('body').get_attribute('data-probe'))
-   assert state()['text']=='comentarrio\n',state()
-   editor.evaluate("e=>window.addEventListener('contextmenu',event=>window.nativeMenuAllowed=!event.defaultPrevented,{once:true})");editor.click(button='right',position={'x':40,'y':12});assert page.evaluate('window.nativeMenuAllowed') is True;page.keyboard.press('Escape')
+   assert state()['text']=='comentario\n',state()
+   page.keyboard.press('Space');page.keyboard.type('com');page.keyboard.press('Space');page.keyboard.type('espacos')
+   assert state()['text']=='comentario com espacos\n',state()
+   page.wait_for_function("Number(document.querySelector('.ql-editor').dataset.spellingErrors)>0",timeout=30000)
+   rect=page.evaluate("""()=>{for(const h of CSS.highlights.values())for(const range of h.values())if(range.toString()==='comentario'){const r=range.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}}}""")
+   assert rect,'local spelling underline missing inside Flutter modal'
+   page.mouse.click(rect['x'],rect['y'],button='right')
+   page.locator('.comment-spelling-menu').get_by_role('menuitem',name='coment\u00e1rio',exact=True).click(timeout=15000)
+   assert state()['text']=='coment\u00e1rio com espacos\n',state()
+   assert all('spelling' not in str(op.get('attributes',{})) for op in state()['delta'])
    page.keyboard.press('Control+a');page.keyboard.insert_text('coment\u00e1rio');page.wait_for_timeout(150)
    assert state()['text']=='coment\u00e1rio\n',state()
    page.keyboard.press('Tab');page.wait_for_timeout(150);assert state()['text']=='coment\u00e1rio\u00a0\u00a0\n',state()
@@ -39,10 +47,12 @@ try:
    assert 'Texto copiado\nCom duas linhas' in state()['text'],(state(),page.locator('body').get_attribute('data-clipboard-seen'))
    assert state()['legacy']==0,state()
    # Existing image insertion still goes through the same Flutter controller.
-   page.mouse.click(255,24);page.wait_for_timeout(250)
+   page.mouse.click(305,64);page.wait_for_timeout(250)
    assert any(isinstance(o['insert'],dict) for o in state()['delta']),state()
    assert page.locator('.ql-editor img').count()==1
-   page.mouse.click(330,24);page.wait_for_timeout(250)
+   editor.click();page.keyboard.press('Control+End');page.keyboard.type('depois');page.keyboard.press('Space');page.keyboard.type('da');page.keyboard.press('Space');page.keyboard.type('imagem')
+   assert 'depois da imagem' in state()['text'],state()
+   page.mouse.click(380,64);page.wait_for_timeout(250)
    page.screenshot(path=f'build/inline-spelling-flutter-{channel}.png')
    assert not errors,errors
    print('FLUTTER_INLINE_SPELLING_PASTE_TAB_FORMAT_IMAGE_PASS',channel,flush=True)

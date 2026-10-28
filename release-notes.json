@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Recuperacao de login com armazenamento persistente alternativo quando o IndexedDB do navegador esta indisponivel. O modo compativel e usado desde a inicializacao e preserva Manter conectado.",
-    "Preservados os vinculos de pastas, planilhas, rascunhos e configuracoes. Nao e necessario atualizar a integracao local."
+    "Editor de comentarios com teclado nativo protegido contra atalhos do Flutter, incluindo Espaco, Enter, Tab e Ctrl+V.",
+    "Corretor de portugues integrado ao app: palavras incorretas sublinhadas durante a digitacao e sugestoes no botao direito, sem depender do dicionario instalado no navegador.",
+    "A verificacao ocorre localmente no navegador. As marcas de correcao nao sao gravadas no comentario nem enviadas ao E-Desk. Nao e necessario atualizar a integracao local."
   ]
 }

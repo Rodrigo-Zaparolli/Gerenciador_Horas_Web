@@ -1,7 +1,14 @@
 /* Browser-native comment editing. Quill 2.0.3 is bundled locally under BSD-3-Clause. */
 (function () {
   'use strict';
-  let loading;
+  let loading, spellingLoading;
+  function loadSpelling() {
+    if (window.gerenciadorCommentSpelling) return Promise.resolve(window.gerenciadorCommentSpelling);
+    return spellingLoading ||= new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src=new URL('comment_spelling.js?editor=2',document.baseURI);
+      script.onload=()=>resolve(window.gerenciadorCommentSpelling);script.onerror=()=>{spellingLoading=null;reject(new Error('Corretor indisponivel'));};document.head.append(script);
+    });
+  }
   function load() {
     if (window.Quill) return Promise.resolve(window.Quill);
     if (!loading) loading = new Promise((resolve, reject) => {
@@ -77,7 +84,10 @@
     root.setAttribute('autocapitalize', 'sentences'); root.setAttribute('role', 'textbox');
     root.setAttribute('aria-label', 'Descri\u00e7\u00e3o do coment\u00e1rio'); root.setAttribute('aria-multiline', 'true');
     root.style.fontFamily = 'Roboto, sans-serif'; root.style.fontSize = '16px';
-    let updating = false, disposed = false;
+    let updating = false, disposed = false, spelling;
+    loadSpelling().then(service=>{if(!disposed)spelling=service.attach(editor);}).catch(()=>{
+      if(!disposed){const notice=document.createElement('span');notice.textContent='Corretor indispon\u00edvel. Reabra o coment\u00e1rio para tentar novamente.';notice.style.cssText='position:absolute;bottom:4px;right:10px;font:11px system-ui';host.append(notice);}
+    });
     function publishSelection() { const r = editor.getSelection(); if (r && !disposed) selected(r.index, r.index + r.length); }
     const textHandler = () => { if (!updating && !disposed) { const r = editor.getSelection() || { index: 0, length: 0 }; changed(JSON.stringify(outgoing(editor.getContents())), r.index, r.index + r.length); queueMicrotask(() => { if (!disposed) publishSelection(); }); } };
     const selectionHandler = r => { if (!updating && !disposed && r) selected(r.index, r.index + r.length); };
@@ -123,7 +133,7 @@
         } finally { updating = false; }
       },
       focus() { if (!disposed) editor.focus({preventScroll:true}); },
-      destroy() { disposed = true; root.removeEventListener('paste', paste, true); root.removeEventListener('keydown', keys, true); editor.off('text-change', textHandler); editor.off('selection-change', selectionHandler); editor.disable(); editor.scroll?.observer?.disconnect?.(); host.replaceChildren(); },
+      destroy() { disposed = true; spelling?.destroy(); root.removeEventListener('paste', paste, true); root.removeEventListener('keydown', keys, true); editor.off('text-change', textHandler); editor.off('selection-change', selectionHandler); editor.disable(); editor.scroll?.observer?.disconnect?.(); host.replaceChildren(); },
       editor
     };
     updating = true; editor.setContents(incoming(JSON.parse(initial)), 'silent'); editor.history.clear(); updating = false;

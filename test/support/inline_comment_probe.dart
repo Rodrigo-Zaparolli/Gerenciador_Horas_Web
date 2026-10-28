@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gerenciador_horas/shared/widgets/writing_review.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:gerenciador_horas/core/platform/comment_editor.dart';
 import 'package:gerenciador_horas/core/platform/comment_paste.dart';
@@ -33,6 +33,9 @@ class S extends State<App> {
   void initState() {
     super.initState();
     c.addListener(report);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
     stop = listenForCommentPaste(
         accepts: () => f.hasFocus,
         onText: (text) {
@@ -60,68 +63,89 @@ class S extends State<App> {
   Widget build(BuildContext context) => MaterialApp(
       theme: ThemeData.dark(),
       localizationsDelegates: const [quill.FlutterQuillLocalizations.delegate],
+      builder: (_, child) => WritingReviewScope(child: child!),
       home: Builder(
           builder: (ctx) => Scaffold(
-                  body: Column(children: [
-                Row(children: [
-                  TextButton(
-                      onPressed: () {
-                        c.formatSelection(quill.Attribute.bold);
-                        f.requestFocus();
-                      },
-                      child: const Text('Bold')),
-                  SizedBox(
-                      width: 160,
-                      child: CommentFontPicker(
-                          value: font,
-                          controller: c,
-                          editorFocus: f,
-                          onChanged: (v) => setState(() => font = v))),
-                  TextButton(
-                      onPressed: () {
-                        final s = c.selection;
-                        c.replaceText(
-                            s.start,
-                            s.end - s.start,
-                            quill.BlockEmbed.image(
-                                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
-                            TextSelection.collapsed(offset: s.start + 1));
-                      },
-                      child: const Text('Image')),
-                  TextButton(
-                      onPressed: () => showDialog<void>(
-                          context: ctx,
-                          builder: (_) =>
-                              AlertDialog(
-                                  content: SizedBox(
-                                      width: 600,
-                                      height: 350,
-                                      child: CommentDocumentPreview(
-                                          delta:
-                                              c.document.toDelta().toJson())),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () => Navigator.pop(ctx),
-                                        child: const Text('Close'))
-                                  ])),
-                      child: const Text('Preview')),
-                ]),
-                Expanded(
-                    child: Shortcuts(
-                        shortcuts: const {
-                      SingleActivator(LogicalKeyboardKey.keyV, control: true):
-                          ProbePaste()
-                    },
-                        child: Actions(
-                            actions: {ProbePaste: BrowserCommentPasteAction()},
-                            child: commentEditor(
-                                controller: c,
-                                focusNode: f,
-                                fallback: quill.QuillEditor.basic(
-                                    controller: c,
-                                    focusNode: f,
-                                    scrollController: scroll))))),
-                const TextField(
-                    decoration: InputDecoration(labelText: 'Other field')),
-              ]))));
+              body: FocusScope(
+                  autofocus: true,
+                  child: Dialog(
+                      child: SizedBox(
+                          width: 1100,
+                          height: 720,
+                          child: Column(children: [
+                            Row(children: [
+                              TextButton(
+                                  onPressed: () {
+                                    c.formatSelection(quill.Attribute.bold);
+                                    f.requestFocus();
+                                  },
+                                  child: const Text('Bold')),
+                              SizedBox(
+                                  width: 160,
+                                  child: CommentFontPicker(
+                                      value: font,
+                                      controller: c,
+                                      editorFocus: f,
+                                      onChanged: (v) =>
+                                          setState(() => font = v))),
+                              TextButton(
+                                  onPressed: () {
+                                    final s = c.selection;
+                                    c.replaceText(
+                                        s.start,
+                                        s.end - s.start,
+                                        quill.BlockEmbed.image(
+                                            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+                                        TextSelection.collapsed(
+                                            offset: s.start + 1));
+                                  },
+                                  child: const Text('Image')),
+                              TextButton(
+                                  onPressed: () => showDialog<void>(
+                                      context: ctx,
+                                      builder: (_) => AlertDialog(
+                                              content: SizedBox(
+                                                  width: 600,
+                                                  height: 350,
+                                                  child: CommentDocumentPreview(
+                                                      delta: c.document
+                                                          .toDelta()
+                                                          .toJson())),
+                                              actions: [
+                                                TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(ctx),
+                                                    child: const Text('Close'))
+                                              ])),
+                                  child: const Text('Preview')),
+                            ]),
+                            Expanded(
+                                child: Shortcuts(
+                                    shortcuts: const {
+                                  SingleActivator(LogicalKeyboardKey.keyV,
+                                      control: true): ProbePaste()
+                                },
+                                    child: Actions(
+                                        actions: {
+                                          ProbePaste:
+                                              BrowserCommentPasteAction()
+                                        },
+                                        child: WritingReviewTarget(
+                                            focusNode: f,
+                                            readText: () =>
+                                                c.document.toPlainText(),
+                                            applyText: (_) {},
+                                            child: commentEditor(
+                                                controller: c,
+                                                focusNode: f,
+                                                fallback:
+                                                    quill.QuillEditor.basic(
+                                                        controller: c,
+                                                        focusNode: f,
+                                                        scrollController:
+                                                            scroll)))))),
+                            const TextField(
+                                decoration:
+                                    InputDecoration(labelText: 'Other field')),
+                          ])))))));
 }

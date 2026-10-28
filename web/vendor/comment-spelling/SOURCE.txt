@@ -1,0 +1,11 @@
+Local Brazilian Portuguese spelling runtime.
+Hunspell-asm 4.0.2: https://github.com/kwonoj/hunspell-asm (MIT binding).
+Hunspell engine: https://github.com/hunspell/hunspell (LGPL/GPL/MPL alternatives).
+Dictionary-pt 4.0.0: https://github.com/wooorm/dictionaries/tree/main/dictionaries/pt
+VERO Brazilian Portuguese dictionary, unmodified index.aff/index.dic.
+Distributed under the MPL alternative; original dictionary notice preserved.
+Worker source: scripts/comment_spelling_worker.js; build: scripts/build_comment_spelling.cjs.
+No remote spelling service or runtime CDN is used.
+
+Hunspell engine source version: fc6a952-200131 (hunspell-asm package configuration).
+Source: https://github.com/hunspell/hunspell/tree/fc6a952

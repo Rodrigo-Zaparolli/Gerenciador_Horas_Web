@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:web/web.dart' as web;
 import '../../features/dashboard/comentario/comment_native_document.dart';
@@ -26,7 +25,7 @@ Future<void> _ensureBridge() {
     final completed = Completer<void>();
     final script = web.HTMLScriptElement()
       ..src = Uri.parse(web.document.baseURI)
-          .resolve('comment_native_editor.js')
+          .resolve('comment_native_editor.js?editor=keyboard-spelling-2')
           .toString();
     script.addEventListener(
         'load', ((web.Event _) => completed.complete()).toJS);
@@ -163,9 +162,9 @@ class _NativeState extends State<_NativeCommentEditor> {
           Expanded(child: widget.fallback)
         ])
       : Focus(
-          onKeyEvent: (_, event) => event.logicalKey == LogicalKeyboardKey.tab
-              ? KeyEventResult.skipRemainingHandlers
-              : KeyEventResult.ignored,
+          // The DOM editor owns its keyboard. Flutter shortcuts must not
+          // consume Space/Enter or dispatch them to a focused toolbar button.
+          onKeyEvent: (_, event) => KeyEventResult.skipRemainingHandlers,
           focusNode: widget.focus,
           child: HtmlElementView.fromTagName(
               tagName: 'div',

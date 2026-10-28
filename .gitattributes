@@ -1,0 +1,5 @@
+# Preserve unmodified dictionary data and upstream license texts.
+web/vendor/comment-spelling/index.aff -text -whitespace
+web/vendor/comment-spelling/index.dic -text -whitespace
+web/vendor/comment-spelling/*LICENSE.txt -text -whitespace
+web/vendor/comment-spelling/*MPL*.txt -text -whitespace
