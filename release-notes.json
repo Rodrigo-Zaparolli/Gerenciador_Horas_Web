@@ -1,7 +1,6 @@
 {
   "changes": [
-    "Correcao ortografica no proprio texto do comentario: palavras podem ser sublinhadas durante a digitacao, com sugestoes no botao direito do Edge ou Chrome. Nao e preciso abrir a janela de revisao.",
-    "Editor do comentario integrado ao navegador, preservando imagens, formatacao, modelos e a conferencia de envio. Mantidos Ctrl+V, Tab de quatro espacos e Shift+Tab.",
-    "O corretor usa o idioma portugues do navegador. Esta atualizacao nao exige baixar novamente a integracao local."
+    "Recuperacao de acesso na tela de login para redefinir apenas a sessao deste sistema, preservando vinculos de pastas, planilhas e configuracoes.",
+    "Mensagem de erro de autenticacao com orientacao para recuperar o acesso. Nao requer atualizar a integracao local."
   ]
 }

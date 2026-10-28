@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'package:gerenciador_horas/features/auth/widgets/auth_viewport.dart';
@@ -149,6 +151,12 @@ class _LoginScreenState extends State<LoginScreen>
         case 'too-many-requests':
           message =
               'Muitas tentativas. Aguarde alguns instantes e tente novamente.';
+          break;
+
+        case 'internal-error':
+          message =
+              'N\u00e3o foi poss\u00edvel concluir o login neste navegador. '
+              'Use Problemas para entrar? para recuperar a sess\u00e3o local.';
           break;
 
         case 'network-request-failed':
@@ -561,6 +569,24 @@ class _LoginScreenState extends State<LoginScreen>
                     },
             ),
           ),
+
+          if (kIsWeb)
+            TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      final opened = await launchUrl(
+                        Uri.base.resolve('recuperar-acesso.html'),
+                        webOnlyWindowName: '_self',
+                      );
+                      if (!opened && mounted) {
+                        _showMessage(
+                            'N\u00e3o foi poss\u00edvel abrir a recupera\u00e7\u00e3o.',
+                            isError: true);
+                      }
+                    },
+              child: const Text('Problemas para entrar?'),
+            ),
 
           // ====================================================
           // ESQUECI A SENHA
