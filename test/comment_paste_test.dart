@@ -13,6 +13,16 @@ class TestCommentPasteIntent extends Intent {
 }
 
 void main() {
+  test(
+      'Windows clipboard line endings become LF without changing text or spacing',
+      () {
+    expect(normalizeCommentPastedText('First\r\nSecond\rThird\n'),
+        'First\nSecond\nThird\n');
+    expect(
+        normalizeCommentPastedText('  Plain text\u00a0'), '  Plain text\u00a0');
+    expect(normalizeCommentPastedText(''), '');
+  });
+
   test('browser shortcut permits the native paste event', () {
     final action = BrowserCommentPasteAction();
     expect(action.consumesKey(const TestCommentPasteIntent()), isFalse);
@@ -24,7 +34,7 @@ void main() {
         accepts: () => true,
         onText: received.add,
         onImage: (_) => fail('Text paste must not add an image'));
-    expect(pasteCommentText('Current text\nSecond line'), isTrue);
+    expect(pasteCommentText('Current text\r\nSecond line'), isTrue);
     expect(received, ['Current text\nSecond line']);
     stop();
     expect(pasteCommentText('After disposal'), isFalse);
@@ -81,11 +91,12 @@ void main() {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     final consumed = await tester.sendKeyDownEvent(LogicalKeyboardKey.keyV);
     expect(consumed, isFalse);
-    expect(pasteCommentText('Pasted current text'), isTrue);
+    expect(pasteCommentText('Pasted current text\r\nSecond line'), isTrue);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.keyV);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pumpAndSettle();
-    expect(controller.document.toPlainText(), 'Pasted current text\n');
+    expect(controller.document.toPlainText(),
+        'Pasted current text\nSecond line\n');
     expect(tester.takeException(), isNull);
     stop();
     await tester.pumpWidget(const SizedBox());

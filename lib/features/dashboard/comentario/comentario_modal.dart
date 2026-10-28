@@ -511,7 +511,7 @@ class ComentarioModal {
           Pasteboard.image.catchError((_) => null),
         ]);
 
-        final textoClipboard = (resultados[0] as String?) ?? '';
+        final textoClipboard = normalizeCommentPastedText((resultados[0] as String?) ?? '');
         final Uint8List? imagemClipboard = resultados[1] as Uint8List?;
         if (textoClipboard.isEmpty && imagemClipboard == null) {
           if (context.mounted) {

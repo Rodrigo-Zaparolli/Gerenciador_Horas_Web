@@ -1,4 +1,5 @@
 import 'dart:js_interop';
+import 'comment_paste_text.dart';
 import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 
@@ -7,7 +8,8 @@ void Function() listenForCommentPaste({required bool Function() accepts,
   final listener = ((web.Event raw) {
     if (!accepts()) return;
     final event = raw as web.ClipboardEvent;
-    final text = event.clipboardData?.getData('text/plain') ?? '';
+    final text = normalizeCommentPastedText(
+        event.clipboardData?.getData('text/plain') ?? '');
     if (text.isNotEmpty) {
       event.preventDefault(); event.stopImmediatePropagation();
       onText(text);
