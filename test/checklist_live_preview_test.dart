@@ -6,6 +6,27 @@ import 'package:gerenciador_horas/features/projects/dialogs/checklist_status_pre
 
 void main() {
   testWidgets(
+      'saved status restores without Excel and survives refresh failure',
+      (tester) async {
+    var calls = 0;
+    final preview = ChecklistLivePreview(calculate: () async {
+      calls++;
+      throw StateError('Excel ocupado');
+    });
+    addTearDown(preview.dispose);
+    preview.restore({'total': .6, 'rows': []});
+    preview.activate();
+    await tester.pump(const Duration(seconds: 1));
+    expect(calls, 0);
+    expect(preview.data!['total'], .6);
+    preview.refresh();
+    await tester.pump();
+    expect(calls, 1);
+    expect(preview.error, isNotNull);
+    expect(preview.data!['total'], .6);
+  });
+
+  testWidgets(
       'Changing account clears the data and rejects a reply already in flight',
       (tester) async {
     final reply = Completer<Map<String, dynamic>>();

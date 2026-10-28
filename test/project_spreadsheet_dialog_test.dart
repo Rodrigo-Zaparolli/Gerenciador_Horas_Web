@@ -1,3 +1,4 @@
+import 'package:gerenciador_horas/features/projects/dialogs/spreadsheet_status_cache.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/checklist_status_preview.dart';
 import 'dart:async';
 import 'package:gerenciador_horas/features/projects/dialogs/checklist_stage_dialog.dart';
@@ -60,6 +61,72 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  testWidgets(
+      'confirmed status persists and reopens without Excel, including failure',
+      (tester) async {
+    tester.view.physicalSize = const Size(1366, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = MemorySpreadsheetStore();
+    var calls = 0;
+    Future<Map<String, dynamic>> transport(Map<String, dynamic> args) async {
+      calls++;
+      if (args['action'] == 'excel-editor-preview')
+        return {
+          'preview': true,
+          'checklistSheet': 'Checklist-Processo',
+          'statusPreview': {
+            'total': .60,
+            'rows': [
+              {'label': 'Implanta\u00e7\u00e3o', 'percentage': .60}
+            ]
+          },
+        };
+      return snapshot();
+    }
+
+    Widget app(
+            Future<Map<String, dynamic>> Function(Map<String, dynamic>) call) =>
+        MaterialApp(
+            home: ProjectSpreadsheetDialog(
+                project: ProjectModel.fromJson({
+                  'id': '1',
+                  'serviceType': 'Enterprise',
+                  'excelLink': 'reference'
+                }),
+                uidProvider: () => 'owner',
+                emailProvider: () => 'other@example.com',
+                store: store,
+                transport: call));
+    await tester.pumpWidget(app(transport));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Checklist-Processo'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(savedSpreadsheetStatus(store.data, {})!['total'], .60);
+    await tester.pumpWidget(const SizedBox());
+    calls = 0;
+    await tester.pumpWidget(app((_) async {
+      calls++;
+      throw StateError('Excel ocupado');
+    }));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Checklist-Processo'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(calls, 0);
+    expect(find.text('60,0%'), findsWidgets);
+    await tester.tap(find.byTooltip('Atualizar pr\u00e9via'));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.text('60,0%'), findsWidgets);
+    expect(find.textContaining('Excel ocupado'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final brightness in Brightness.values) {
     testWidgets(
         'six complete status rows and tasks fit side by side at notebook height $brightness',
@@ -434,9 +501,11 @@ void main() {
               return snapshot();
             })));
     await tester.pumpAndSettle();
-    final writes = store.writes;
     await tester.tap(find.text('Checklist-Processo'));
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    final writes = store.writes;
     await tester.tap(find.byKey(const ValueKey('checklist-stage-Implantação')));
     await tester.pumpAndSettle();
     await tester.tap(stagePercentField());

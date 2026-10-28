@@ -1,6 +1,7 @@
 {
   "changes": [
-    "Modal de tarefas do checklist com barra e porcentagem no cabecalho, mostrando somente o trabalho aberto.",
-    "A previa mantem o ultimo percentual disponivel enquanto a planilha recalcula os ajustes individuais ou em bloco. Para gravar os ajustes no Excel, use Salvar na planilha."
+    "A tabela Status Projeto agora e salva com a copia da planilha no sistema e restaurada ao reabrir, sem consultar novamente o Excel.",
+    "Uma falha ao atualizar preserva o ultimo resultado confirmado. Previas de alteracoes ainda nao salvas nao substituem a tabela salva.",
+    "O resultado salvo e vinculado a revisao da planilha e as guias selecionadas. Projetos antigos precisam de um calculo bem-sucedido para criar essa copia da tabela."
   ]
 }

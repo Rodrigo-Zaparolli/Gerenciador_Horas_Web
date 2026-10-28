@@ -17,7 +17,20 @@ class ChecklistLivePreview extends ChangeNotifier {
   void activate() {
     if (_active || _disposed) return;
     _active = true;
-    invalidate();
+    if (data == null || stale) invalidate();
+  }
+
+  void restore(Map<String, dynamic> saved) {
+    if (_disposed) return;
+    _generation++;
+    _timer?.cancel();
+    _dirty = false;
+    _paused = false;
+    data = Map<String, dynamic>.from(saved);
+    stale = false;
+    error = null;
+    updating = false;
+    notifyListeners();
   }
 
   void invalidate({bool clear = false}) {

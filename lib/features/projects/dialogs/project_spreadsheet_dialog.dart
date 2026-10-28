@@ -1,3 +1,5 @@
+import 'spreadsheet_status_cache.dart';
+import 'package:flutter/foundation.dart';
 import 'project_worksheet_preference.dart';
 import 'dart:async';
 import 'spreadsheet_store.dart';
@@ -164,6 +166,38 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
 
   bool _stageDialogOpen = false;
   Future<void> _fileRequestTail = Future<void>.value();
+  Future<void> _snapshotWriteTail = Future<void>.value();
+
+  void resumeSavedStatus() {
+    final saved =
+        pending.isEmpty ? savedSpreadsheetStatus(data, sheetNames) : null;
+    if (saved != null) {
+      livePreview.restore(saved);
+    } else {
+      livePreview.resume(clear: true);
+    }
+  }
+
+  Future<bool> persistSnapshot(Map<String, dynamic> snapshot) {
+    final account = owner;
+    final reference = widget.project.excelLink ?? '';
+    final revision = snapshot['revision'];
+    final sheets = Map<String, String>.from(sheetNames);
+    bool current() =>
+        authorized &&
+        owner == account &&
+        (widget.project.excelLink ?? '') == reference &&
+        data?['revision'] == revision &&
+        mapEquals(sheets, sheetNames);
+    final job = _snapshotWriteTail.then((_) async {
+      if (!current() || store == null) return false;
+      await store!.save(account!, widget.project.id, reference, snapshot);
+      return current();
+    });
+    _snapshotWriteTail =
+        job.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return job;
+  }
 
   Future<Map<String, dynamic>> request(String action,
       {String? revision,
@@ -332,7 +366,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         await load();
       }
     } finally {
-      if (mounted && authorized) livePreview.resume(clear: true);
+      if (mounted && authorized) resumeSavedStatus();
     }
   }
 
@@ -379,7 +413,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
-        if (authorized && data != null) livePreview.resume(clear: true);
+        if (authorized && data != null) resumeSavedStatus();
       }
     }
   }
@@ -435,6 +469,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           data = saved;
           busy = false;
         });
+        final status = savedSpreadsheetStatus(saved, sheetNames);
+        if (status != null) livePreview.restore(status);
         return;
       }
     } catch (e) {
@@ -454,10 +490,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     if (!authorized || store == null) return;
     final stamp = DateTime.now().toIso8601String();
     try {
-      await store!.save(
-          owner!, widget.project.id, widget.project.excelLink ?? '', result);
-      if (mounted && authorized) {
-        setState(() => data = {...result, 'syncedAt': stamp});
+      final persisted = await persistSnapshot(result);
+      if (persisted && mounted && authorized) {
+        setState(() => data = {...data!, 'syncedAt': stamp});
       }
     } catch (e) {
       if (mounted && authorized) {
@@ -507,7 +542,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
-        if (authorized && data != null) livePreview.resume(clear: true);
+        if (authorized && data != null) resumeSavedStatus();
       }
     }
   }
@@ -516,9 +551,11 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     if (!mounted || !authorized || data == null) {
       throw StateError('A conta mudou.');
     }
+    final revision = data!['revision'];
+    final sheets = Map<String, String>.from(sheetNames);
+    final changes = pending.values.toList();
     final result = await request('excel-editor-preview',
-        revision: data!['revision'] as String,
-        changes: pending.values.toList());
+        revision: revision as String, changes: changes);
     if (!mounted || !authorized) throw StateError('A conta mudou.');
     if (result['preview'] != true ||
         result['statusPreview'] is! Map ||
@@ -526,7 +563,24 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       throw StateError(
           'A integra\u00e7\u00e3o n\u00e3o confirmou a pr\u00e9via. Atualize e reinicie a integra\u00e7\u00e3o v29.');
     }
-    return Map<String, dynamic>.from(result['statusPreview'] as Map);
+    final status = Map<String, dynamic>.from(result['statusPreview'] as Map);
+    // Draft calculations must never replace the saved workbook's Status table.
+    if (changes.isEmpty &&
+        pending.isEmpty &&
+        data?['revision'] == revision &&
+        mapEquals(sheets, sheetNames) &&
+        !busy) {
+      final snapshot = withSavedSpreadsheetStatus(data!, sheets, status);
+      setState(() => data = snapshot);
+      unawaited(persistSnapshot(snapshot).catchError((Object error) {
+        if (mounted && authorized) {
+          setState(() => notice =
+              'A tabela foi calculada, mas n\u00e3o foi salva no sistema. $error');
+        }
+        return false;
+      }));
+    }
+    return status;
   }
 
   Future<void> save() async {
@@ -576,7 +630,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
-        if (authorized && data != null) livePreview.resume(clear: true);
+        if (authorized && data != null) resumeSavedStatus();
       }
     }
   }
