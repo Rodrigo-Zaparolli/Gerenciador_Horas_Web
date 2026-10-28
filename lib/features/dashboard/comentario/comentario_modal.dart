@@ -12,6 +12,7 @@ import 'comment_save_gate.dart';
 import '../../../core/platform/comment_paste.dart';
 import 'comment_paste_action.dart';
 import 'comment_tab.dart';
+import 'comment_spelling_dialog.dart';
 import '../../edesk/comment_document_snapshot.dart';
 import '../../../data/services/recoverable_draft.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
@@ -52,6 +53,7 @@ class _ColarComentarioIntent extends Intent {
 
 class ComentarioModal {
   static void show(BuildContext context, ProjectModel project) {
+    final commentOwnerId = FirebaseAuth.instance.currentUser?.uid;
     final comentarioController = _ComentarioRichTextController();
     final editorController = quill.QuillController.basic();
     final editorFocusNode = FocusNode();
@@ -6139,6 +6141,11 @@ class ComentarioModal {
                                                           CommentEditorToolbar(
                                                         formatting: Row(
                                                           children: [
+                                                            IconButton(
+                                                              tooltip: 'Corrigir escrita',
+                                                              icon: const Icon(Icons.spellcheck),
+                                                              onPressed: (salvando || testandoEdesk || enviandoEdesk) ? null : () => showCommentSpellingDialog(dialogContext, editorController, canEdit: () => editorOpen && !salvando && !testandoEdesk && !enviandoEdesk && FirebaseAuth.instance.currentUser?.uid == commentOwnerId),
+                                                            ),
                                                             SizedBox(
                                                               width: 135,
                                                               child: CommentFontPicker(

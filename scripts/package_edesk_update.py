@@ -1,4 +1,4 @@
-"""Build the small consultoria-rows-below-54 update for an existing full installation."""
+"""Build the small phase-audit-55 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = (
     'edesk_bot/edesk_horas.py',
     'edesk_bot/hour_receipt.py',
-    'edesk_bot/edesk_conferencia.py', 'edesk_bot/edesk_recebidos.py',
+    'edesk_bot/edesk_conferencia.py', 'edesk_bot/phase_audit.py', 'edesk_bot/edesk_recebidos.py',
     'local_edesk/journal.py',
     'edesk_bot/work_selection.py',
     'edesk_bot/edesk_comentario.py',
@@ -24,7 +24,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO consultoria-rows-below-54 — instalação completa já existente
+README = '''ATUALIZAÇÃO phase-audit-55 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +35,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v55: conferencia consulta datas ajustadas em Fases, horas trabalhadas, saldo de horas e situacao de conclusao de cada trabalho. Somente leitura, sem salvar alteracoes no E-Desk.
 
 Novidade v54: adicionar, excluir e desfazer encontros de Consultoria pelo sistema. Ao salvar, altera as linhas da tabela no Excel, recalcula resumo e preserva macros, imagens e dados das outras guias com backup. Requer integracao v54 para operacoes de linhas.
 
@@ -186,7 +188,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-54.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-55.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

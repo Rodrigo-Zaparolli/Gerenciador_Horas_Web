@@ -35,7 +35,19 @@ class WorkAuditDialog extends StatefulWidget {
 class _WorkAuditDialogState extends State<WorkAuditDialog> {
   final _number = TextEditingController(), _search = TextEditingController();
   final _selected = <String>{};
-  final _fields = <String>{'name', 'status', 'start', 'end', 'percentage'};
+  final _fields = <String>{
+    'name',
+    'status',
+    'start',
+    'end',
+    'percentage',
+    'hours',
+    'estimatedHours',
+    'remainingHours',
+    'overrunHours',
+    'completed',
+    'phaseName'
+  };
   final _results =
       <({String reference, String? error, List<AuditFieldResult> fields})>[];
   String _mode = 'selected', _message = '', _progress = '';
@@ -142,7 +154,9 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
               requestJson: jsonEncode({
                 'edeskCredenciais': credentials,
                 'solicitacoes': [target.toJson()],
-                'includeHours': _fields.contains('hours')
+                'includeHours': _fields.any(
+                    const {'hours', 'remainingHours', 'overrunHours'}.contains),
+                'phaseDates': true
               }),
               enviar: false,
               script: 'edesk_conferencia.py',
@@ -167,8 +181,7 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
               final work = row['idTrabalho']?.toString() ?? '';
               _results.add((
                 reference: '${target.number}${work.isEmpty ? '' : '/$work'}',
-                error:
-                    row['error']?.toString() ?? row['hoursError']?.toString(),
+                error: auditWorkErrors(row, _fields),
                 fields: compareAuditWork(
                     target.expected[work] ?? {},
                     Map<String, dynamic>.from(row['values'] as Map? ?? {}),
@@ -276,6 +289,8 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                                 ])),
                           ],
                           const SizedBox(height: 10),
+                          const Text('Datas consultadas na aba Fases. Saldo: horas previstas menos horas trabalhadas; excedentes aparecem separadamente.'),
+                          const SizedBox(height: 8),
                           Wrap(spacing: 10, children: [
                             for (final entry in auditFields.entries)
                               FilterChip(

@@ -26,13 +26,13 @@ def fixture(route):
         for number in ['1','3','6']:
             url=base+f'/Trabalho.aspx?solicitacao=226144&id_trabalho={number}'
             body+=f'<tr><td><a href="#" onclick="/*btnSelTra*/window.open(\'{url}\');return false;">{number}</a></td><td>Etapa {number}</td></tr>'
-        body+='</table></div>'
+        body+='</table></div><button onclick="document.querySelector(\'#cph1_rpvFasePro\').style.display=\'block\'">Fases</button><div id="cph1_rpvFasePro" style="display:none"><table><tr><td><span id="row1_lblGFasNome">PROMOB - Implanta\xe7\xe3o Plugin</span></td><td><input id="row1_txtGFasDtIniAj" value="05/10/2026"></td><td><input id="row1_txtGFasDtTerAju" value="20/10/2026"></td></tr></table></div>'
     elif path.endswith('TrabalhoRetroativo.aspx'):
         body='<table><tr><th>Data</th><th>Hora Inicial</th><th>Hora Final</th></tr><tr><td>22/10/2026</td><td>08:00</td><td>10:00</td></tr></table>'
     elif path.endswith('Trabalho.aspx'):
         visited.append(request.url)
         body='''<h1>Solicitação 226144 Trabalho 3</h1><table>
-          <tr><td>Nome do trabalho</td><td><input value="Implantação Plugin"></td></tr>
+          <tr><td>Horas previstas</td><td><input value="10:00"></td></tr><tr><td>Nome do trabalho</td><td><input value="Implantação Plugin"></td></tr>
           <tr><td>Situação</td><td><select><option>Em andamento</option></select></td></tr>
           <tr><td>Início ajustado</td><td><input value="01/10/2026"></td></tr>
           <tr><td>Término ajustado</td><td><input value="30/10/2026"></td></tr>
@@ -59,7 +59,8 @@ with sync_playwright() as p:
     with patch('edesk_comentario.acessar_minha_grid'), patch('edesk_comentario.localizar_solicitacao_validada',return_value=(page,None,page)), patch('edesk_comentario.abrir_solicitacao_para_comentario',return_value=page):
         result=audit_request(context,page,{'solicitacao':'226144','trabalhos':['3']},'test')
         assert len(result)==1 and result[0]['idTrabalho']=='3',result
-        assert result[0]['values']=={'name':'Implantação Plugin','status':'Em andamento','start':'01/10/2026','end':'30/10/2026','percentage':'70'},result
+        assert result[0]['values']['start']=='05/10/2026' and result[0]['values']['end']=='20/10/2026',result
+        assert result[0]['values']['completed']=='Nao' and result[0]['values']['phaseName'].startswith('PROMOB'),result
         assert len(visited)==1 and 'id_trabalho=3' in visited[0],visited
         assert not writes,writes
         page.goto(request_url)
@@ -72,6 +73,7 @@ with sync_playwright() as p:
         with patch('edesk_horas.abrir_trabalho_retroativo',side_effect=retro):
             result=audit_request(context,page,{'solicitacao':'226144','trabalhos':['3']},'test',include_hours=True)
         assert result[0]['values']['hours']=='02:00',result
+        assert result[0]['values']['remainingHours']=='08:00' and result[0]['values']['overrunHours']=='00:00',result
     assert not writes,writes
     probe=context.new_page();probe.goto(base+'/Trabalho.aspx?solicitacao=226144&id_trabalho=3')
     probe.evaluate("fetch('/save',{method:'POST',body:'__EVENTTARGET=cph1%24BtAtu'}).catch(()=>null)")

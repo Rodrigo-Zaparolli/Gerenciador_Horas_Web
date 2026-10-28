@@ -3,10 +3,15 @@ import '../../domain/models/project_model.dart';
 const auditFields = <String, String>{
   'name': 'Nome do trabalho',
   'status': 'Situação',
-  'start': 'Início previsto/ajustado',
-  'end': 'Fim previsto/ajustado',
+  'start': 'Início ajustado (Fases)',
+  'end': 'Fim ajustado (Fases)',
   'percentage': '% realizado',
-  'hours': 'Horas cadastradas',
+  'hours': 'Horas trabalhadas',
+  'estimatedHours': 'Horas previstas',
+  'remainingHours': 'Horas restantes',
+  'overrunHours': 'Horas excedentes',
+  'completed': 'Trabalho concluído',
+  'phaseName': 'Fase consultada',
 };
 
 String auditNormalized(String value) {
@@ -38,7 +43,12 @@ String? auditStatus(String value) => switch (auditNormalized(value)) {
       'trab' =>
         'andamento',
       'trab_stop' || 'parado' || 'pausado' => 'parado',
-      'trab_fim' || 'finalizado' || 'concluido' || 'encerrado' => 'fim',
+      'trab_fim' ||
+      'finalizado' ||
+      'concluido' ||
+      'concluida' ||
+      'encerrado' =>
+        'fim',
       _ => null,
     };
 
@@ -86,7 +96,10 @@ List<AuditTarget> projectAuditTargets(List<ProjectModel> projects) {
         'name': task.stage,
         'status': task.status,
         'start': auditDate(task.planStart),
-        'end': auditDate(task.planEnd)
+        'end': auditDate(task.planEnd),
+        'estimatedHours': task.estimatedHours,
+        if (auditStatus(task.status) != null)
+          'completed': auditStatus(task.status) == 'fim' ? 'Sim' : 'Nao',
       };
     }
   }
@@ -104,13 +117,14 @@ String auditSummary(Iterable<List<AuditFieldResult>> rows,
     return 'Conferência interrompida. Resultados já obtidos foram mantidos.';
   }
   final fields = rows.expand((row) => row).toList();
-  final missing = fields.where((field) => field.state == 'Não consultado').length;
+  final missing =
+      fields.where((field) => field.state == 'Não consultado').length;
   if (hasErrors || fields.isEmpty || missing > 0) {
     return 'Conferência parcial: há dados que não puderam ser consultados. '
         'Confira os avisos de cada trabalho. Nenhum dado foi alterado.';
   }
-  if (fields.any((field) =>
-      field.state != 'Igual' && field.state != 'Somente consulta')) {
+  if (fields.any(
+      (field) => field.state != 'Igual' && field.state != 'Somente consulta')) {
     return 'Consulta concluída com divergências ou dados para revisar. '
         'Nenhum dado foi alterado.';
   }
@@ -133,6 +147,19 @@ List<AuditFieldResult> compareAuditWork(Map<String, String> expected,
 String _compare(String field, String expected, String actual) {
   if (actual.trim().isEmpty) return 'Não consultado';
   if (expected.trim().isEmpty) return 'Somente consulta';
+  if (const ['hours', 'estimatedHours', 'remainingHours', 'overrunHours']
+      .contains(field)) {
+    int? minutes(String value) {
+      final match = RegExp(r'^(\d+):([0-5]\d)$').firstMatch(value.trim());
+      return match == null
+          ? null
+          : int.parse(match[1]!) * 60 + int.parse(match[2]!);
+    }
+
+    final left = minutes(expected), right = minutes(actual);
+    if (left == null || right == null) return 'Revisar horas';
+    return left == right ? 'Igual' : 'Diverg\u00eancia';
+  }
   if (field == 'status') {
     final left = auditStatus(expected), right = auditStatus(actual);
     if (left == null || right == null) return 'Revisar situação';
@@ -159,4 +186,18 @@ String _compare(String field, String expected, String actual) {
   return auditNormalized(expected) == auditNormalized(actual)
       ? 'Igual'
       : 'Divergência';
+}
+
+String? auditWorkErrors(Map<String, dynamic> row, Set<String> fields) {
+  final errors = <String>[
+    if (row['error'] != null) row['error'].toString(),
+    if (fields
+            .any(const {'hours', 'remainingHours', 'overrunHours'}.contains) &&
+        row['hoursError'] != null)
+      row['hoursError'].toString(),
+    if (fields.any(const {'start', 'end'}.contains) &&
+        row['phaseError'] != null)
+      row['phaseError'].toString(),
+  ];
+  return errors.isEmpty ? null : errors.join('\n');
 }

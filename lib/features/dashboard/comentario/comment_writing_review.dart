@@ -1,4 +1,5 @@
 import 'package:diff_match_patch/diff_match_patch.dart';
+import '../../../core/platform/comment_paste_text.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
@@ -6,8 +7,12 @@ import 'package:flutter_quill/flutter_quill.dart';
 void applyCommentWritingReview(QuillController controller, String revised) {
   final original = controller.document.toPlainText();
   // Quill requires the final document newline.
-  final target = revised.endsWith('\n') ? revised : '$revised\n';
-  final changes = diff(original, target);
+  final normalized = normalizeCommentPastedText(revised);
+  // Exclude Quill's mandatory terminal newline from the diff, so appending
+  // a new paragraph never tries inserting after the end of the document.
+  final body = original.endsWith('\n') ? original.substring(0, original.length - 1) : original;
+  final target = normalized.endsWith('\n') ? normalized.substring(0, normalized.length - 1) : normalized;
+  final changes = diff(body, target);
   // Embedded objects are never editable in this plain-text review.
   if (changes.any((change) =>
       change.operation != DIFF_EQUAL && change.text.contains('\uFFFC'))) {

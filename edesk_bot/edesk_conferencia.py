@@ -29,6 +29,7 @@ READ_FIELDS = r'''() => {
   const visible=e=>e&&e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden';
   const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9%]/g,'');
   const aliases={name:['trabalho','nomedotrabalho','descricao','descricaodotrabalho','atividade'],
+    phase:['fase','fasedotrabalho'],
     status:['situacao','situacaodotrabalho','status','statusdotrabalho'],
     start:['inicioajustado','datadeinicioajustada','datainicialajustada','inicioprevisto','datainicialprevista'],
     end:['terminoajustado','datafinalajustada','datadeterminoajustada','terminoprevisto','datafinalprevista'],
@@ -205,6 +206,18 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
         raise AuditLookupError(phase) from error
     if not numbers:
         raise AuditLookupError('work_numbers')
+    grid_values = {}
+    try:
+        grid_values = {str(row['idTrabalho']): row['values'] for row in import_work_rows(request_page, solicitation)}
+    except Exception:
+        pass  # A missing grid estimate is never guessed from an unrelated work.
+    from phase_audit import read_phases, phase_dates, summarize_work
+    phases = {}
+    phase_error = None
+    try:
+        phases = read_phases(request_page)
+    except Exception:
+        phase_error = 'Nao foi possivel consultar as datas ajustadas em Fases.'
     rows = []
     for number in numbers:
         result = {'solicitacao': solicitation, 'idTrabalho': str(number), 'values': {}}
@@ -216,7 +229,15 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
             work = abrir_trabalho_na_solicitacao(request_page, context, solicitation, number)
             if work is None or not validar_tela_trabalho(work, solicitation, number):
                 raise RuntimeError('O trabalho solicitado nao foi localizado com sua chave exata.')
-            result['values'] = work.evaluate(READ_FIELDS)
+            result['values'] = {k:v for k,v in grid_values.get(str(number), {}).items() if k in {'name','estimatedHours'}}
+            result['values'].update(work.evaluate(READ_FIELDS))
+            # Dates on the Work screen are not the adjusted project phase dates.
+            result['values'].pop('start', None)
+            result['values'].pop('end', None)
+            try:
+                result['values'].update(phase_dates(phases, result['values']))
+            except ValueError:
+                result['phaseError'] = phase_error or 'A fase deste trabalho nao foi identificada sem ambiguidade.'
             if include_hours:
                 try:
                     retro = abrir_trabalho_retroativo(work, extrair_dados_url(work.url))
@@ -235,6 +256,7 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
                         result['hoursError'] = 'A listagem de horas nao foi lida integralmente.'
                 except Exception:
                     result['hoursError'] = 'Nao foi possivel consultar todas as horas do retroativo.'
+            summarize_work(result['values'])
         except AuditLookupError as error:
             result.update(error=str(error), errorCode=error.code)
         except Exception:

@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Corrigida a colagem de texto copiado no Windows: quebras de linha CRLF sao convertidas para o formato aceito pelo editor antes da insercao.",
-    "Correcao verificada com copiar e colar reais no Chrome e Edge, com texto simples, varias linhas e espacos preservados.",
-    "Nao exige baixar novamente a integracao local."
+    "Comentario: botao Corrigir escrita na barra do editor para revisar portugues com as sugestoes do Edge ou Chrome, preservando imagens e formatacao.",
+    "Conferencia E-Desk: datas ajustadas lidas em Fases, horas trabalhadas verificadas nos lancamentos, horas previstas, saldo e excedentes e identificacao de trabalhos concluidos.",
+    "A conferencia permanece somente leitura e marca os dados que nao puderam ser consultados. Atualize e reinicie a integracao v55 para usar a nova conferencia. A correcao do Ctrl+V do Windows permanece incluida."
   ]
 }

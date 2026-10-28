@@ -153,6 +153,7 @@ def health_check():
                     "hoursReconciliation": True,
                     "hoursTimesheet": True,
                     "workAudit": True,
+                    "phaseDatesAudit": True,
                     "workEnumeration": True,
                     "workGridImport": True,
                     "requestTitleImport": True,
@@ -377,6 +378,8 @@ def _validate_automation_request(action: str, data: object, send: object):
             works = target.get('trabalhos', [])
             if not isinstance(works, list) or len(works) > 100 or any(not str(work).isdigit() for work in works):
                 return 'Informe numeros validos de trabalho.'
+        if 'phaseDates' in data and not isinstance(data['phaseDates'], bool):
+            return 'phaseDates deve ser verdadeiro ou falso.'
         if 'includeHours' in data and not isinstance(data['includeHours'], bool):
             return 'A opcao de horas deve ser verdadeira ou falsa.'
     elif action == "fases":

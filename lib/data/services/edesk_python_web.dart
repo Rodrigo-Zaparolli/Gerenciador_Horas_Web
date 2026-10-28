@@ -364,6 +364,10 @@ class EdeskWebClient {
                 'Atualize e reinicie a integração v38 para buscar os trabalhos da Minha Grid.',
                 503);
           }
+          if (action == 'conferencia' && data['phaseDates'] == true &&
+              (health is! Map || health['phaseDatesAudit'] != true)) {
+            return _failure('Atualize e reinicie a integra\u00e7\u00e3o v55 para conferir datas em Fases, horas restantes e trabalhos conclu\u00eddos. Nenhuma consulta foi iniciada.', 503);
+          }
           if (action == 'conferencia' &&
               (health is! Map || health['workAudit'] != true)) {
             return _failure(

@@ -28,17 +28,49 @@ ProjectModel project() => ProjectModel(
         ]);
 
 void main() {
-  test('Summary distinguishes incomplete reads, errors, differences and consultation', () {
+  test('phase dates, balances, completion and partial errors remain explicit',
+      () {
+    expect(auditFields['start'], contains('Fases'));
+    final results = compareAuditWork({
+      'estimatedHours': '8:00',
+      'completed': 'Sim'
+    }, {
+      'estimatedHours': '08:00',
+      'completed': 'Sim',
+      'remainingHours': '02:30'
+    }, {
+      'estimatedHours',
+      'completed',
+      'remainingHours'
+    });
+    expect(results.map((r) => r.state), ['Igual', 'Igual', 'Somente consulta']);
+    expect(auditStatus('Conclu\u00edda'), 'fim');
+    expect(auditWorkErrors({'phaseError': 'Fases indisponiveis'}, {'start'}),
+        'Fases indisponiveis');
+    expect(auditWorkErrors({'phaseError': 'Fases indisponiveis'}, {'name'}),
+        isNull);
+  });
+
+  test(
+      'Summary distinguishes incomplete reads, errors, differences and consultation',
+      () {
     String summary(List<AuditFieldResult> fields, {bool errors = false}) =>
         auditSummary([fields], hasErrors: errors, interrupted: false);
     expect(summary([]), startsWith('Conferência parcial'));
-    expect(summary(const [AuditFieldResult('name', 'Nome', '', 'Não consultado')]),
+    expect(
+        summary(const [AuditFieldResult('name', 'Nome', '', 'Não consultado')]),
         startsWith('Conferência parcial'));
-    expect(summary(const [AuditFieldResult('percentage', '', '100', 'Somente consulta')], errors: true),
+    expect(
+        summary(const [
+          AuditFieldResult('percentage', '', '100', 'Somente consulta')
+        ], errors: true),
         startsWith('Conferência parcial'));
     expect(summary(const [AuditFieldResult('name', 'A', 'B', 'Divergência')]),
         contains('divergências'));
-    expect(summary(const [AuditFieldResult('percentage', '', '100', 'Somente consulta')]),
+    expect(
+        summary(const [
+          AuditFieldResult('percentage', '', '100', 'Somente consulta')
+        ]),
         startsWith('Consulta concluída: todos os campos'));
     expect(auditSummary([], hasErrors: false, interrupted: true),
         startsWith('Conferência interrompida'));
