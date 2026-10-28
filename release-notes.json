@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Consultas de planilha agora usam uma fila compartilhada entre os modais, evitando conflito ao abrir o checklist enquanto outra leitura ainda termina.",
-    "Leituras recusadas por Excel ocupado aguardam e tentam novamente por ate um minuto. Gravacoes, falhas de conexao e resultados incertos nao sao repetidos automaticamente.",
-    "Os caminhos de pasta e planilha sao preservados. Nao e necessario atualizar a integracao local."
+    "Integracao v56 corrige um bloqueio persistente da planilha: uma falha ao limpar a copia temporaria nao impede as proximas operacoes.",
+    "Leitura inicial do Status Projeto sem criar copia gravavel nem forcar recalculo completo quando nao existem alteracoes pendentes.",
+    "Esta correcao exige baixar a atualizacao leve v56, parar a integracao, substituir os arquivos na mesma pasta e iniciar novamente. Pastas, planilhas e autorizacoes locais sao preservadas."
   ]
 }

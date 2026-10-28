@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 import hashlib
 import json
+import logging
 import math
 import os
 from pathlib import Path
@@ -684,6 +685,17 @@ def edit(path, body):
             if revision(path) != original:
                 raise ValueError('O arquivo mudou durante a leitura. Recarregue.')
             return {**data, 'revision': original, 'filename': path.name}
+        # With no draft changes, read the workbook's current status directly.
+        # Creating a writable copy, scanning all fields and forcing a complete
+        # recalculation here needlessly held the global Excel lock.
+        if previewing and body.get('changes') == []:
+            with workbook(path) as (_, book):
+                preview = status_preview(book, body.get('serviceType'), body.get('sheetNames'))
+            if revision(path) != original:
+                raise ValueError('O arquivo mudou durante a previa. Recarregue para conferir.')
+            return {'preview': True, 'statusPreview': preview, 'revision': original,
+                    'entrySheet': (body.get('sheetNames') or {}).get('entry', 'Informa\u00e7\u00f5es de entrada'),
+                    'checklistSheet': checklist_sheet(body.get('serviceType'), body.get('sheetNames')), 'filename': path.name}
         handle, name = tempfile.mkstemp(prefix='.gerenciador-', suffix=path.suffix, dir=path.parent)
         os.close(handle)
         staged = Path(name)
@@ -761,6 +773,13 @@ def edit(path, body):
                 'saved': True, 'rowsApplied': {'added':len(expected_rows['added']),'deleted':len(expected_rows['deleted'])} if expected_rows is not None else None, 'backup': str(backup), 'backupCleanupWarning': cleanup_warning,
                 'savedAt': datetime.now().isoformat()}
     finally:
-        if staged is not None:
-            staged.unlink(missing_ok=True)
-        lock.release()
+        try:
+            if staged is not None:
+                try:
+                    staged.unlink(missing_ok=True)
+                except OSError:
+                    # Excel/OneDrive can briefly keep this disposable copy
+                    # open. Never mask the original result or strand the lock.
+                    logging.getLogger(__name__).warning('A copia temporaria da planilha ficou pendente de limpeza.')
+        finally:
+            lock.release()
