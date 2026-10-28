@@ -18,7 +18,7 @@
   <button id="copy" hidden>Copiar diagnóstico</button>
   <p><a href="/">Voltar ao app</a></p>
 </main>
-<script src="native_local_files_v2.js"></script>
+<script src="native_local_files_v2.js?bridge=excel-queue-10"></script>
 <script>
 const check=document.querySelector('#check'), result=document.querySelector('#result'), copy=document.querySelector('#copy');
 check.onclick=async()=>{
@@ -27,6 +27,7 @@ check.onclick=async()=>{
     const call=async args=>JSON.parse(await nativeLocalFilesRequest(JSON.stringify(args)));
     const health=await call({action:'health',interactive:true});
     const report={pagina:location.origin,ponte:window.nativeLocalFilesBridgeVersion,conexao:health};
+    try{report.planilha=JSON.parse(localStorage.getItem('nativeSpreadsheetDiagnostic'));}catch(_){}
     try{report.ultimaTentativa=JSON.parse(localStorage.getItem('nativeExcelPreviewDiagnostic'));}catch(_){}
     if(health.status===200 && health.data?.service==='gerenciador-horas-edesk'){
       // An intentionally invalid token guarantees no native operation can run.
