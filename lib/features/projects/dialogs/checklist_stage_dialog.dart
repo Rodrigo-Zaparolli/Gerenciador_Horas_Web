@@ -374,17 +374,18 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
               _preview?.invalidate();
             },
     );
-    final title = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      IconButton.outlined(
-        key: ValueKey('stage-toggle-$id'),
-        tooltip: expanded ? 'Recolher tarefas' : 'Expandir tarefas',
-        onPressed: () => setState(() {
+    void toggle() => setState(() {
           if (expanded) {
             _collapsedBlocks.add(id);
           } else {
             _collapsedBlocks.remove(id);
           }
-        }),
+        });
+    final title = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      IconButton.outlined(
+        key: ValueKey('stage-toggle-$id'),
+        tooltip: expanded ? 'Recolher tarefas' : 'Expandir tarefas',
+        onPressed: toggle,
         icon: Icon(expanded ? Icons.remove : Icons.add, size: 20),
       ),
       const SizedBox(width: 10),
@@ -405,19 +406,27 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
           borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
+        Material(
             color: colors.primary.withValues(alpha: .07),
-            padding: const EdgeInsets.all(12),
-            child: LayoutBuilder(
-                builder: (context, size) => size.maxWidth < 480
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [title, const SizedBox(height: 12), control])
-                    : Row(children: [
-                        Expanded(child: title),
-                        const SizedBox(width: 16),
-                        SizedBox(width: 190, child: control)
-                      ]))),
+            child: InkWell(
+                key: ValueKey('stage-header-$id'),
+                onTap: toggle,
+                child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: LayoutBuilder(
+                        builder: (context, size) => size.maxWidth < 480
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                    title,
+                                    const SizedBox(height: 12),
+                                    control
+                                  ])
+                            : Row(children: [
+                                Expanded(child: title),
+                                const SizedBox(width: 16),
+                                SizedBox(width: 190, child: control)
+                              ]))))),
         if (expanded)
           Padding(
               padding: const EdgeInsets.fromLTRB(24, 10, 10, 0),

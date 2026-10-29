@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Tela de login preparada para salvar e preencher e-mail e senha pelo gerenciador de senhas do navegador.",
-    "Nova verificacao de login salvo identifica armazenamento permanente ou temporario sem alterar a sessao nem exibir credenciais.",
-    "O novo formato de blocos do checklist continua restrito a conta piloto. Integracao v57 compativel."
+    "Na conta piloto, clicar no titulo ou cabecalho da tarefa pai abre e recolhe suas tarefas filhas.",
+    "O seletor de percentual continua independente: altera os filhos sem recolher o bloco.",
+    "Mantida a liberacao do novo formato somente na conta piloto. Integracao v57 compativel."
   ]
 }

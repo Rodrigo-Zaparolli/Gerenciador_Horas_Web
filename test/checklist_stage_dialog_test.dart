@@ -90,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('stage-toggle-B1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.tap(find.text('Parent'));
       await tester.pumpAndSettle();
       expect(field('E2'), findsNothing);
       final parent = find.byWidgetPredicate((w) =>
@@ -107,7 +107,7 @@ void main() {
       expect(find.text('0 de 3 tarefas conclu\u00eddas'), findsOneWidget);
       await tester.ensureVisible(find.byKey(const ValueKey('stage-toggle-B1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.tap(find.text('Parent'));
       await tester.pumpAndSettle();
       await choose(tester, 'E2', '50');
       expect(find.text('Valores diferentes'), findsOneWidget);
