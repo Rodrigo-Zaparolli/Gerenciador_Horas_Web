@@ -14,6 +14,7 @@ import '../../../core/platform/comment_editor.dart';
 import 'comment_paste_action.dart';
 import 'comment_tab.dart';
 import '../../edesk/comment_document_snapshot.dart';
+import '../../edesk/comment_delta_html.dart';
 import '../../../data/services/recoverable_draft.dart';
 import 'package:gerenciador_horas/shared/widgets/recovery_error.dart';
 import 'package:gerenciador_horas/core/theme/app_visuals.dart';
@@ -52,7 +53,7 @@ class _ColarComentarioIntent extends Intent {
 }
 
 class ComentarioModal {
-  static void show(BuildContext context, ProjectModel project) {
+  static void show(BuildContext context, ProjectModel project, {String initialText = ''}) {
     final comentarioController = _ComentarioRichTextController();
     final editorController = quill.QuillController.basic();
     final editorFocusNode = FocusNode();
@@ -118,7 +119,7 @@ class ComentarioModal {
 
     // Formatação do bloco de texto atualmente em edição.
     String fonteComentario = 'Roboto';
-    double tamanhoFonteComentario = 11;
+    double tamanhoFonteComentario = commentDefaultFontSize;
     bool negritoComentario = false;
     bool italicoComentario = false;
     bool sublinhadoComentario = false;
@@ -214,7 +215,7 @@ class ComentarioModal {
         case 'huge':
           return '24';
         default:
-          return '11';
+          return commentDefaultFontSize.toString();
       }
     }
 
@@ -836,60 +837,8 @@ class ComentarioModal {
       return buffer.toString().trim();
     }
 
-    String escaparHtmlComentario(String valor) {
-      return valor
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#39;');
-    }
-
-    String blocoTextoParaHtml(Map<String, String> bloco) {
-      final texto = escaparHtmlComentario(bloco['valor'] ?? '')
-          .replaceAll('\r\n', '<br>')
-          .replaceAll('\r', '<br>');
-      if (texto.isEmpty) return '';
-
-      final linhas = texto.replaceAll('<br>', '\n').split('\n');
-      final fonte = escaparHtmlComentario(bloco['fonte'] ?? 'Roboto');
-      final tamanho = double.tryParse(bloco['tamanho'] ?? '') ?? 11;
-      final negrito = bloco['negrito'] == 'true' ? 'bold' : 'normal';
-      final italico = bloco['italico'] == 'true' ? 'italic' : 'normal';
-      final decoracoes = <String>[
-        if (bloco['sublinhado'] == 'true') 'underline',
-        if (bloco['tachado'] == 'true') 'line-through',
-      ];
-      final decoracao = decoracoes.isEmpty ? 'none' : decoracoes.join(' ');
-      final alinhamento = bloco['alinhamento'] ?? 'left';
-      final corArgb = bloco['cor'] ?? 'ff111827';
-      final corRgb = corArgb.length >= 6
-          ? corArgb.substring(corArgb.length - 6)
-          : '111827';
-      final corTextoPadraoApp = const Color(0xFFF8FAFC)
-          .toARGB32()
-          .toRadixString(16)
-          .substring(2)
-          .toLowerCase();
-      final corTextoEdesk =
-          corRgb.toLowerCase() == corTextoPadraoApp ? '111827' : corRgb;
-      final estilo = 'font-family:$fonte;font-size:${tamanho}px;'
-          'font-weight:$negrito;font-style:$italico;'
-          'text-decoration:$decoracao;color:#$corTextoEdesk;'
-          'text-align:$alinhamento;';
-
-      return linhas
-          .map(
-            (linha) =>
-                linha.isEmpty ? '' : '<span style="$estilo">$linha</span>',
-          )
-          .join('<br>');
-    }
-
-    // HTML final do documento. As imagens são incorporadas na posição
-    // em que aparecem no editor; não existem placeholders EDESK_IMAGE.
-    String montarHtmlEdesk(List<Map<String, String>> documento) =>
-        commentHtmlFromBlocks(documento, blocoTextoParaHtml);
+    // Use the same immutable document for the review and the delivered HTML.
+    String montarHtmlEdesk(List<dynamic> delta) => commentHtmlFromDelta(delta);
 
     // Texto utilizado para filtrar o histórico da lateral direita.
     String buscaHistorico = '';
@@ -1826,8 +1775,15 @@ class ComentarioModal {
       if (!validarPercentual(dialogContext)) return;
       final texto = montarTextoOrdenado();
       final editorDeltaPreview = CommentDocumentSnapshot(editorController.document.toDelta().toJson()).delta;
-      final documentoAtual = blocosDoDocumento();
-      final textoEdesk = montarHtmlEdesk(documentoAtual);
+      late final String textoEdesk;
+      try {
+        textoEdesk = montarHtmlEdesk(editorDeltaPreview);
+      } on FormatException catch (error) {
+        if (dialogContext.mounted) {
+          ScaffoldMessenger.of(dialogContext).showSnackBar(SnackBar(content: Text(error.message)));
+        }
+        return;
+      }
 
       final imagensParaEnvio = imagensBase64.isNotEmpty
           ? List<String>.from(imagensBase64)
@@ -4321,6 +4277,7 @@ class ComentarioModal {
 // MODAL — COMENTÁRIOS E-DESK (Móvel e Redimensionável)
 // ===============================================================
 
+    if (initialText.trim().isNotEmpty) carregarDocumentoComentario(texto: initialText.trim());
     RecoverableDraft.clear(FirebaseAuth.instance.currentUser?.uid, 'comment.${project.id}');
 
     final stopCommentPaste = listenForCommentPaste(

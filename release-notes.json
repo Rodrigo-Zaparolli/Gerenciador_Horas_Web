@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Times New Roman adicionada ao seletor de fontes do comentario. Pode ser aplicada ao texto selecionado ou escolhida antes de digitar.",
-    "Preserva tamanho, negrito, italico e demais atributos ao trocar a fonte. No editor web, Times New Roman utiliza a fonte instalada no computador.",
-    "Atualizacao apenas do site. Mantem a integracao local v58 e o layout de conferencia da conta piloto."
+    "Times New Roman adicionada as fontes do comentario, para texto selecionado ou nova digitacao.",
+    "O HTML enviado ao E-Desk usa o mesmo documento congelado da revisao, preservando tamanhos, estilos, paragrafos, listas, recuos e ordem das imagens.",
+    "Texto sem tamanho definido mantem os 16px exibidos pelo editor, sem reducao para 11px no envio. O seletor passa a mostrar esse tamanho padrao. Atualizacao do site; integracao v58 mantida."
   ]
 }
