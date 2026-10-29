@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gerenciador_horas/domain/models/checklist_format_model.dart';
 import 'package:gerenciador_horas/domain/models/project_model.dart';
 import 'package:gerenciador_horas/domain/models/work_format_model.dart';
+import '../../features/edesk/phase_date_sync.dart';
 import 'project_reference_upgrade.dart';
 import 'project_move_patch.dart';
 import 'project_reference_save.dart';
@@ -39,6 +40,27 @@ class FirebaseService {
       }
     }
     return refs.values.toList();
+  }
+
+  Future<void> applyAuditedPhaseDates({required String ownerUid,
+      required String projectId, required String request, required String work,
+      required String phase, required String expectedStart, required String expectedEnd,
+      required DateTime start, required DateTime end}) async {
+    if (_auth.currentUser?.uid != ownerUid) throw StateError('A conta mudou.');
+    final refs = await _projectReferences(ownerUid, projectId);
+    await _db.runTransaction((transaction) async {
+      final snapshots = [for (final ref in refs) await transaction.get(ref)];
+      if (_auth.currentUser?.uid != ownerUid) throw StateError('A conta mudou.');
+      final existing = snapshots.where((s) => s.exists).toList();
+      if (existing.length != 1) throw StateError('Cadastro ausente ou duplicado. Confira o projeto.');
+      final snapshot = existing.single;
+      final data = snapshot.data()!;
+      if (data['id']?.toString() != projectId) throw StateError('Projeto diferente do consultado.');
+      final tasks = phaseDatePatch(data['subTasks'] as List? ?? [],
+          request: request, work: work, phase: phase,
+          expectedStart: expectedStart, expectedEnd: expectedEnd, start: start, end: end);
+      transaction.update(snapshot.reference, {'subTasks': tasks});
+    });
   }
 
   Future<void> applyProjectFolderMove(

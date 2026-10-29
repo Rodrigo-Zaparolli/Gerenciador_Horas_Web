@@ -1,3 +1,5 @@
+import 'phase_audit_table.dart';
+import 'phase_date_sync_dialog.dart';
 import '../../core/config/work_audit_pilot_access.dart';
 import 'work_audit_result_card.dart';
 import 'dart:async';
@@ -216,6 +218,56 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
     }
   }
 
+  Future<void> _adjustPhase(
+      String reference, List<AuditFieldResult> fields) async {
+    final parts = reference.split('/');
+    final user = FirebaseAuth.instance.currentUser;
+    if (parts.length != 2 ||
+        _busy ||
+        !WorkAuditPilotAccess.allows(uid: user?.uid, email: user?.email)) {
+      return;
+    }
+    final matches = <({ProjectModel project, TaskModel task})>[];
+    for (final project in widget.projects) {
+      for (final task in project.subTasks ?? <TaskModel>[]) {
+        if ((task.edeskSolicitacao?.trim().isNotEmpty == true
+                    ? task.edeskSolicitacao!.trim()
+                    : project.id) ==
+                parts[0] &&
+            task.edeskWorkNumber == parts[1]) {
+          matches.add((project: project, task: task));
+        }
+      }
+    }
+    final values = {for (final f in fields) f.field: f.edesk};
+    if (matches.length != 1 || (values['phaseName'] ?? '').isEmpty) {
+      setState(() => _message =
+          'Associe um \u00fanico trabalho cadastrado a esta fase antes de ajustar as datas.');
+      return;
+    }
+    final match = matches.single;
+    setState(() => _busy = true);
+    final changed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PhaseDateSyncDialog(
+            project: match.project,
+            task: match.task,
+            request: parts[0],
+            phase: values['phaseName']!,
+            edeskStart: values['start'] ?? '',
+            edeskEnd: values['end'] ?? ''));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (changed == true) {
+        _results.clear();
+        _message =
+            'Altera\u00e7\u00e3o confirmada. Reabra a confer\u00eancia para consultar os dados atualizados.';
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final auditUser = FirebaseAuth.instance.currentUser;
@@ -238,8 +290,9 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                     Text('Conferir trabalhos no E-Desk',
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 8),
-                    const Text(
-                        'Consulta · Nenhuma alteração será salva no app ou no E-Desk. Campos sem equivalente no app aparecem como “Somente consulta”.'),
+                    Text(summarized
+                        ? 'A consulta n\u00e3o altera cadastros. Use Ajustar datas para escolher o destino e confirmar uma altera\u00e7\u00e3o.'
+                        : 'Consulta · Nenhuma alteração será salva no app ou no E-Desk. Campos sem equivalente no app aparecem como “Somente consulta”.'),
                     const SizedBox(height: 12),
                     Expanded(
                         child: SingleChildScrollView(
@@ -327,6 +380,11 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 12),
                                 child: SelectableText(_message)),
+                          if (summarized)
+                            PhaseAuditTable(
+                                results: _results,
+                                busy: _busy,
+                                onAdjust: _adjustPhase),
                           for (final result in _results)
                             if (summarized)
                               WorkAuditResultCard(

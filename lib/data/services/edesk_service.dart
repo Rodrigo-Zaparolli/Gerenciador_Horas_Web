@@ -1241,6 +1241,11 @@ class EdeskService {
       String mensagem,
     )? onConcluido,
   }) async {
+    final phaseOwner = FirebaseAuth.instance.currentUser?.uid;
+    if (phaseOwner == null) {
+      return const EdeskSendResult(confirmed: false, statusCode: 401,
+          message: 'Entre novamente na conta.', responseBody: '');
+    }
     final idValue = id.trim();
     final clienteValue = cliente.trim();
 
@@ -1355,6 +1360,10 @@ class EdeskService {
     // =============================================================
 
     try {
+      if (FirebaseAuth.instance.currentUser?.uid != phaseOwner) {
+        return const EdeskSendResult(confirmed: false, statusCode: 401,
+            message: 'A conta mudou. Abra o projeto novamente.', responseBody: '');
+      }
       final resultado = await executarPythonEdeskBackground(
         requestJson: requestJson,
         enviar: true,
