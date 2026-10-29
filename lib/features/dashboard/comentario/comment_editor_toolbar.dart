@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
-/// Only offer families shipped with the app; system fonts are unavailable to
-/// the web canvas. Keep a saved legacy family visible until the user changes it.
+/// Bundled families render in Flutter. Times New Roman uses the system font
+/// in the native HTML editor; its menu label uses the regular UI font.
 class CommentFontPicker extends StatelessWidget {
   const CommentFontPicker(
       {super.key,
@@ -11,7 +11,13 @@ class CommentFontPicker extends StatelessWidget {
       required this.editorFocus,
       required this.onChanged});
 
-  static const families = ['Roboto', 'Lato', 'Noto Serif', 'Roboto Mono'];
+  static const bundledFamilies = [
+    'Roboto',
+    'Lato',
+    'Noto Serif',
+    'Roboto Mono'
+  ];
+  static const families = [...bundledFamilies, 'Times New Roman'];
   final String value;
   final quill.QuillController controller;
   final FocusNode editorFocus;
@@ -28,7 +34,9 @@ class CommentFontPicker extends StatelessWidget {
             .map((font) => DropdownMenuItem(
                 value: font,
                 child: Text(font,
-                    style: TextStyle(fontFamily: font, fontSize: 11))))
+                    style: TextStyle(
+                        fontFamily: font == 'Times New Roman' ? null : font,
+                        fontSize: 11))))
             .toList(),
         onChanged: (font) {
           if (font == null) return;

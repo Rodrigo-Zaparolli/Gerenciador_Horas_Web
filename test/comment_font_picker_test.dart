@@ -96,7 +96,7 @@ void main() {
       }
     });
     final widths = <double>[];
-    for (final family in CommentFontPicker.families) {
+    for (final family in CommentFontPicker.bundledFamilies) {
       final painter = TextPainter(
           text: TextSpan(
               text: 'Implantação: WWW iii 2026',
