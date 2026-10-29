@@ -1,7 +1,7 @@
 {
   "changes": [
-    "O aviso da integracao compara a versao instalada neste computador com a disponivel, mesmo quando o site ja esta atualizado.",
-    "Integracoes anteriores a v57 exibem o modal com os downloads leve e completo da v57.",
-    "Mantida a correcao de Manter conectado; nao e necessario reinstalar quem ja utiliza a integracao v57."
+    "O modal do trabalho mostra a contagem de tarefas concluidas em tempo real, inclusive durante o recalculo e com o filtro de pendentes.",
+    "O percentual continua seguindo os pesos do Excel; tarefas de peso zero mostram um indicador explicativo.",
+    "Contagem atualizada tambem ao aplicar percentuais em bloco. A integracao v57 continua valida."
   ]
 }

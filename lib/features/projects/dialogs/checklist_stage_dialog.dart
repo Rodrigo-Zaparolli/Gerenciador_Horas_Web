@@ -80,7 +80,7 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                   ? 'Pr\u00e9via imediata dos ajustes'
                   : 'Atualizando na planilha...')
               : valid
-                  ? 'Progresso deste trabalho'
+                  ? 'Percentual conforme os pesos do Excel.'
                   : 'Percentual ainda indispon\u00edvel';
       Widget progress() => Row(children: [
             Expanded(
@@ -137,9 +137,11 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                     IconButton(
                         tooltip: 'Atualizar pr\u00e9via',
                         onPressed: preview.updating ? null : preview.refresh,
-                        icon: Icon(preview.updating || preview.stale
-                            ? Icons.sync
-                            : Icons.refresh, size: 18)),
+                        icon: Icon(
+                            preview.updating || preview.stale
+                                ? Icons.sync
+                                : Icons.refresh,
+                            size: 18)),
                 ])),
       ));
     }
@@ -186,6 +188,9 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final completed = widget.tasks
+        .where((task) => _values[ChecklistStageDialog.fieldKey(task)] == 1)
+        .length;
     final shown = widget.tasks
         .where((task) =>
             !_pendingOnly || _values[ChecklistStageDialog.fieldKey(task)] != 1)
@@ -200,7 +205,13 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (_preview != null || widget.initialPreview != null)
               stagePreview(),
-            Text('${shown.length} de ${widget.tasks.length} tarefas'),
+            Wrap(spacing: 16, runSpacing: 4, children: [
+              Text(
+                  '$completed de ${widget.tasks.length} tarefas conclu\u00eddas',
+                  key: const ValueKey('stage-completed-count'),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text('${shown.length} de ${widget.tasks.length} tarefas'),
+            ]),
             SwitchListTile.adaptive(
                 key: const ValueKey('stage-pending-only'),
                 contentPadding: EdgeInsets.zero,
@@ -297,6 +308,14 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
     );
   }
 
+  bool zeroWeight(Map<String, dynamic> task) {
+    final data = _preview?.data ?? widget.initialPreview;
+    final weights = data?['taskProgress'];
+    if (weights is! Map) return false;
+    final item = weights[ChecklistStageDialog.fieldKey(task)];
+    return item is Map && item['weight'] is num && item['weight'] == 0;
+  }
+
   Widget taskCard(Map<String, dynamic> task, ColorScheme colors) => Card(
       key: ValueKey('stage-task-${ChecklistStageDialog.fieldKey(task)}'),
       margin: const EdgeInsets.only(bottom: 10),
@@ -310,8 +329,17 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                   Text(task['label']?.toString() ?? '',
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  Text('Estimado: ${task['estimated'] ?? '—'}',
-                      style: TextStyle(color: colors.onSurfaceVariant)),
+                  Row(children: [
+                    Expanded(
+                        child: Text(
+                            'Estimado: ${task['estimated'] ?? '\u2014'}',
+                            style: TextStyle(color: colors.onSurfaceVariant))),
+                    if (zeroWeight(task))
+                      const Tooltip(
+                          message:
+                              'Peso zero na planilha: n\u00e3o aumenta a barra.',
+                          child: Icon(Icons.info_outline, size: 18)),
+                  ]),
                   if ((task['note']?.toString() ?? '').isNotEmpty)
                     Text(task['note'].toString(),
                         style: TextStyle(color: colors.onSurfaceVariant)),

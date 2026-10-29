@@ -12,6 +12,7 @@ Finder field(String cell) => find.byWidgetPredicate((w) =>
 
 Future<void> choose(WidgetTester tester, String cell, String value) async {
   await tester.ensureVisible(field(cell));
+  await tester.pumpAndSettle();
   await tester.tap(field(cell));
   await tester.pumpAndSettle();
   await tester.tap(find.text('$value%').last);
@@ -19,6 +20,57 @@ Future<void> choose(WidgetTester tester, String cell, String value) async {
 }
 
 void main() {
+  testWidgets(
+      'zero-weight completion updates count while weighted progress and Excel wait stay unchanged',
+      (tester) async {
+    final pending = Completer<Map<String, dynamic>>();
+    await tester.pumpWidget(MaterialApp(
+        home: ChecklistStageDialog(
+      stage: 'Implantacao',
+      canApply: () => true,
+      tasks: const [
+        {'sheet': 'Checklist', 'cell': 'E1', 'label': 'Weighted'},
+        {'sheet': 'Checklist', 'cell': 'E2', 'label': 'Zero weight'},
+      ],
+      values: const {'Checklist!E1': .5, 'Checklist!E2': 0},
+      initialPreview: const {
+        'rows': [
+          {'label': 'Implantacao', 'percentage': .5}
+        ],
+        'taskProgress': {
+          'Checklist!E1': {'weight': 1, 'value': .5},
+          'Checklist!E2': {'weight': 0, 'value': 0}
+        }
+      },
+      calculatePreview: (_) => pending.future,
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('0 de 2 tarefas conclu\u00eddas'), findsOneWidget);
+    await tester.ensureVisible(field('E2'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Peso zero na planilha: n\u00e3o aumenta a barra.'),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+    await tester.pumpAndSettle();
+    await choose(tester, 'E2', '100');
+    expect(find.text('1 de 2 tarefas conclu\u00eddas'), findsOneWidget);
+    expect(find.text('1 de 2 tarefas'), findsOneWidget);
+    expect(
+        tester
+            .widget<LinearProgressIndicator>(
+                find.byKey(const ValueKey('stage-live-progress')))
+            .value,
+        .5);
+    expect(pending.isCompleted, isFalse);
+    await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+    await tester.pumpAndSettle();
+    await choose(tester, 'E2', '25');
+    expect(find.text('0 de 2 tarefas conclu\u00eddas'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    pending.complete({'rows': []});
+    await tester.pump();
+  });
+
   testWidgets('progress changes immediately while Excel calculation is pending',
       (tester) async {
     final pending = Completer<Map<String, dynamic>>();
@@ -238,6 +290,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('75%').last);
     await tester.pumpAndSettle();
+    expect(find.text('0 de 4 tarefas conclu\u00eddas'), findsOneWidget);
     await choose(tester, 'E1', '25');
     await tester.tap(find.text('Aplicar ajustes'));
     await tester.pumpAndSettle();
@@ -253,6 +306,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('100%').last);
     await tester.pumpAndSettle();
+    expect(find.text('2 de 4 tarefas conclu\u00eddas'), findsOneWidget);
     await tester.tap(find.text('Cancelar'));
     await tester.pumpAndSettle();
     expect(result, isNull);
