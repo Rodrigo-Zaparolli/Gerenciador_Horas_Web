@@ -1,3 +1,4 @@
+import '../../../core/config/checklist_block_pilot_access.dart';
 import 'spreadsheet_status_cache.dart';
 import 'package:flutter/foundation.dart';
 import 'project_worksheet_preference.dart';
@@ -881,6 +882,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         barrierDismissible: false,
         builder: (_) => ChecklistStageDialog(
             stage: group,
+            expandableBlocks:
+                ChecklistBlockPilotAccess.allows(uid: uid, email: email),
             initialPreview: livePreview.data ??
                 (data?['statusPreview'] is Map
                     ? Map<String, dynamic>.from(data!['statusPreview'] as Map)

@@ -9,10 +9,12 @@ class ChecklistStageDialog extends StatefulWidget {
       required this.tasks,
       required this.values,
       required this.canApply,
+      this.expandableBlocks = false,
       this.calculatePreview,
       this.initialPreview});
   final Map<String, dynamic>? initialPreview;
   final String stage;
+  final bool expandableBlocks;
   final List<Map<String, dynamic>> tasks;
   final Map<String, double> values;
   final bool Function() canApply;
@@ -232,7 +234,9 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                         thumbVisibility: true,
                         child: ListView(
                             controller: _scroll,
-                            children: taskGroups(shown, colors)))),
+                            children: widget.expandableBlocks
+                                ? taskGroups(shown, colors)
+                                : legacyTasks(shown, colors)))),
             const SizedBox(height: 12),
             const Text(
                 'Aplicar ajustes atualiza o editor e a prévia do Status Projeto. Para gravar no Excel, use Salvar na planilha.'),
@@ -251,6 +255,66 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
 
   String blockId(Map<String, dynamic> task) =>
       task['blockId']?.toString() ?? '';
+
+  List<Widget> legacyTasks(
+          List<Map<String, dynamic>> shown, ColorScheme colors) =>
+      [
+        for (var index = 0; index < shown.length; index++) ...[
+          if (blockId(shown[index]).isNotEmpty &&
+              (index == 0 ||
+                  blockId(shown[index - 1]) != blockId(shown[index])))
+            legacyBlockControl(blockId(shown[index]),
+                shown[index]['block']?.toString() ?? 'Bloco de tarefas'),
+          taskCard(shown[index], colors),
+        ],
+      ];
+
+  Widget legacyBlockControl(String id, String label) {
+    final tasks = widget.tasks
+        .where((task) => blockId(task) == id && task['readOnly'] != true)
+        .toList();
+    final current = tasks
+        .map((task) => _values[ChecklistStageDialog.fieldKey(task)])
+        .toSet();
+    final value = current.length == 1 &&
+            const [0.0, .25, .5, .75, 1.0].contains(current.single)
+        ? current.single
+        : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<double>(
+          key: ValueKey('stage-block-$id-$value'),
+          initialValue: value,
+          decoration: const InputDecoration(
+              labelText: 'Aplicar percentual a todo o bloco',
+              border: OutlineInputBorder()),
+          hint: const Text('Valores diferentes'),
+          items: [
+            for (final step in const [0.0, .25, .5, .75, 1.0])
+              DropdownMenuItem(value: step, child: Text(percentage(step)))
+          ],
+          onChanged: tasks.isEmpty
+              ? null
+              : (value) {
+                  if (value == null || !widget.canApply()) return;
+                  setState(() {
+                    for (final task in tasks) {
+                      _values[ChecklistStageDialog.fieldKey(task)] = value;
+                    }
+                  });
+                  _preview?.invalidate();
+                },
+        ),
+        const SizedBox(height: 4),
+        Text(
+            'Aplica a todas as tarefas editáveis deste bloco, inclusive as ocultas pelo filtro.',
+            style: Theme.of(context).textTheme.bodySmall),
+      ]),
+    );
+  }
 
   List<Widget> taskGroups(
       List<Map<String, dynamic>> shown, ColorScheme colors) {

@@ -61,6 +61,45 @@ Finder stagePercentField() => find.byWidgetPredicate((w) =>
     (w.key as ValueKey<String>).value.startsWith('stage-percent-'));
 
 void main() {
+  for (final account in [
+    'rodrigozaparolli79@gmail.com',
+    'maiquel.elste@cyncly.com'
+  ]) {
+    testWidgets('editor forwards pilot blocks only for $account',
+        (tester) async {
+      tester.view.physicalSize = const Size(1366, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(MaterialApp(
+          home: ProjectSpreadsheetDialog(
+        project:
+            ProjectModel.fromJson({'id': '1', 'serviceType': 'Enterprise'}),
+        uidProvider: () => 'account',
+        emailProvider: () => account,
+        transport: (args) async => args['action'] == 'excel-editor-preview'
+            ? {
+                'preview': true,
+                'checklistSheet': 'Checklist-Processo',
+                'statusPreview': {'rows': []}
+              }
+            : snapshot(),
+      )));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Checklist-Processo'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+          find.byKey(const ValueKey('checklist-stage-Implanta\u00e7\u00e3o')));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<ChecklistStageDialog>(find.byType(ChecklistStageDialog))
+              .expandableBlocks,
+          account == 'rodrigozaparolli79@gmail.com');
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets(
       'confirmed status persists and reopens without Excel, including failure',
       (tester) async {

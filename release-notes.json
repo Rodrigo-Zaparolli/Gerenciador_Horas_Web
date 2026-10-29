@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Todas as etapas do checklist usam blocos expansiveis com botoes de abrir e recolher, percentual no cabecalho e ajuste individual dos filhos.",
-    "O percentual do bloco alcanca todos os filhos editaveis, inclusive os recolhidos ou ocultos pelo filtro de pendentes.",
-    "A contagem de concluidas e o percentual conforme os pesos do Excel permanecem no modal. Integracao v57 compativel."
+    "Novo formato de blocos do checklist em teste exclusivo na conta piloto: abrir e recolher, percentual no pai e ajuste individual dos filhos.",
+    "As demais contas continuam com o formato anterior das etapas.",
+    "Mantidos os pesos do Excel, a contagem de concluidas e a compatibilidade com a integracao v57."
   ]
 }

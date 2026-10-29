@@ -51,6 +51,7 @@ void main() {
                           context: context,
                           builder: (_) => ChecklistStageDialog(
                                 stage: stage,
+                                expandableBlocks: true,
                                 canApply: () => true,
                                 tasks: const [
                                   {
@@ -379,6 +380,8 @@ void main() {
                 )))));
     await tester.tap(find.text('Open blocks'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stage-toggle-F1')), findsNothing);
+    expect(field('E1'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
     await tester.pumpAndSettle();
     final block = find.byWidgetPredicate((w) =>
