@@ -1,7 +1,7 @@
 {
   "changes": [
-    "O modal do trabalho mostra a contagem de tarefas concluidas em tempo real, inclusive durante o recalculo e com o filtro de pendentes.",
-    "O percentual continua seguindo os pesos do Excel; tarefas de peso zero mostram um indicador explicativo.",
-    "Contagem atualizada tambem ao aplicar percentuais em bloco. A integracao v57 continua valida."
+    "Todas as etapas do checklist usam blocos expansiveis com botoes de abrir e recolher, percentual no cabecalho e ajuste individual dos filhos.",
+    "O percentual do bloco alcanca todos os filhos editaveis, inclusive os recolhidos ou ocultos pelo filtro de pendentes.",
+    "A contagem de concluidas e o percentual conforme os pesos do Excel permanecem no modal. Integracao v57 compativel."
   ]
 }

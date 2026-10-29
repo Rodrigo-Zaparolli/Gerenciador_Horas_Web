@@ -29,6 +29,7 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
   late final Map<String, double> _values;
   bool _pendingOnly = false;
   bool _closing = false;
+  final Set<String> _collapsedBlocks = {};
   ChecklistLivePreview? _preview;
 
   @override
@@ -39,6 +40,8 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
         ChecklistStageDialog.fieldKey(task):
             widget.values[ChecklistStageDialog.fieldKey(task)] ?? 0
     };
+    _collapsedBlocks.addAll(
+        widget.tasks.map(blockId).where((id) => id.isNotEmpty).toSet().skip(1));
   }
 
   @override
@@ -227,21 +230,9 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
                     : Scrollbar(
                         controller: _scroll,
                         thumbVisibility: true,
-                        child: ListView(controller: _scroll, children: [
-                          for (var index = 0;
-                              index < shown.length;
-                              index++) ...[
-                            if (blockId(shown[index]).isNotEmpty &&
-                                (index == 0 ||
-                                    blockId(shown[index - 1]) !=
-                                        blockId(shown[index])))
-                              blockControl(
-                                  blockId(shown[index]),
-                                  shown[index]['block']?.toString() ??
-                                      'Bloco de tarefas'),
-                            taskCard(shown[index], colors),
-                          ],
-                        ]))),
+                        child: ListView(
+                            controller: _scroll,
+                            children: taskGroups(shown, colors)))),
             const SizedBox(height: 12),
             const Text(
                 'Aplicar ajustes atualiza o editor e a prévia do Status Projeto. Para gravar no Excel, use Salvar na planilha.'),
@@ -261,49 +252,114 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
   String blockId(Map<String, dynamic> task) =>
       task['blockId']?.toString() ?? '';
 
-  Widget blockControl(String id, String label) {
-    final tasks = widget.tasks
-        .where((task) => blockId(task) == id && task['readOnly'] != true)
-        .toList();
-    final current = tasks
-        .map((task) => _values[ChecklistStageDialog.fieldKey(task)])
-        .toSet();
-    final value = current.length == 1 &&
-            const [0.0, .25, .5, .75, 1.0].contains(current.single)
-        ? current.single
-        : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+  List<Widget> taskGroups(
+      List<Map<String, dynamic>> shown, ColorScheme colors) {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final task in shown) {
+      final id = blockId(task);
+      final groupKey =
+          id.isEmpty ? 'task:${ChecklistStageDialog.fieldKey(task)}' : id;
+      groups.putIfAbsent(groupKey, () => []).add(task);
+    }
+    return [
+      for (final members in groups.values)
+        if (blockId(members.first).isEmpty)
+          taskCard(members.first, colors)
+        else
+          blockCard(blockId(members.first), members, colors),
+    ];
+  }
+
+  Widget blockCard(
+      String id, List<Map<String, dynamic>> shown, ColorScheme colors) {
+    final all = widget.tasks.where((task) => blockId(task) == id).toList();
+    final editable = all.where((task) => task['readOnly'] != true).toList();
+    final current =
+        all.map((task) => _values[ChecklistStageDialog.fieldKey(task)]).toSet();
+    final value = current.length == 1 ? current.single : null;
+    final expanded = !_collapsedBlocks.contains(id);
+    final steps = <double>[
+      0,
+      .25,
+      .5,
+      .75,
+      1,
+      if (value != null && !const [0, .25, .5, .75, 1].contains(value)) value
+    ]..sort();
+    final label = all.first['block']?.toString() ?? 'Bloco de tarefas';
+    final control = DropdownButtonFormField<double>(
+      key: ValueKey('stage-block-$id-$value'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: const InputDecoration(
+          labelText: 'Aplicar a todo o bloco', border: OutlineInputBorder()),
+      hint: const Text('Valores diferentes'),
+      items: [
+        for (final step in steps)
+          DropdownMenuItem(value: step, child: Text(percentage(step)))
+      ],
+      onChanged: editable.isEmpty
+          ? null
+          : (next) {
+              if (next == null || !widget.canApply()) return;
+              setState(() {
+                for (final task in editable) {
+                  _values[ChecklistStageDialog.fieldKey(task)] = next;
+                }
+              });
+              _preview?.invalidate();
+            },
+    );
+    final title = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      IconButton.outlined(
+        key: ValueKey('stage-toggle-$id'),
+        tooltip: expanded ? 'Recolher tarefas' : 'Expandir tarefas',
+        onPressed: () => setState(() {
+          if (expanded) {
+            _collapsedBlocks.add(id);
+          } else {
+            _collapsedBlocks.remove(id);
+          }
+        }),
+        icon: Icon(expanded ? Icons.remove : Icons.add, size: 20),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<double>(
-          key: ValueKey('stage-block-$id-$value'),
-          initialValue: value,
-          decoration: const InputDecoration(
-              labelText: 'Aplicar percentual a todo o bloco',
-              border: OutlineInputBorder()),
-          hint: const Text('Valores diferentes'),
-          items: [
-            for (final step in const [0.0, .25, .5, .75, 1.0])
-              DropdownMenuItem(value: step, child: Text(percentage(step)))
-          ],
-          onChanged: tasks.isEmpty
-              ? null
-              : (value) {
-                  if (value == null || !widget.canApply()) return;
-                  setState(() {
-                    for (final task in tasks) {
-                      _values[ChecklistStageDialog.fieldKey(task)] = value;
-                    }
-                  });
-                  _preview?.invalidate();
-                },
-        ),
         const SizedBox(height: 4),
-        Text(
-            'Aplica a todas as tarefas editáveis deste bloco, inclusive as ocultas pelo filtro.',
+        Text('${all.length} tarefas',
             style: Theme.of(context).textTheme.bodySmall),
+      ])),
+    ]);
+    return Container(
+      key: ValueKey('stage-group-$id'),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+          border: Border.all(color: colors.outlineVariant),
+          borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+            color: colors.primary.withValues(alpha: .07),
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+                builder: (context, size) => size.maxWidth < 480
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [title, const SizedBox(height: 12), control])
+                    : Row(children: [
+                        Expanded(child: title),
+                        const SizedBox(width: 16),
+                        SizedBox(width: 190, child: control)
+                      ]))),
+        if (expanded)
+          Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 10, 0),
+              child: Column(children: [
+                for (final task in shown) taskCard(task, colors)
+              ])),
       ]),
     );
   }

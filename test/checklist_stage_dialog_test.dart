@@ -20,6 +20,104 @@ Future<void> choose(WidgetTester tester, String cell, String value) async {
 }
 
 void main() {
+  for (final stage in [
+    'Contato Inicial',
+    'Levantamento de Escopo',
+    'Desenvolvimento',
+    'Implanta\u00e7\u00e3o',
+    'P\u00f3s-Implanta\u00e7\u00e3o',
+    'Catalog',
+    'Builder',
+    'Construtor',
+    'Encerramento'
+  ]) {
+    testWidgets(
+        'parent and child editing remains independent of collapse and filter in $stage',
+        (tester) async {
+      tester.view.physicalSize = stage == 'Contato Inicial'
+          ? const Size(390, 844)
+          : const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      Map<String, double>? result;
+      await tester.pumpWidget(MaterialApp(
+          home: Builder(
+              builder: (context) => Scaffold(
+                      body: TextButton(
+                    child: const Text('Open'),
+                    onPressed: () async {
+                      result = await showDialog<Map<String, double>>(
+                          context: context,
+                          builder: (_) => ChecklistStageDialog(
+                                stage: stage,
+                                canApply: () => true,
+                                tasks: const [
+                                  {
+                                    'sheet': 'Checklist',
+                                    'cell': 'E1',
+                                    'label': 'Hidden completed',
+                                    'blockId': 'B1',
+                                    'block': 'Parent'
+                                  },
+                                  {
+                                    'sheet': 'Checklist',
+                                    'cell': 'E2',
+                                    'label': 'Editable child',
+                                    'blockId': 'B1',
+                                    'block': 'Parent'
+                                  },
+                                  {
+                                    'sheet': 'Checklist',
+                                    'cell': 'E3',
+                                    'label': 'Other block',
+                                    'blockId': 'B2',
+                                    'block': 'Other'
+                                  },
+                                ],
+                                values: const {
+                                  'Checklist!E1': 1,
+                                  'Checklist!E2': 0,
+                                  'Checklist!E3': 0
+                                },
+                              ));
+                    },
+                  )))));
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('stage-pending-only')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.pumpAndSettle();
+      expect(field('E2'), findsNothing);
+      final parent = find.byWidgetPredicate((w) =>
+          w is DropdownButtonFormField<double> &&
+          w.key.toString().contains('stage-block-B1-'));
+      await tester.ensureVisible(parent);
+      await tester.pumpAndSettle();
+      await tester.tap(parent);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('75%').last);
+      await tester.pumpAndSettle();
+      expect(field('E1'), findsNothing);
+      expect(field('E2'), findsNothing);
+      expect(find.text('0 de 3 tarefas conclu\u00eddas'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('stage-toggle-B1')));
+      await tester.pumpAndSettle();
+      await choose(tester, 'E2', '50');
+      expect(find.text('Valores diferentes'), findsOneWidget);
+      await tester.tap(find.text('Aplicar ajustes'));
+      await tester.pumpAndSettle();
+      expect(
+          result, {'Checklist!E1': .75, 'Checklist!E2': .5, 'Checklist!E3': 0});
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
       'zero-weight completion updates count while weighted progress and Excel wait stay unchanged',
       (tester) async {
