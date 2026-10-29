@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Novo formato de blocos do checklist em teste exclusivo na conta piloto: abrir e recolher, percentual no pai e ajuste individual dos filhos.",
-    "As demais contas continuam com o formato anterior das etapas.",
-    "Mantidos os pesos do Excel, a contagem de concluidas e a compatibilidade com a integracao v57."
+    "Tela de login preparada para salvar e preencher e-mail e senha pelo gerenciador de senhas do navegador.",
+    "Nova verificacao de login salvo identifica armazenamento permanente ou temporario sem alterar a sessao nem exibir credenciais.",
+    "O novo formato de blocos do checklist continua restrito a conta piloto. Integracao v57 compativel."
   ]
 }

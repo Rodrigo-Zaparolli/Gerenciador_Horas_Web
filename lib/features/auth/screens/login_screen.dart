@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
@@ -122,6 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
         keepConnected: _keepConnected,
       );
 
+      TextInput.finishAutofillContext(shouldSave: true);
       if (!mounted) {
         return;
       }
@@ -495,55 +497,69 @@ class _LoginScreenState extends State<LoginScreen>
           // E-MAIL
           // ====================================================
 
-          TextField(
-            controller: _emailController,
-            focusNode: _emailFocusNode,
-            enabled: !_isLoading,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            onSubmitted: (_) {
-              _passwordFocusNode.requestFocus();
-            },
-            decoration: _inputDecoration(
-              label: 'E-mail',
-              icon: Icons.email_outlined,
-            ),
-          ),
-
-          SizedBox(height: smallHeight ? 10 : 16),
-
-          // ====================================================
-          // SENHA
-          // ====================================================
-
-          TextField(
-            controller: _passwordController,
-            focusNode: _passwordFocusNode,
-            enabled: !_isLoading,
-            obscureText: _obscurePassword,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) {
-              _handleLogin();
-            },
-            decoration: _inputDecoration(
-              label: 'Senha',
-              icon: Icons.lock_outline_rounded,
-              suffixIcon: IconButton(
-                tooltip: _obscurePassword ? 'Mostrar senha' : 'Ocultar senha',
-                icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+          AutofillGroup(
+            onDisposeAction: AutofillContextAction.cancel,
+            child: Column(children: [
+              TextField(
+                controller: _emailController,
+                autofillHints: const [
+                  AutofillHints.username,
+                  AutofillHints.email
+                ],
+                autocorrect: false,
+                focusNode: _emailFocusNode,
+                enabled: !_isLoading,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  _passwordFocusNode.requestFocus();
+                },
+                decoration: _inputDecoration(
+                  label: 'E-mail',
+                  icon: Icons.email_outlined,
                 ),
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
               ),
-            ),
+
+              SizedBox(height: smallHeight ? 10 : 16),
+
+              // ====================================================
+              // SENHA
+              // ====================================================
+
+              TextField(
+                controller: _passwordController,
+                autofillHints: const [AutofillHints.password],
+                autocorrect: false,
+                enableSuggestions: false,
+                focusNode: _passwordFocusNode,
+                enabled: !_isLoading,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) {
+                  _handleLogin();
+                },
+                decoration: _inputDecoration(
+                  label: 'Senha',
+                  icon: Icons.lock_outline_rounded,
+                  suffixIcon: IconButton(
+                    tooltip:
+                        _obscurePassword ? 'Mostrar senha' : 'Ocultar senha',
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                  ),
+                ),
+              ),
+            ]),
           ),
 
           SizedBox(height: smallHeight ? 3 : 10),
@@ -569,6 +585,15 @@ class _LoginScreenState extends State<LoginScreen>
                     },
             ),
           ),
+
+          if (kIsWeb)
+            TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => launchUrl(Uri.base.resolve('diagnostico-login.html'),
+                      webOnlyWindowName: '_blank'),
+              child: const Text('Verificar login salvo'),
+            ),
 
           if (kIsWeb)
             TextButton(

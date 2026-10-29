@@ -31,6 +31,29 @@ class Auth extends Fake implements FirebaseAuth {
 }
 
 void main() {
+  testWidgets(
+      'login exposes one autofill group with username and existing password',
+      (tester) async {
+    await tester
+        .pumpWidget(MaterialApp(home: LoginScreen(onLoginSuccess: () {})));
+    await tester.pumpAndSettle();
+    final fields =
+        tester.widgetList<TextField>(find.byType(TextField)).toList();
+    expect(fields.length, 2);
+    expect(fields[0].autofillHints,
+        containsAll([AutofillHints.username, AutofillHints.email]));
+    expect(fields[1].autofillHints, [AutofillHints.password]);
+    expect(fields[1].obscureText, isTrue);
+    expect(fields[1].autocorrect, isFalse);
+    expect(fields[1].enableSuggestions, isFalse);
+    final emailGroup =
+        AutofillGroup.of(tester.element(find.byType(TextField).first));
+    final passwordGroup =
+        AutofillGroup.of(tester.element(find.byType(TextField).last));
+    expect(identical(emailGroup, passwordGroup), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   test(
       'Waits for local persistence before authenticating; unchecked uses session',
       () async {
