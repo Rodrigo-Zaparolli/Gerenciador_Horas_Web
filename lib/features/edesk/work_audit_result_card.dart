@@ -3,10 +3,15 @@ import 'work_audit.dart';
 
 class WorkAuditResultCard extends StatelessWidget {
   const WorkAuditResultCard(
-      {super.key, required this.reference, required this.fields, this.error});
+      {super.key,
+      required this.reference,
+      required this.fields,
+      this.error,
+      this.showPhaseDates = true});
   final String reference;
   final List<AuditFieldResult> fields;
   final String? error;
+  final bool showPhaseDates;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +30,7 @@ class WorkAuditResultCard extends StatelessWidget {
             ? '${name!.app} (app)'
             : '';
     final summary = auditWorkSummary(fields, error: error);
+    final hasReadValues = fields.any((f) => f.edesk.trim().isNotEmpty);
     final partial = summary == 'Confer\u00eancia parcial';
     final needsReview = summary != 'Consulta conclu\u00edda';
     final completed = auditNormalized(mapped['completed']?.edesk ?? '');
@@ -37,6 +43,11 @@ class WorkAuditResultCard extends StatelessWidget {
       'overrunHours': 'Horas excedentes',
     };
     return Card(
+      elevation: 0,
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: colors.outlineVariant)),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
           padding: const EdgeInsets.all(16),
@@ -52,10 +63,16 @@ class WorkAuditResultCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(heading,
-                              style: Theme.of(context).textTheme.titleSmall),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(color: colors.onSurfaceVariant)),
                           if (title.isNotEmpty)
                             Text(title,
-                                style: Theme.of(context).textTheme.titleMedium),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700)),
                         ]),
                     Chip(
                         avatar: Icon(
@@ -65,83 +82,89 @@ class WorkAuditResultCard extends StatelessWidget {
                             size: 18),
                         label: Text(summary)),
                   ]),
-              if (mapped.containsKey('phaseName'))
+              if (hasReadValues && mapped.containsKey('phaseName'))
                 Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(mapped['phaseName']!.edesk.isEmpty
                         ? 'Fase n\u00e3o consultada'
                         : 'Fase: ${mapped['phaseName']!.edesk}')),
-              Wrap(spacing: 12, runSpacing: 4, children: [
-                if (mapped.containsKey('completed'))
-                  Chip(
-                      avatar: Icon(
-                          completed == 'sim'
-                              ? Icons.task_alt
-                              : Icons.pending_outlined,
-                          size: 18),
-                      label: Text(completed == 'sim'
-                          ? 'Trabalho conclu\u00eddo'
-                          : completed == 'nao'
-                              ? 'Trabalho n\u00e3o conclu\u00eddo'
-                              : 'Conclus\u00e3o n\u00e3o consultada')),
-                if (mapped['status']?.edesk.isNotEmpty == true)
-                  Chip(label: Text(mapped['status']!.edesk)),
-              ]),
+              if (hasReadValues)
+                Wrap(spacing: 12, runSpacing: 4, children: [
+                  if (mapped.containsKey('completed'))
+                    Chip(
+                        avatar: Icon(
+                            completed == 'sim'
+                                ? Icons.task_alt
+                                : Icons.pending_outlined,
+                            size: 18),
+                        label: Text(completed == 'sim'
+                            ? 'Trabalho conclu\u00eddo'
+                            : completed == 'nao'
+                                ? 'Trabalho n\u00e3o conclu\u00eddo'
+                                : 'Conclus\u00e3o n\u00e3o consultada')),
+                  if (mapped['status']?.edesk.isNotEmpty == true)
+                    Chip(label: Text(mapped['status']!.edesk)),
+                ]),
               if (error != null)
                 Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: SelectableText(error!,
                         style: TextStyle(color: colors.error))),
-              LayoutBuilder(builder: (context, size) {
-                final columns = size.maxWidth >= 800
-                    ? 3
-                    : size.maxWidth >= 420
-                        ? 2
-                        : 1;
-                final width = (size.maxWidth - (columns - 1) * 12) / columns;
-                return Wrap(spacing: 12, runSpacing: 12, children: [
-                  for (final entry in labels.entries)
-                    if (mapped.containsKey(entry.key))
-                      SizedBox(
-                          width: width,
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                                color: colors.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(entry.value,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall),
-                                  const SizedBox(height: 4),
-                                  SelectableText(
-                                      mapped[entry.key]!.edesk.isEmpty
-                                          ? 'N\u00e3o consultado'
-                                          : mapped[entry.key]!.edesk,
-                                      style: TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w600,
-                                          color:
-                                              mapped[entry.key]!.edesk.isEmpty
-                                                  ? colors.error
-                                                  : colors.onSurface)),
-                                  if (mapped[entry.key]!.state ==
-                                      'Diverg\u00eancia')
-                                    Text('No app: ${mapped[entry.key]!.app}',
-                                        style: TextStyle(color: colors.error)),
-                                  if (mapped[entry.key]!
-                                      .state
-                                      .startsWith('Revisar'))
-                                    Text(mapped[entry.key]!.state,
-                                        style: TextStyle(color: colors.error)),
-                                ]),
-                          )),
-                ]);
-              }),
-              if (partial)
+              if (hasReadValues)
+                LayoutBuilder(builder: (context, size) {
+                  final columns = size.maxWidth >= 800
+                      ? (showPhaseDates ? 3 : 4)
+                      : size.maxWidth >= 420
+                          ? 2
+                          : 1;
+                  final width = (size.maxWidth - (columns - 1) * 12) / columns;
+                  return Wrap(spacing: 12, runSpacing: 12, children: [
+                    for (final entry in labels.entries)
+                      if (mapped.containsKey(entry.key) &&
+                          (showPhaseDates ||
+                              !const {'start', 'end'}.contains(entry.key)))
+                        SizedBox(
+                            width: width,
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                  color: colors.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(entry.value,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall),
+                                    const SizedBox(height: 4),
+                                    SelectableText(
+                                        mapped[entry.key]!.edesk.isEmpty
+                                            ? 'N\u00e3o consultado'
+                                            : mapped[entry.key]!.edesk,
+                                        style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w600,
+                                            color:
+                                                mapped[entry.key]!.edesk.isEmpty
+                                                    ? colors.onSurfaceVariant
+                                                    : colors.onSurface)),
+                                    if (mapped[entry.key]!.state ==
+                                        'Diverg\u00eancia')
+                                      Text('No app: ${mapped[entry.key]!.app}',
+                                          style:
+                                              TextStyle(color: colors.error)),
+                                    if (mapped[entry.key]!
+                                        .state
+                                        .startsWith('Revisar'))
+                                      Text(mapped[entry.key]!.state,
+                                          style:
+                                              TextStyle(color: colors.error)),
+                                  ]),
+                            )),
+                  ]);
+                }),
+              if (partial && hasReadValues)
                 const Padding(
                     padding: EdgeInsets.only(top: 10),
                     child: Text(

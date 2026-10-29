@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Correcao da consulta de Fases: ignora controles ocultos Telerik, identifica a aba principal e aguarda a tabela terminar de carregar.",
-    "Falhas de leitura agora informam se a aba nao foi identificada, a tabela nao carregou ou as datas sao ambiguas. Dados ausentes continuam sem valor.",
-    "Requer atualizar e reiniciar a integracao local v58. O ajuste de datas nos dois sentidos permanece somente na conta piloto."
+    "Conferencia aberta pelo projeto usa diretamente esse cadastro, sem pesquisa, lista ou selecao de outros projetos.",
+    "Conta piloto: novo layout com cabecalho do cliente, resumo da consulta e abas Fases e datas e Trabalhos e horas. Opcoes ficam recolhidas para dar mais espaco aos resultados.",
+    "Falhas de abertura aparecem em aviso compacto. Datas e horas permanecem sem valor quando nao consultadas. Layout atualizado no site; mantem a integracao v58."
   ]
 }

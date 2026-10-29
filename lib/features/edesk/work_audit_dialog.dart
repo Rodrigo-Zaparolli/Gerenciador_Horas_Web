@@ -1,3 +1,4 @@
+import 'work_audit_review.dart';
 import 'phase_audit_table.dart';
 import 'phase_date_sync_dialog.dart';
 import '../../core/config/work_audit_pilot_access.dart';
@@ -98,15 +99,18 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
       final matching = widget.projects
           .where((p) => p.id.trim() == _number.text.trim())
           .toList();
-      targets = _mode == 'number'
-          ? matching.isEmpty
-              ? [AuditTarget(_number.text.trim())]
-              : projectAuditTargets(matching)
-          : projectAuditTargets(widget.projects
-              .where((p) => _mode == 'all'
-                  ? p.status != 'TRAB_FIM' && p.status != 'TRAB_STOP'
-                  : _selected.contains(p.id))
-              .toList());
+      targets = widget.selectedProject != null
+          ? projectAuditTargets(widget.projects,
+              selectedProject: widget.selectedProject)
+          : _mode == 'number'
+              ? matching.isEmpty
+                  ? [AuditTarget(_number.text.trim())]
+                  : projectAuditTargets(matching)
+              : projectAuditTargets(widget.projects
+                  .where((p) => _mode == 'all'
+                      ? p.status != 'TRAB_FIM' && p.status != 'TRAB_STOP'
+                      : _selected.contains(p.id))
+                  .toList());
       if (targets.isEmpty ||
           targets.any((t) => !RegExp(r'^\d+$').hasMatch(t.number))) {
         throw const FormatException(
@@ -228,7 +232,9 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
       return;
     }
     final matches = <({ProjectModel project, TaskModel task})>[];
-    for (final project in widget.projects) {
+    for (final project in widget.selectedProject == null
+        ? widget.projects
+        : [widget.selectedProject!]) {
       for (final task in project.subTasks ?? <TaskModel>[]) {
         if ((task.edeskSolicitacao?.trim().isNotEmpty == true
                     ? task.edeskSolicitacao!.trim()
@@ -268,14 +274,95 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
     });
   }
 
+  Widget _scopeControls() {
+    final visible = widget.projects.where((p) => '${p.id} ${p.client}'
+        .toLowerCase()
+        .contains(_search.text.toLowerCase()));
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      DropdownButtonFormField<String>(
+          initialValue: _mode,
+          decoration: const InputDecoration(labelText: 'O que conferir'),
+          items: const [
+            DropdownMenuItem(
+                value: 'all', child: Text('Todos os projetos ativos')),
+            DropdownMenuItem(
+                value: 'selected', child: Text('Projetos selecionados')),
+            DropdownMenuItem(
+                value: 'number', child: Text('Informar solicitação'))
+          ],
+          onChanged: _busy ? null : (value) => setState(() => _mode = value!)),
+      if (_mode == 'number')
+        TextField(
+            controller: _number,
+            enabled: !_busy,
+            keyboardType: TextInputType.number,
+            decoration:
+                const InputDecoration(labelText: 'Número da solicitação')),
+      if (_mode == 'selected') ...[
+        TextField(
+            controller: _search,
+            enabled: !_busy,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'Pesquisar projeto')),
+        SizedBox(
+            height: 180,
+            child: ListView(children: [
+              for (final p in visible)
+                CheckboxListTile(
+                    dense: true,
+                    title: Text('${p.id} · ${p.client}'),
+                    value: _selected.contains(p.id),
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(() {
+                              if (value == true) {
+                                _selected.add(p.id);
+                              } else {
+                                _selected.remove(p.id);
+                              }
+                            }))
+            ])),
+      ],
+    ]);
+  }
+
+  Widget _fieldControls() => Wrap(spacing: 10, children: [
+        for (final entry in auditFields.entries)
+          FilterChip(
+              label: Text(entry.value),
+              selected: _fields.contains(entry.key),
+              onSelected: _busy
+                  ? null
+                  : (value) => setState(() {
+                        if (value) {
+                          _fields.add(entry.key);
+                        } else {
+                          _fields.remove(entry.key);
+                        }
+                      }))
+      ]);
+
   @override
   Widget build(BuildContext context) {
     final auditUser = FirebaseAuth.instance.currentUser;
     final summarized = WorkAuditPilotAccess.allows(
         uid: auditUser?.uid, email: auditUser?.email);
-    final visible = widget.projects.where((p) => '${p.id} ${p.client}'
-        .toLowerCase()
-        .contains(_search.text.toLowerCase()));
+    if (summarized) {
+      return WorkAuditReview(
+          project: widget.selectedProject,
+          results: _results,
+          options: _fieldControls(),
+          scopeControls: widget.selectedProject == null
+              ? _scopeControls()
+              : const SizedBox.shrink(),
+          busy: _busy,
+          message: _message,
+          progress: _progress,
+          onRun: _run,
+          onClose: () => Navigator.pop(context),
+          onAdjust: _adjustPhase,
+          onStop: _stop ? null : () => setState(() => _stop = true));
+    }
     return PopScope(
         canPop: !_busy,
         child: Dialog(
@@ -299,76 +386,12 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                          DropdownButtonFormField<String>(
-                              initialValue: _mode,
-                              decoration: const InputDecoration(
-                                  labelText: 'O que conferir'),
-                              items: const [
-                                DropdownMenuItem(
-                                    value: 'all',
-                                    child: Text('Todos os projetos ativos')),
-                                DropdownMenuItem(
-                                    value: 'selected',
-                                    child: Text('Projetos selecionados')),
-                                DropdownMenuItem(
-                                    value: 'number',
-                                    child: Text('Informar solicitação'))
-                              ],
-                              onChanged: _busy
-                                  ? null
-                                  : (value) => setState(() => _mode = value!)),
-                          if (_mode == 'number')
-                            TextField(
-                                controller: _number,
-                                enabled: !_busy,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                    labelText: 'Número da solicitação')),
-                          if (_mode == 'selected') ...[
-                            TextField(
-                                controller: _search,
-                                enabled: !_busy,
-                                onChanged: (_) => setState(() {}),
-                                decoration: const InputDecoration(
-                                    labelText: 'Pesquisar projeto')),
-                            SizedBox(
-                                height: 180,
-                                child: ListView(children: [
-                                  for (final p in visible)
-                                    CheckboxListTile(
-                                        dense: true,
-                                        title: Text('${p.id} · ${p.client}'),
-                                        value: _selected.contains(p.id),
-                                        onChanged: _busy
-                                            ? null
-                                            : (value) => setState(() {
-                                                  if (value == true) {
-                                                    _selected.add(p.id);
-                                                  } else {
-                                                    _selected.remove(p.id);
-                                                  }
-                                                }))
-                                ])),
-                          ],
+                          if (widget.selectedProject == null) _scopeControls(),
                           const SizedBox(height: 10),
                           const Text(
                               'Datas consultadas na aba Fases. Saldo: horas previstas menos horas trabalhadas; excedentes aparecem separadamente.'),
                           const SizedBox(height: 8),
-                          Wrap(spacing: 10, children: [
-                            for (final entry in auditFields.entries)
-                              FilterChip(
-                                  label: Text(entry.value),
-                                  selected: _fields.contains(entry.key),
-                                  onSelected: _busy
-                                      ? null
-                                      : (value) => setState(() {
-                                            if (value) {
-                                              _fields.add(entry.key);
-                                            } else {
-                                              _fields.remove(entry.key);
-                                            }
-                                          }))
-                          ]),
+                          _fieldControls(),
                           if (_busy) ...[
                             const SizedBox(height: 12),
                             const LinearProgressIndicator(),

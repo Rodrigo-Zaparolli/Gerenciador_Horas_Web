@@ -72,9 +72,11 @@ class AuditTarget {
       {'solicitacao': number, 'trabalhos': expected.keys.toList()};
 }
 
-List<AuditTarget> projectAuditTargets(List<ProjectModel> projects) {
+List<AuditTarget> projectAuditTargets(List<ProjectModel> projects,
+    {ProjectModel? selectedProject}) {
   final targets = <String, AuditTarget>{};
-  for (final project in projects) {
+  for (final project
+      in selectedProject == null ? projects : [selectedProject]) {
     final tasks = project.subTasks ?? <TaskModel>[];
     if (tasks.isEmpty) {
       if (!RegExp(r'^\d+$').hasMatch(project.id.trim())) {

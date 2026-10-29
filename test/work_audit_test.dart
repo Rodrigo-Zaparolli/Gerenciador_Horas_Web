@@ -28,6 +28,20 @@ ProjectModel project() => ProjectModel(
         ]);
 
 void main() {
+  test(
+      'opening a project limits the audit even when the global list contains other projects',
+      () {
+    final selected = project();
+    final other = project()..id = '999999';
+    other.subTasks!.single.subId = 'invalid';
+    other.subTasks!.single.edeskIdTrabalho = 'invalid';
+    final targets =
+        projectAuditTargets([other, selected], selectedProject: selected);
+    expect(targets.map((t) => t.number), ['226144']);
+    expect(targets.single.expected.keys, ['3']);
+    expect(() => projectAuditTargets([other, selected]), throwsFormatException);
+  });
+
   test('unknown comparison values still require valid dates and hours', () {
     final rows = compareAuditWork(
         {}, {'hours': '12:99', 'start': '31/02/2026'}, {'hours', 'start'});

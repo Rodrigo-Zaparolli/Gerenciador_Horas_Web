@@ -22,6 +22,12 @@ class PhaseAuditTable extends StatelessWidget {
         r.fields.any((f) => f.field == 'phaseName' && f.edesk.isNotEmpty));
     if (rows.isEmpty) return const SizedBox.shrink();
     return Card(
+        elevation: 0,
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant)),
         child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
