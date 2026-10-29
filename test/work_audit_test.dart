@@ -28,6 +28,21 @@ ProjectModel project() => ProjectModel(
         ]);
 
 void main() {
+  test('unknown comparison values still require valid dates and hours', () {
+    final rows = compareAuditWork(
+        {}, {'hours': '12:99', 'start': '31/02/2026'}, {'hours', 'start'});
+    expect(rows.map((r) => r.state), ['Revisar horas', 'Revisar data']);
+    expect(auditWorkSummary(rows), 'Dados para revisar');
+    final valid = compareAuditWork(
+        {}, {'hours': '00:00', 'start': '29/10/2026'}, {'hours', 'start'});
+    expect(valid.map((r) => r.state), ['Somente consulta', 'Somente consulta']);
+    expect(auditWorkSummary(valid), 'Consulta conclu\u00edda');
+    expect(auditWorkSummary(valid, error: 'Falha nas horas'),
+        'Confer\u00eancia parcial');
+    expect(auditWorkErrors({'phaseError': 'Falha em Fases'}, {'phaseName'}),
+        'Falha em Fases');
+  });
+
   test('phase dates, balances, completion and partial errors remain explicit',
       () {
     expect(auditFields['start'], contains('Fases'));
@@ -45,6 +60,10 @@ void main() {
     });
     expect(results.map((r) => r.state), ['Igual', 'Igual', 'Somente consulta']);
     expect(auditStatus('Conclu\u00edda'), 'fim');
+    expect(auditStatus('Finalizada'), 'fim');
+    expect(auditStatus('Encerrada'), 'fim');
+    expect(auditStatus('Parada'), 'parado');
+    expect(auditStatus('Pausada'), 'parado');
     expect(auditWorkErrors({'phaseError': 'Fases indisponiveis'}, {'start'}),
         'Fases indisponiveis');
     expect(auditWorkErrors({'phaseError': 'Fases indisponiveis'}, {'name'}),

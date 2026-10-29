@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Na conta piloto, o percentual da tarefa pai e calculado automaticamente a partir dos filhos, inclusive recolhidos ou ocultos pelo filtro.",
-    "O calculo do bloco usa os pesos disponiveis; blocos sem peso mostram a media dos filhos. O percentual geral do trabalho continua seguindo o Excel.",
-    "Editar o percentual do pai continua aplicando o valor a todos os filhos editaveis. Integracao v57 compativel."
+    "Na conta piloto, a conferencia mostra datas ajustadas de Fases, horas previstas, trabalhadas, restantes e excedentes por trabalho.",
+    "Consulta concluida e trabalho concluido aparecem separados. Dados nao consultados permanecem sem valor, sem assumir zero.",
+    "Comparacao detalhada com o app, destaque de divergencias e validacao de datas e horas. Nenhum dado e alterado no app ou no E-Desk. Integracao v57 compativel."
   ]
 }

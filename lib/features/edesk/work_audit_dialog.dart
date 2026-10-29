@@ -1,3 +1,5 @@
+import '../../core/config/work_audit_pilot_access.dart';
+import 'work_audit_result_card.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -59,7 +61,11 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
     if (widget.selectedProject != null) {
       _selected.add(widget.selectedProject!.id);
     }
-    final owner = FirebaseAuth.instance.currentUser?.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    final owner = user?.uid;
+    if (WorkAuditPilotAccess.allows(uid: owner, email: user?.email)) {
+      _fields.remove('percentage');
+    }
     _auth = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user?.uid != owner && mounted) {
         _stop = true;
@@ -212,6 +218,9 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final auditUser = FirebaseAuth.instance.currentUser;
+    final summarized = WorkAuditPilotAccess.allows(
+        uid: auditUser?.uid, email: auditUser?.email);
     final visible = widget.projects.where((p) => '${p.id} ${p.client}'
         .toLowerCase()
         .contains(_search.text.toLowerCase()));
@@ -289,7 +298,8 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                                 ])),
                           ],
                           const SizedBox(height: 10),
-                          const Text('Datas consultadas na aba Fases. Saldo: horas previstas menos horas trabalhadas; excedentes aparecem separadamente.'),
+                          const Text(
+                              'Datas consultadas na aba Fases. Saldo: horas previstas menos horas trabalhadas; excedentes aparecem separadamente.'),
                           const SizedBox(height: 8),
                           Wrap(spacing: 10, children: [
                             for (final entry in auditFields.entries)
@@ -318,42 +328,51 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
                                     const EdgeInsets.symmetric(vertical: 12),
                                 child: SelectableText(_message)),
                           for (final result in _results)
-                            Card(
-                                child: ExpansionTile(
-                              initiallyExpanded: result.error != null ||
-                                  result.fields
-                                      .any((f) => f.state == 'Divergência'),
-                              title: Text(result.reference),
-                              subtitle: Text(result.error ??
-                                  (result.fields
-                                          .any((f) => f.state == 'Divergência')
-                                      ? 'Divergência encontrada'
-                                      : result.fields.isNotEmpty &&
-                                              result.fields.every(
-                                                  (f) => f.state == 'Igual')
-                                          ? 'Conferido'
-                                          : 'Conferência parcial / dados consultados')),
-                              children: [
-                                SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: DataTable(columns: const [
-                                      DataColumn(label: Text('Campo')),
-                                      DataColumn(label: Text('App')),
-                                      DataColumn(label: Text('E-Desk')),
-                                      DataColumn(label: Text('Resultado'))
-                                    ], rows: [
-                                      for (final f in result.fields)
-                                        DataRow(cells: [
-                                          DataCell(Text(auditFields[f.field]!)),
-                                          DataCell(SelectableText(
-                                              f.app.isEmpty ? '—' : f.app)),
-                                          DataCell(SelectableText(
-                                              f.edesk.isEmpty ? '—' : f.edesk)),
-                                          DataCell(Text(f.state))
-                                        ])
-                                    ]))
-                              ],
-                            )),
+                            if (summarized)
+                              WorkAuditResultCard(
+                                  reference: result.reference,
+                                  error: result.error,
+                                  fields: result.fields)
+                            else
+                              Card(
+                                  child: ExpansionTile(
+                                initiallyExpanded: result.error != null ||
+                                    result.fields
+                                        .any((f) => f.state == 'Divergência'),
+                                title: Text(result.reference),
+                                subtitle: Text(result.error ??
+                                    (result.fields.any(
+                                            (f) => f.state == 'Divergência')
+                                        ? 'Divergência encontrada'
+                                        : result.fields.isNotEmpty &&
+                                                result.fields.every(
+                                                    (f) => f.state == 'Igual')
+                                            ? 'Conferido'
+                                            : 'Conferência parcial / dados consultados')),
+                                children: [
+                                  SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: DataTable(columns: const [
+                                        DataColumn(label: Text('Campo')),
+                                        DataColumn(label: Text('App')),
+                                        DataColumn(label: Text('E-Desk')),
+                                        DataColumn(label: Text('Resultado'))
+                                      ], rows: [
+                                        for (final f in result.fields)
+                                          DataRow(cells: [
+                                            DataCell(
+                                                Text(auditFields[f.field]!)),
+                                            DataCell(SelectableText(
+                                                f.app.isEmpty ? '—' : f.app)),
+                                            DataCell(SelectableText(
+                                                f.edesk.isEmpty
+                                                    ? '—'
+                                                    : f.edesk)),
+                                            DataCell(Text(f.state))
+                                          ])
+                                      ]))
+                                ],
+                              )),
                         ]))),
                     const SizedBox(height: 12),
                     Wrap(alignment: WrapAlignment.end, spacing: 12, children: [

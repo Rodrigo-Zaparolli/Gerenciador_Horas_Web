@@ -35,19 +35,27 @@ String auditNormalized(String value) {
 }
 
 String? auditStatus(String value) => switch (auditNormalized(value)) {
-      'ini_pro' || 'não iniciado' || 'nao iniciado' || 'aberto' => 'inicio',
+      'ini_pro' ||
+      'não iniciado' ||
+      'nao iniciado' ||
+      'nao iniciada' ||
+      'aberto' ||
+      'aberta' =>
+        'inicio',
       'em andamento' ||
       'andamento' ||
       'exe_pro' ||
       'trab_exe' ||
       'trab' =>
         'andamento',
-      'trab_stop' || 'parado' || 'pausado' => 'parado',
+      'trab_stop' || 'parado' || 'parada' || 'pausado' || 'pausada' => 'parado',
       'trab_fim' ||
       'finalizado' ||
+      'finalizada' ||
       'concluido' ||
       'concluida' ||
-      'encerrado' =>
+      'encerrado' ||
+      'encerrada' =>
         'fim',
       _ => null,
     };
@@ -111,6 +119,21 @@ class AuditFieldResult {
   final String field, app, edesk, state;
 }
 
+String auditWorkSummary(List<AuditFieldResult> fields, {String? error}) {
+  if (error != null ||
+      fields.isEmpty ||
+      fields.any((f) => f.state == 'N\u00e3o consultado')) {
+    return 'Confer\u00eancia parcial';
+  }
+  if (fields.any((f) => f.state == 'Diverg\u00eancia')) {
+    return 'Diverg\u00eancias encontradas';
+  }
+  if (fields.any((f) => f.state != 'Igual' && f.state != 'Somente consulta')) {
+    return 'Dados para revisar';
+  }
+  return 'Consulta conclu\u00edda';
+}
+
 String auditSummary(Iterable<List<AuditFieldResult>> rows,
     {required bool hasErrors, required bool interrupted}) {
   if (interrupted) {
@@ -146,7 +169,17 @@ List<AuditFieldResult> compareAuditWork(Map<String, String> expected,
 
 String _compare(String field, String expected, String actual) {
   if (actual.trim().isEmpty) return 'Não consultado';
-  if (expected.trim().isEmpty) return 'Somente consulta';
+  if (expected.trim().isEmpty &&
+      !const [
+        'hours',
+        'estimatedHours',
+        'remainingHours',
+        'overrunHours',
+        'start',
+        'end'
+      ].contains(field)) {
+    return 'Somente consulta';
+  }
   if (const ['hours', 'estimatedHours', 'remainingHours', 'overrunHours']
       .contains(field)) {
     int? minutes(String value) {
@@ -156,8 +189,11 @@ String _compare(String field, String expected, String actual) {
           : int.parse(match[1]!) * 60 + int.parse(match[2]!);
     }
 
-    final left = minutes(expected), right = minutes(actual);
-    if (left == null || right == null) return 'Revisar horas';
+    final right = minutes(actual);
+    if (right == null) return 'Revisar horas';
+    if (expected.trim().isEmpty) return 'Somente consulta';
+    final left = minutes(expected);
+    if (left == null) return 'Revisar horas';
     return left == right ? 'Igual' : 'Diverg\u00eancia';
   }
   if (field == 'status') {
@@ -179,8 +215,11 @@ String _compare(String field, String expected, String actual) {
       return auditDate(date);
     }
 
-    final left = normalizeDate(expected), right = normalizeDate(actual);
-    if (left == null || right == null) return 'Revisar data';
+    final right = normalizeDate(actual);
+    if (right == null) return 'Revisar data';
+    if (expected.trim().isEmpty) return 'Somente consulta';
+    final left = normalizeDate(expected);
+    if (left == null) return 'Revisar data';
     return left == right ? 'Igual' : 'Divergência';
   }
   return auditNormalized(expected) == auditNormalized(actual)
@@ -195,7 +234,7 @@ String? auditWorkErrors(Map<String, dynamic> row, Set<String> fields) {
             .any(const {'hours', 'remainingHours', 'overrunHours'}.contains) &&
         row['hoursError'] != null)
       row['hoursError'].toString(),
-    if (fields.any(const {'start', 'end'}.contains) &&
+    if (fields.any(const {'start', 'end', 'phaseName'}.contains) &&
         row['phaseError'] != null)
       row['phaseError'].toString(),
   ];
