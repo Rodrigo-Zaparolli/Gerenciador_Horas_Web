@@ -2,6 +2,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/features/projects/dialogs/checklist_stage_progress.dart';
 
 void main() {
+  test('parent percentage follows all children using known weights', () {
+    final tasks = [
+      {'sheet': 'S', 'cell': 'E1'},
+      {'sheet': 'S', 'cell': 'E2'}
+    ];
+    final values = {'S!E1': 1.0, 'S!E2': 0.0};
+    expect(
+        checklistBlockProgress(tasks, values, {
+          'taskProgress': {
+            'S!E1': {'weight': .1},
+            'S!E2': {'weight': .3}
+          }
+        }),
+        .25);
+    expect(
+        checklistBlockProgress(tasks, values, {
+          'taskProgress': {
+            'S!E1': {'weight': 0},
+            'S!E2': {'weight': 0}
+          }
+        }),
+        .5);
+    expect(checklistBlockProgress(tasks, values, null), .5);
+    expect(checklistBlockProgress(tasks, {'S!E1': 1, 'S!E2': 1}, null), 1);
+  });
+
   const tasks = [
     {'sheet': 'S', 'cell': 'E1'},
     {'sheet': 'S', 'cell': 'E2'}

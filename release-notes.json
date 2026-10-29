@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Na conta piloto, clicar no titulo ou cabecalho da tarefa pai abre e recolhe suas tarefas filhas.",
-    "O seletor de percentual continua independente: altera os filhos sem recolher o bloco.",
-    "Mantida a liberacao do novo formato somente na conta piloto. Integracao v57 compativel."
+    "Na conta piloto, o percentual da tarefa pai e calculado automaticamente a partir dos filhos, inclusive recolhidos ou ocultos pelo filtro.",
+    "O calculo do bloco usa os pesos disponiveis; blocos sem peso mostram a media dos filhos. O percentual geral do trabalho continua seguindo o Excel.",
+    "Editar o percentual do pai continua aplicando o valor a todos os filhos editaveis. Integracao v57 compativel."
   ]
 }

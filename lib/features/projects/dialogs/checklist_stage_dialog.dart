@@ -335,12 +335,19 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
   }
 
   Widget blockCard(
+          String id, List<Map<String, dynamic>> shown, ColorScheme colors) =>
+      _preview == null
+          ? blockCardContent(id, shown, colors)
+          : ListenableBuilder(
+              listenable: _preview!,
+              builder: (_, __) => blockCardContent(id, shown, colors));
+
+  Widget blockCardContent(
       String id, List<Map<String, dynamic>> shown, ColorScheme colors) {
     final all = widget.tasks.where((task) => blockId(task) == id).toList();
     final editable = all.where((task) => task['readOnly'] != true).toList();
-    final current =
-        all.map((task) => _values[ChecklistStageDialog.fieldKey(task)]).toSet();
-    final value = current.length == 1 ? current.single : null;
+    final value = checklistBlockProgress(
+        all, _values, _preview?.data ?? widget.initialPreview);
     final expanded = !_collapsedBlocks.contains(id);
     final steps = <double>[
       0,
@@ -348,32 +355,37 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
       .5,
       .75,
       1,
-      if (value != null && !const [0, .25, .5, .75, 1].contains(value)) value
+      if (!const [0, .25, .5, .75, 1].contains(value)) value
     ]..sort();
     final label = all.first['block']?.toString() ?? 'Bloco de tarefas';
-    final control = DropdownButtonFormField<double>(
-      key: ValueKey('stage-block-$id-$value'),
-      initialValue: value,
-      isExpanded: true,
-      decoration: const InputDecoration(
-          labelText: 'Aplicar a todo o bloco', border: OutlineInputBorder()),
-      hint: const Text('Valores diferentes'),
-      items: [
-        for (final step in steps)
-          DropdownMenuItem(value: step, child: Text(percentage(step)))
-      ],
-      onChanged: editable.isEmpty
-          ? null
-          : (next) {
-              if (next == null || !widget.canApply()) return;
-              setState(() {
-                for (final task in editable) {
-                  _values[ChecklistStageDialog.fieldKey(task)] = next;
-                }
-              });
-              _preview?.invalidate();
-            },
-    );
+    final control = Tooltip(
+        message:
+            'Calculado pelos filhos com os pesos dispon\u00edveis. Sem pesos, usa a m\u00e9dia dos filhos. Alterar aplica a todos os filhos edit\u00e1veis.',
+        child: DropdownButtonFormField<double>(
+          key: ValueKey('stage-block-$id-$value'),
+          initialValue: value,
+          isExpanded: true,
+          decoration: const InputDecoration(
+              labelText: 'Realizado do bloco', border: OutlineInputBorder()),
+          items: [
+            for (final step in steps)
+              DropdownMenuItem(
+                  value: step,
+                  enabled: const [0, .25, .5, .75, 1].contains(step),
+                  child: Text(percentage(step)))
+          ],
+          onChanged: editable.isEmpty
+              ? null
+              : (next) {
+                  if (next == null || !widget.canApply()) return;
+                  setState(() {
+                    for (final task in editable) {
+                      _values[ChecklistStageDialog.fieldKey(task)] = next;
+                    }
+                  });
+                  _preview?.invalidate();
+                },
+        ));
     void toggle() => setState(() {
           if (expanded) {
             _collapsedBlocks.add(id);

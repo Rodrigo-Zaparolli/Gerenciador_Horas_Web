@@ -110,7 +110,9 @@ void main() {
       await tester.tap(find.text('Parent'));
       await tester.pumpAndSettle();
       await choose(tester, 'E2', '50');
-      expect(find.text('Valores diferentes'), findsOneWidget);
+      expect(
+          tester.widget<DropdownButtonFormField<double>>(parent).initialValue,
+          .625);
       await tester.tap(find.text('Aplicar ajustes'));
       await tester.pumpAndSettle();
       expect(
@@ -172,14 +174,31 @@ void main() {
 
   testWidgets('progress changes immediately while Excel calculation is pending',
       (tester) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final pending = Completer<Map<String, dynamic>>();
     await tester.pumpWidget(MaterialApp(
         home: ChecklistStageDialog(
       stage: 'Implantacao',
+      expandableBlocks: true,
       canApply: () => true,
       tasks: const [
-        {'sheet': 'Checklist', 'cell': 'E1', 'label': 'Editable'},
-        {'sheet': 'Checklist', 'cell': 'E2', 'label': 'Done'}
+        {
+          'sheet': 'Checklist',
+          'cell': 'E1',
+          'label': 'Editable',
+          'blockId': 'Live',
+          'block': 'Live parent'
+        },
+        {
+          'sheet': 'Checklist',
+          'cell': 'E2',
+          'label': 'Done',
+          'blockId': 'Live',
+          'block': 'Live parent'
+        }
       ],
       values: const {'Checklist!E1': 0, 'Checklist!E2': 1},
       initialPreview: const {
@@ -210,7 +229,13 @@ void main() {
                 find.byKey(const ValueKey('stage-live-progress')))
             .value,
         .875);
-    expect(find.text('87,50%'), findsOneWidget);
+    expect(
+        tester
+            .widget<DropdownButtonFormField<double>>(
+                find.byKey(const ValueKey('stage-block-Live-0.875')))
+            .initialValue,
+        .875);
+    expect(find.text('87,50%'), findsNWidgets(2));
     await tester.pumpWidget(const SizedBox());
     pending.complete({'rows': []});
     await tester.pump();

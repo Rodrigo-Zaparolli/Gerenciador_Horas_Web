@@ -44,3 +44,31 @@ double? immediateStageProgress(String stage, List<Map<String, dynamic>> tasks,
   }
   return after.clamp(0, 1);
 }
+
+/// Whole-block progress includes collapsed and filtered children. Excel weights
+/// apply within the block when available; weightless blocks use a simple mean.
+/// This display never changes the stage's authoritative Excel calculation.
+double checklistBlockProgress(List<Map<String, dynamic>> tasks,
+    Map<String, double> values, Map<String, dynamic>? preview) {
+  if (tasks.isEmpty) return 0;
+  final progress = preview?['taskProgress'];
+  double sum = 0, weighted = 0, weights = 0;
+  var completeWeights = progress is Map;
+  for (final task in tasks) {
+    final key = "${task['sheet']}!${task['cell']}";
+    final value = values[key] ?? 0;
+    sum += value;
+    final item = progress is Map ? progress[key] : null;
+    final weight = item is Map ? item['weight'] : null;
+    if (weight is num && weight.isFinite && weight >= 0 && weight <= 1) {
+      weighted += weight * value;
+      weights += weight;
+    } else {
+      completeWeights = false;
+    }
+  }
+  return (completeWeights && weights > 0
+          ? weighted / weights
+          : sum / tasks.length)
+      .clamp(0, 1);
+}
