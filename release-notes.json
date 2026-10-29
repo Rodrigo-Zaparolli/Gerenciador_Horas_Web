@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Conta piloto: conferencia por trabalho com datas de Fases, horas previstas, trabalhadas, restantes e excedentes, e conclusao.",
-    "Tabela de fases com datas do sistema e datas ajustadas do E-Desk. Ajustar datas permite escolher E-Desk para Sistema ou Sistema para E-Desk e confirmar o antes e depois.",
-    "Importacao de datas altera somente o trabalho identificado e bloqueia cadastro alterado ou duplicado. Envio usa a rotina de fases com releitura da gravacao. Consulta nao altera dados. Integracao v57 compativel."
+    "Correcao da consulta de Fases: ignora controles ocultos Telerik, identifica a aba principal e aguarda a tabela terminar de carregar.",
+    "Falhas de leitura agora informam se a aba nao foi identificada, a tabela nao carregou ou as datas sao ambiguas. Dados ausentes continuam sem valor.",
+    "Requer atualizar e reiniciar a integracao local v58. O ajuste de datas nos dois sentidos permanece somente na conta piloto."
   ]
 }

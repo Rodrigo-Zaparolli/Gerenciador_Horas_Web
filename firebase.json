@@ -361,6 +361,21 @@
         "source": "/downloads/integracao-edesk-completa-windows-v56.zip",
         "destination": "/downloads/integracao-edesk-completa-windows-v57.zip",
         "type": 302
+      },
+      {
+        "source": "/downloads/abertura-local-windows-v57.zip",
+        "destination": "/downloads/abertura-local-windows-v58.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/atualizacao-integracao-completa-57.zip",
+        "destination": "/downloads/atualizacao-integracao-completa-58.zip",
+        "type": 302
+      },
+      {
+        "source": "/downloads/integracao-edesk-completa-windows-v57.zip",
+        "destination": "/downloads/integracao-edesk-completa-windows-v58.zip",
+        "type": 302
       }
     ]
   }

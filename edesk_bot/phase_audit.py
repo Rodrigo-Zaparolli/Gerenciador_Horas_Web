@@ -9,30 +9,56 @@ def phase_key(value):
     text=re.sub(r'\(oh\)\s*$','',text)
     return re.sub(r'[^a-z0-9]','',text)
 
+class PhaseReadError(ValueError):
+    pass
+
+
 READ_PHASES=r"""view => {
  const visible=e=>e&&e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden';
+ const inputs=(owner,part)=>[...owner.querySelectorAll('input')].filter(e=>e.id.includes(part)&&e.type!=='hidden'&&visible(e));
  const names=[...view.querySelectorAll("span[id*='lblGFasNome']")].filter(visible);
- if(!names.length)throw Error('Nenhuma fase reconhecida.');
+ if(!names.length)throw Error('phase_rows_pending');
  return names.map(label=>{
   let owner=label.parentElement;
-  while(owner&&owner!==view&&!(owner.querySelectorAll("span[id*='lblGFasNome']").length===1&&owner.querySelectorAll("input[id*='txtGFasDtIniAj']").length===1&&owner.querySelectorAll("input[id*='txtGFasDtTerAju']").length===1))owner=owner.parentElement;
-  if(!owner||owner===view)throw Error('Campos de fase sem associacao unica.');
-  return {name:label.textContent.trim(),start:owner.querySelector("input[id*='txtGFasDtIniAj']").value.trim(),end:owner.querySelector("input[id*='txtGFasDtTerAju']").value.trim()};
+  while(owner&&owner!==view&&!(
+    [...owner.querySelectorAll("span[id*='lblGFasNome']")].filter(visible).length===1&&
+    inputs(owner,'txtGFasDtIniAj').length===1&&inputs(owner,'txtGFasDtTerAju').length===1))owner=owner.parentElement;
+  if(!owner||[...owner.querySelectorAll("span[id*='lblGFasNome']")].filter(visible).length!==1||inputs(owner,'txtGFasDtIniAj').length!==1||inputs(owner,'txtGFasDtTerAju').length!==1)throw Error('phase_fields_ambiguous');
+  return {name:label.textContent.trim(),start:inputs(owner,'txtGFasDtIniAj')[0].value.trim(),end:inputs(owner,'txtGFasDtTerAju')[0].value.trim()};
  });
 }"""
+
 
 def read_phases(page):
     view=page.locator('#cph1_rpvFasePro')
     if not view.count() or not view.first.is_visible():
-        tabs=[t for t in page.get_by_text(re.compile(r'^Fases\s*(?:\(\d+\))?$')).all() if t.is_visible()]
-        if len(tabs)!=1:raise ValueError('A aba Fases nao foi identificada sem ambiguidade.')
+        # Click the main Telerik tab anchor, not an arbitrary matching text node.
+        tabs=page.locator('div.rtsLevel1 a.rtsLink').filter(
+            has_text=re.compile(r'^\s*Fases\s*(?:\(\d+\))?\s*$',re.I))
+        tabs=[tab for tab in tabs.all() if tab.is_visible()]
+        if not tabs:
+            tabs=[tab for tab in page.get_by_role('tab',name=re.compile(r'^\s*Fases\s*(?:\(\d+\))?\s*$',re.I)).all() if tab.is_visible()]
+        if not tabs:
+            tabs=[tab for tab in page.get_by_text(re.compile(r'^\s*Fases\s*(?:\(\d+\))?\s*$',re.I)).all() if tab.is_visible()]
+        if len(tabs)!=1:raise PhaseReadError('A aba principal Fases nao foi identificada sem ambiguidade.')
         tabs[0].click(timeout=15000)
-    view.wait_for(state='visible',timeout=15000)
-    page.wait_for_function("() => !window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.()",timeout=15000)
-    rows=view.evaluate(READ_PHASES)
+    try:
+        view.wait_for(state='visible',timeout=20000)
+        # A visible view may still be empty while the Telerik AJAX reply arrives.
+        page.wait_for_function(r"""() => {
+          const view=document.querySelector('#cph1_rpvFasePro');
+          const busy=window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.();
+          return !busy&&view&&[...view.querySelectorAll("span[id*='lblGFasNome']")].some(e=>e.getClientRects().length&&e.textContent.trim());
+        }""",timeout=20000)
+        rows=view.evaluate(READ_PHASES)
+    except Exception as error:
+        if 'phase_fields_ambiguous' in str(error):
+            raise PhaseReadError('Os campos de datas de Fases nao possuem uma associacao unica.') from error
+        raise PhaseReadError('A aba Fases abriu, mas a tabela de datas nao terminou de carregar.') from error
     keys=[phase_key(row['name']) for row in rows]
-    if not all(keys) or len(set(keys))!=len(keys):raise ValueError('Nomes de fases vazios ou repetidos.')
+    if not all(keys) or len(set(keys))!=len(keys):raise PhaseReadError('A tabela de Fases possui nomes vazios ou repetidos.')
     return {key:row for key,row in zip(keys,rows)}
+
 
 def phase_dates(phases,work):
     key=phase_key(work.get('phase') or work.get('name'))

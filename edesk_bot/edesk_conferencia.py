@@ -211,11 +211,13 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
         grid_values = {str(row['idTrabalho']): row['values'] for row in import_work_rows(request_page, solicitation)}
     except Exception:
         pass  # A missing grid estimate is never guessed from an unrelated work.
-    from phase_audit import read_phases, phase_dates, summarize_work
+    from phase_audit import read_phases, phase_dates, summarize_work, PhaseReadError
     phases = {}
     phase_error = None
     try:
         phases = read_phases(request_page)
+    except PhaseReadError as error:
+        phase_error = str(error)
     except Exception:
         phase_error = 'Nao foi possivel consultar as datas ajustadas em Fases.'
     rows = []
