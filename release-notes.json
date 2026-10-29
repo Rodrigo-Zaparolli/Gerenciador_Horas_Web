@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Integracao v57: percentual da etapa calculado com todas as tarefas e seus pesos, sem confundir um bloco concluido com o trabalho inteiro.",
-    "Barra do trabalho atualizada imediatamente durante os ajustes; indicacao de confirmacao pela planilha.",
-    "Para aplicar o calculo corrigido, atualize e reinicie a integracao v57 e recarregue a planilha."
+    "Manter conectado usa armazenamento permanente consistente na entrada e na reabertura do navegador.",
+    "O login verifica o acesso ao armazenamento permanente e informa quando o navegador o bloqueia.",
+    "Correcao apenas do site: a integracao v57 continua valida, sem necessidade de reinstalar."
   ]
 }

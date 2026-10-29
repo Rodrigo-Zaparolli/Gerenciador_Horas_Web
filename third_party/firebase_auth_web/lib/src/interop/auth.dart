@@ -19,6 +19,18 @@ import 'auth_interop.dart' as auth_interop;
 
 export 'auth_interop.dart';
 
+// Initialization options must stay identical within a page. A login can
+// select a durable backend for the next startup without reinitializing Auth.
+final bool _localAuthStorageAtStartup = _readLocalAuthStoragePreference();
+bool _readLocalAuthStoragePreference() {
+  try {
+    return web.window.localStorage.getItem('gerenciador_horas.auth.storage') ==
+        'local';
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Given an AppJSImp, return the Auth instance.
 Auth getAuthInstance(App app) {
   // Default persistence can be seen here
@@ -26,12 +38,7 @@ Auth getAuthInstance(App app) {
   // Opt-in recovery for profiles whose IndexedDB is inaccessible. Do not
   // include IndexedDB in this hierarchy: Firebase otherwise reads it during
   // initialization/migration, before Dart can call setPersistence.
-  bool localOnly = false;
-  try {
-    localOnly =
-        web.window.localStorage.getItem('gerenciador_horas.auth.storage') ==
-            'local';
-  } catch (_) {}
+  final localOnly = _localAuthStorageAtStartup;
   final List<JSAny?> persistences = localOnly
       ? [
           auth_interop.browserLocalPersistence,

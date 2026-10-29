@@ -42,10 +42,10 @@ void main() {
         keepConnected: true,
         web: true);
     await Future<void>.delayed(Duration.zero);
-    expect(auth.events, [Persistence.INDEXED_DB]);
+    expect(auth.events, [Persistence.LOCAL]);
     auth.persistenceWait!.complete();
     await login;
-    expect(auth.events, [Persistence.INDEXED_DB, 'login:user@example.com']);
+    expect(auth.events, [Persistence.LOCAL, 'login:user@example.com']);
     auth.events.clear();
     await LoginSession.signIn(
         auth: auth,
@@ -66,7 +66,7 @@ void main() {
             keepConnected: true,
             web: true),
         throwsStateError);
-    expect(auth.events, [Persistence.INDEXED_DB, Persistence.LOCAL]);
+    expect(auth.events, [Persistence.LOCAL]);
   });
   test('Unavailable IndexedDB falls back to durable local storage', () async {
     final auth = Auth()..failIndexedDb = true;
@@ -75,7 +75,8 @@ void main() {
         email: 'user@example.com',
         password: 'test',
         keepConnected: true,
-        web: true);
+        web: true,
+        preferLocalStorage: false);
     expect(auth.events, [
       Persistence.INDEXED_DB,
       Persistence.LOCAL,

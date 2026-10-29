@@ -13,16 +13,24 @@ class LoginSession {
   }) async {
     if (web) {
       if (keepConnected) {
-        // Use the same durable backend that Firebase prefers when restoring
-        // authentication after a browser restart. Never fall back to a
-        // session-only login when the user requested a persistent session.
-        try {
-          await auth.setPersistence(
-              (preferLocalStorage ?? prefersLocalAuthStorage())
-                  ? Persistence.LOCAL
-                  : Persistence.INDEXED_DB);
-        } catch (_) {
+        // Select the same durable backend on login and the next startup.
+        // A successful session-only fallback must never satisfy this option.
+        final useLocal = preferLocalStorage ?? true;
+        if (useLocal) {
+          if (!prepareLocalAuthStorage()) {
+            throw FirebaseAuthException(
+                code: 'web-storage-unsupported',
+                message:
+                    'O navegador bloqueou o armazenamento permanente do login.');
+          }
           await auth.setPersistence(Persistence.LOCAL);
+        } else {
+          try {
+            await auth.setPersistence(Persistence.INDEXED_DB);
+          } catch (_) {
+            if (!prepareLocalAuthStorage()) rethrow;
+            await auth.setPersistence(Persistence.LOCAL);
+          }
         }
       } else {
         await auth.setPersistence(Persistence.SESSION);
