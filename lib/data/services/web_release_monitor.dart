@@ -1,3 +1,4 @@
+import '../../core/platform/native_file_transport.dart';
 import 'integration_downloads.dart';
 import '../../shared/widgets/integration_download_panel.dart';
 import 'dart:async';
@@ -29,6 +30,7 @@ class WebReleaseMonitor extends StatefulWidget {
       this.releaseLoader,
       this.notesLoader,
       this.integrationLoader,
+      this.installedIntegrationLoader,
       this.openIntegrationDownload,
       this.installedRelease,
       this.synchronize,
@@ -38,6 +40,7 @@ class WebReleaseMonitor extends StatefulWidget {
   final Future<String?> Function()? releaseLoader;
   final Future<List<String>> Function()? notesLoader;
   final Future<IntegrationDownloads?> Function()? integrationLoader;
+  final Future<String?> Function()? installedIntegrationLoader;
   final Future<bool> Function(Uri)? openIntegrationDownload;
   final String? installedRelease;
   final VoidCallback? synchronize;
@@ -53,6 +56,7 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
   StreamSubscription<User?>? _auth;
   bool _checking = false;
   String? _dismissed;
+  String? _dismissedIntegration;
   DateTime? _lastCheck;
 
   @override
@@ -121,13 +125,38 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
             ? decoded['release'] as String
             : null;
       }
-      if (release == null ||
-          release.isEmpty ||
-          release == currentRelease ||
-          release == _dismissed ||
-          !mounted) {
-        return;
+      final webUpdate = release != null &&
+          release.isNotEmpty &&
+          release != currentRelease &&
+          release != _dismissed;
+      String? nativeVersion;
+      if (integration != null && integration.version != _dismissedIntegration) {
+        try {
+          if (widget.installedIntegrationLoader != null) {
+            nativeVersion = await widget.installedIntegrationLoader!();
+          } else if (kIsWeb) {
+            final health = await nativeFileRequest(
+                {'action': 'health', 'interactive': false});
+            final data = health['data'];
+            if (health['status'] == 200 &&
+                data is Map &&
+                data['service'] == 'gerenciador-horas-edesk' &&
+                data['mode'] == 'local' &&
+                data['busy'] != true) {
+              nativeVersion = data['integrationPackageVersion']?.toString();
+            }
+          }
+        } catch (_) {
+          // Unknown/offline is not evidence of an outdated installation.
+        }
       }
+      final nativeNumber = int.tryParse(
+          RegExp(r'(\d+)$').firstMatch(nativeVersion ?? '')?.group(1) ?? '');
+      final nativeUpdate = integration != null &&
+          nativeNumber != null &&
+          nativeNumber < int.parse(integration.version) &&
+          integration.version != _dismissedIntegration;
+      if ((!webUpdate && !nativeUpdate) || !mounted) return;
       if (EdeskActivity.active != 0 ||
           ModalRoute.of(context)?.isCurrent != true) {
         // This release has not been shown. Retry on the next safe tick,
@@ -138,7 +167,9 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
       final update = await showDialog<bool>(
           context: context,
           builder: (dialog) => AlertDialog(
-                title: const Text('Nova versão disponível'),
+                title: Text(webUpdate
+                    ? 'Nova versão disponível'
+                    : 'Atualizar integração E-Desk'),
                 content: SizedBox(
                   width: 440,
                   child: SingleChildScrollView(
@@ -146,7 +177,12 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (notes.isNotEmpty) ...[
+                        if (!webUpdate) ...[
+                          Text(
+                              'Integra\u00e7\u00e3o ativa v$nativeNumber; dispon\u00edvel v${integration!.version}.'),
+                          const SizedBox(height: 8),
+                        ],
+                        if (webUpdate && notes.isNotEmpty) ...[
                           const Text('O que mudou nesta versão:',
                               style: TextStyle(fontWeight: FontWeight.bold)),
                           const SizedBox(height: 12),
@@ -156,15 +192,16 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
                               child: Text('• $note'),
                             ),
                           const SizedBox(height: 12),
-                        ] else
+                        ] else if (webUpdate)
                           const Text('Uma nova versão do app está disponível.'),
                         if (integration != null)
                           IntegrationDownloadPanel(
                               downloads: integration,
                               openDownload: widget.openIntegrationDownload),
-                        const Text(
-                            'Os textos dos comentários e e-mails têm recuperação local. '
-                            'Salve alterações em outros formulários e selecione novamente os anexos após atualizar.'),
+                        if (webUpdate)
+                          const Text(
+                              'Os textos dos comentários e e-mails têm recuperação local. '
+                              'Salve alterações em outros formulários e selecione novamente os anexos após atualizar.'),
                       ],
                     ),
                   ),
@@ -173,13 +210,15 @@ class _WebReleaseMonitorState extends State<WebReleaseMonitor> {
                   TextButton(
                       onPressed: () => Navigator.pop(dialog, false),
                       child: const Text('Depois')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(dialog, true),
-                      child: const Text('Atualizar app')),
+                  if (webUpdate)
+                    FilledButton(
+                        onPressed: () => Navigator.pop(dialog, true),
+                        child: const Text('Atualizar app')),
                 ],
               ));
       if (!mounted) return;
-      if (update == true && EdeskActivity.active == 0) {
+      if (nativeUpdate) _dismissedIntegration = integration.version;
+      if (webUpdate && update == true && EdeskActivity.active == 0) {
         (widget.reload ?? reloadApp)();
       } else {
         _dismissed = release;

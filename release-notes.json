@@ -1,7 +1,7 @@
 {
   "changes": [
-    "Manter conectado usa armazenamento permanente consistente na entrada e na reabertura do navegador.",
-    "O login verifica o acesso ao armazenamento permanente e informa quando o navegador o bloqueia.",
-    "Correcao apenas do site: a integracao v57 continua valida, sem necessidade de reinstalar."
+    "O aviso da integracao compara a versao instalada neste computador com a disponivel, mesmo quando o site ja esta atualizado.",
+    "Integracoes anteriores a v57 exibem o modal com os downloads leve e completo da v57.",
+    "Mantida a correcao de Manter conectado; nao e necessario reinstalar quem ja utiliza a integracao v57."
   ]
 }
