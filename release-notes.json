@@ -1,7 +1,10 @@
 {
   "changes": [
-    "Times New Roman adicionada as fontes do comentario, para texto selecionado ou nova digitacao.",
-    "O HTML enviado ao E-Desk usa o mesmo documento congelado da revisao, preservando tamanhos, estilos, paragrafos, listas, recuos e ordem das imagens.",
-    "Texto sem tamanho definido mantem os 16px exibidos pelo editor, sem reducao para 11px no envio. O seletor passa a mostrar esse tamanho padrao. Atualizacao do site; integracao v58 mantida."
+    "Importacao pelo ID reorganizada em busca, conferencia e cadastro, com etapas adaptadas ao celular e total de horas sempre visivel.",
+    "Integracao v59 corrige a selecao da aba principal Trabalhos e aguarda o carregamento das linhas para importar IDs reais e horas estimadas.",
+    "Planilha diferencia alteracoes pendentes, gravacao em andamento, salvo no Excel e gravacao nao confirmada, preservando a edicao quando ocorre uma falha.",
+    "Cabecalho da planilha mostra o arquivo junto ao cliente e projeto. Progresso mantem pesos do Excel e contagem de tarefas concluidas.",
+    "Conferencia distingue resultados completos, parciais e falhos. Diagnosticos mais especificos e logs com menos separadores, preservando comprovantes.",
+    "Manter conectado lembra a escolha apos login bem-sucedido. Downloads leve e completo da integracao v59 disponiveis nesta atualizacao."
   ]
 }

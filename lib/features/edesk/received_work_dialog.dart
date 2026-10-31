@@ -66,6 +66,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
   List<Map<String, dynamic>> _rows = [];
   final _imported = <String>{};
   bool _busy = false;
+  bool _queryError = false;
   ReceivedWorkReview? _idReview;
   String _message =
       'Clique em Buscar na Minha Grid para consultar seus trabalhos no E-Desk.';
@@ -162,6 +163,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     if (_busy || !_sameOwner) return;
     setState(() {
       _busy = true;
+      _queryError = false;
       if (widget.importById) _idReview = null;
       _message =
           'Carregando os trabalhos da solicitação ${row['solicitacao']}…';
@@ -270,9 +272,12 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
       }
     } catch (error) {
       if (_sameOwner) {
-        setState(() => _message = error is StateError
-            ? error.message.toString()
-            : 'Não foi possível carregar os detalhes. Nenhum cadastro foi realizado.');
+        setState(() {
+          _queryError = true;
+          _message = error is StateError
+              ? error.message.toString()
+              : 'Não foi possível carregar os detalhes. Nenhum cadastro foi realizado.';
+        });
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -285,6 +290,7 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
     if (!RegExp(r'^\d+$').hasMatch(number)) {
       setState(() {
         _idReview = null;
+        _queryError = true;
         _message = 'Informe apenas os números do ID da solicitação.';
       });
       return;
@@ -311,17 +317,24 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
                   controller: _requestId,
                   onSearch: _searchById,
                   message: _message,
+                  hasError: _queryError,
                   busy: _busy),
               const ProjectImportSection(
                   number: 2,
-                  title: 'Conferir dados do projeto',
-                  child: Text(
-                      'Busque a solicitação para conferir cliente, tipo de serviço, líder e tipo de horas.')),
-              const ProjectImportSection(
-                  number: 3,
-                  title: 'Vincular etapas do trabalho',
-                  child: Text(
-                      'As etapas serão montadas conforme o tipo de serviço cadastrado no sistema.')),
+                  title: 'O que você poderá conferir',
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                            'Cliente e tipo de serviço encontrados na solicitação.'),
+                        SizedBox(height: 8),
+                        Text(
+                            'ID, nome, horas previstas e datas de cada trabalho.'),
+                        SizedBox(height: 12),
+                        Text(
+                            'A busca é somente leitura. O cadastro no app acontece após sua conferência.',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ])),
             ],
           ))
       : PopScope(
@@ -482,7 +495,6 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
   final List<_StepDraft> _sources = [];
   WorkFormat? _format;
   late final TextEditingController _reviewRequest;
-  final _tableScroll = ScrollController();
   bool get _usesFormat => widget.formats.isNotEmpty;
   late final String? _owner;
   StreamSubscription<User?>? _auth;
@@ -614,7 +626,6 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
     _auth?.cancel();
     _reviewRequest.removeListener(_queryChanged);
     if (widget.requestController == null) _reviewRequest.dispose();
-    _tableScroll.dispose();
     _client.dispose();
     _type.dispose();
     _leader.dispose();
@@ -712,124 +723,68 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
             child: Text('Selecione o tipo de serviço para montar as etapas.')),
       if (_format != null && _steps.isEmpty)
         const Text('Este tipo não possui etapas cadastradas.'),
-      if (_steps.isNotEmpty)
-        LayoutBuilder(
-            builder: (context, constraints) => Scrollbar(
-                controller: _tableScroll,
-                thumbVisibility: true,
-                notificationPredicate: (notification) =>
-                    notification.metrics.axis == Axis.horizontal,
-                child: SingleChildScrollView(
-                  controller: _tableScroll,
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                      width: constraints.maxWidth < 1020
-                          ? 1020
-                          : constraints.maxWidth,
-                      child: Column(children: [
-                        const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 6),
-                            child: Row(children: [
-                              SizedBox(width: 42),
-                              Expanded(
-                                  flex: 3, child: Text('Etapa do cadastro')),
-                              SizedBox(width: 12),
-                              Expanded(
-                                  flex: 4, child: Text('Trabalho no E-Desk')),
-                              SizedBox(width: 12),
-                              SizedBox(
-                                  width: 100,
-                                  child: Text('Horas previstas',
-                                      style: TextStyle(fontSize: 12))),
-                              SizedBox(width: 12),
-                              SizedBox(width: 132, child: Text('Início')),
-                              SizedBox(width: 12),
-                              SizedBox(width: 132, child: Text('Fim')),
-                            ])),
-                        for (final step in _steps)
-                          Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(children: [
-                                SizedBox(
-                                    width: 42,
-                                    child: Checkbox(
-                                        value: step.selected || step.existing,
-                                        onChanged: _saving || step.existing
-                                            ? null
-                                            : (v) => setState(() =>
-                                                step.selected = v == true))),
-                                Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                        '${step.name.text}${step.existing ? ' · Já cadastrado' : ''}')),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                    flex: 4,
-                                    child: DropdownButtonFormField<String>(
-                                      key: ValueKey(
-                                          'mapping-${step.name.text}-${step.id}'),
-                                      initialValue:
-                                          step.id.isEmpty ? null : step.id,
-                                      isExpanded: true,
-                                      decoration: const InputDecoration(
-                                          isDense: true,
-                                          border: OutlineInputBorder(),
-                                          contentPadding: EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 8),
-                                          hintText: 'Selecionar trabalho'),
-                                      items: [
-                                        const DropdownMenuItem(
-                                            value: '',
-                                            child: Text('Selecionar trabalho')),
-                                        for (final source in _sources.where(
-                                            (s) =>
-                                                s.error == null &&
-                                                (s.id == step.id ||
-                                                    !used.contains(s.id))))
-                                          DropdownMenuItem(
-                                              value: source.id,
-                                              child: Text(
-                                                  '${source.id} · ${source.name.text.isEmpty ? 'Nome não identificado' : source.name.text}',
-                                                  overflow:
-                                                      TextOverflow.ellipsis))
-                                      ],
-                                      onChanged: _saving
-                                          ? null
-                                          : (id) => setState(() => _link(
-                                              step,
-                                              _sources
-                                                  .where((s) => s.id == id)
-                                                  .firstOrNull)),
-                                    )),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                    width: 100,
-                                    child: TextField(
-                                        controller: step.hours,
-                                        enabled: !_saving && step.selected,
-                                        decoration: const InputDecoration(
-                                            isDense: true,
-                                            border: OutlineInputBorder(),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                    horizontal: 8, vertical: 8),
-                                            hintText: 'HH:mm'),
-                                        onChanged: (_) => setState(() {}))),
-                                const SizedBox(width: 12),
-                                _stageDateField(step, true),
-                                const SizedBox(width: 12),
-                                _stageDateField(step, false),
-                              ])),
-                      ])),
-                ))),
+      for (final step in _steps)
+        ProjectImportMappingRow(
+          key: ValueKey('import-stage-${step.name.text}'),
+          title: '${step.name.text}${step.existing ? ' · Já cadastrado' : ''}',
+          selected: step.selected || step.existing,
+          linked: step.id.isNotEmpty,
+          checkbox: Checkbox(
+              value: step.selected || step.existing,
+              onChanged: _saving || step.existing
+                  ? null
+                  : (value) => setState(() => step.selected = value == true)),
+          work: DropdownButtonFormField<String>(
+            key: ValueKey('mapping-${step.name.text}-${step.id}'),
+            initialValue: step.id.isEmpty ? null : step.id,
+            isExpanded: true,
+            decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+                labelText: 'Trabalho no E-Desk',
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                hintText: 'Selecionar trabalho'),
+            items: [
+              const DropdownMenuItem(
+                  value: '', child: Text('Selecionar trabalho')),
+              for (final source in _sources.where((s) =>
+                  s.error == null && (s.id == step.id || !used.contains(s.id))))
+                DropdownMenuItem(
+                    value: source.id,
+                    child: Text(
+                        '${source.id} · ${source.name.text.isEmpty ? 'Nome não identificado' : source.name.text}',
+                        overflow: TextOverflow.ellipsis)),
+            ],
+            onChanged: _saving
+                ? null
+                : (id) => setState(() =>
+                    _link(step, _sources.where((s) => s.id == id).firstOrNull)),
+          ),
+          hours: TextField(
+              controller: step.hours,
+              enabled: !_saving && step.selected,
+              decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Horas previstas',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  hintText: 'HH:mm'),
+              onChanged: (_) => setState(() {})),
+          start: _stageDateField(step, true),
+          end: _stageDateField(step, false),
+        ),
       const SizedBox(height: 10),
       const Text(
-          'Confira as associações. Etapas sem correspondência exigem seleção manual; os números não são definidos pela posição na lista.'),
+          'Cada etapa deve estar vinculada ao ID real do E-Desk. Confira as horas e as datas antes de cadastrar.'),
       if (extras > 0)
-        Text(
-            '$extras trabalho(s) consultados ainda sem associação. Eles não serão cadastrados automaticamente.'),
-      const SizedBox(height: 8),
-      const SizedBox(height: 12),
+        Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+                '$extras trabalho(s) consultados ainda sem associação. Eles não serão cadastrados automaticamente.',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.tertiary))),
     ];
   }
 
@@ -920,10 +875,14 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
         isDense: true,
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10));
     return ProjectImportLayout(
+      reviewReady: true,
       busy: _saving,
       onManual: widget.onManual,
       onClose: () => Navigator.pop(context),
-      summary: Text(_selectionSummary),
+      summary: Text(_selectionSummary,
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.primary)),
       message: _error.isEmpty
           ? null
           : SelectableText(_error,

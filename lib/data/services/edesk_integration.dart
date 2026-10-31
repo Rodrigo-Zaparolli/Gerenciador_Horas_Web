@@ -13,7 +13,8 @@ import '../../features/edesk/comment_document_preview.dart';
 const edeskApiUrl = defaultEdeskApiUrl;
 final appNavigatorKey = GlobalKey<NavigatorState>();
 final edeskProgress = ValueNotifier<String>('Abrindo E-Desk…');
-final edeskProgressCounts = ValueNotifier<({int completed, int total})>((completed: 0, total: 0));
+final edeskProgressCounts =
+    ValueNotifier<({int completed, int total})>((completed: 0, total: 0));
 
 class EdeskIntegrationApi {
   static Future<String> currentUrl() => urlProvider();
@@ -31,7 +32,10 @@ class EdeskIntegrationApi {
       String? baseUrl}) async {
     final resolvedUrl = baseUrl ?? await urlProvider();
     final host = Uri.parse(resolvedUrl).host;
-    if (baseUrl == null && host != '127.0.0.1' && host != 'localhost' && await edeskExtensionAvailable()) {
+    if (baseUrl == null &&
+        host != '127.0.0.1' &&
+        host != 'localhost' &&
+        await edeskExtensionAvailable()) {
       final uid = authenticated ? FirebaseAuth.instance.currentUser?.uid : null;
       return edeskExtensionCall(path, body: body, uid: uid);
     }
@@ -69,14 +73,16 @@ class EdeskIntegrationApi {
 String progressLabel(String? stage) => switch (stage) {
       'percentage_work' => 'Abrindo o trabalho para cadastrar a porcentagem…',
       'percentage_saving' => 'Salvando a porcentagem no trabalho…',
-      'percentage_verifying' => 'Reabrindo o trabalho para confirmar a porcentagem salva…',
+      'percentage_verifying' =>
+        'Reabrindo o trabalho para confirmar a porcentagem salva…',
       'opening' => 'Abrindo E-Desk…',
       'login' =>
         'Aguardando login — conclua o acesso na janela do E-Desk no computador que executa a integração.',
       'preparing' => 'Localizando os trabalhos no E-Desk…',
       'sending' => 'Enviando e verificando o registro no E-Desk…',
       'checking' => 'Conferindo as horas cadastradas no retroativo…',
-      'retrying' => 'Cadastrando novamente somente as horas comprovadamente ausentes…',
+      'retrying' =>
+        'Cadastrando novamente somente as horas comprovadamente ausentes…',
       'finished' => 'Recebendo o resultado do envio…',
       _ => 'Aguardando a integração…',
     };
@@ -108,7 +114,8 @@ class _IntegrationStatusDialogState extends State<_IntegrationStatusDialog> {
   Future<void> check() async {
     setState(() => checking = true);
     try {
-      final health = await EdeskIntegrationApi.call('/healthz', authenticated: false);
+      final health =
+          await EdeskIntegrationApi.call('/healthz', authenticated: false);
       if (health['mode'] == 'central') {
         await EdeskIntegrationApi.call('/api/edesk/session');
       }
@@ -246,6 +253,17 @@ String edeskPreparationError(Object error) {
   return 'Não foi possível preparar o envio. Confira o estado da integração E-Desk e tente novamente. Nenhuma fase foi enviada nesta tentativa.';
 }
 
+String edeskConsultationError(Object error) {
+  if (error is StateError) return error.message.toString();
+  if (error is TimeoutException || error is http.ClientException) {
+    return edeskPreparationError(error);
+  }
+  if (error is FormatException) {
+    return 'A integra\u00e7\u00e3o retornou dados inv\u00e1lidos. Atualize a consulta; n\u00e3o altere suas credenciais por esta mensagem.';
+  }
+  return 'A consulta falhou ao processar os dados. Tente novamente e informe a etapa que falhou se o problema continuar.';
+}
+
 class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
   bool loading = true;
   String? error;
@@ -263,13 +281,17 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
     });
     try {
       final requiresPercentage = widget.script == 'edesk_percentual.py' ||
-          (widget.script == 'edesk_comentario.py' && widget.data['percentualRealizado'] != null);
-      final percentageBase = requiresPercentage ? await EdeskIntegrationApi.currentUrl() : null;
-      final health = await EdeskIntegrationApi.call('/healthz', authenticated: false,
-          baseUrl: percentageBase);
-      if (widget.script == 'edesk_comentario.py' && requiresPercentage &&
+          (widget.script == 'edesk_comentario.py' &&
+              widget.data['percentualRealizado'] != null);
+      final percentageBase =
+          requiresPercentage ? await EdeskIntegrationApi.currentUrl() : null;
+      final health = await EdeskIntegrationApi.call('/healthz',
+          authenticated: false, baseUrl: percentageBase);
+      if (widget.script == 'edesk_comentario.py' &&
+          requiresPercentage &&
           health['commentPercentageReceipt'] != true) {
-        throw StateError('Atualize e reinicie a integração no computador que executa o E-Desk antes de enviar comentário com porcentagem. Nenhum comentário foi enviado.');
+        throw StateError(
+            'Atualize e reinicie a integração no computador que executa o E-Desk antes de enviar comentário com porcentagem. Nenhum comentário foi enviado.');
       }
       if (health['mode'] == 'central') {
         await EdeskIntegrationApi.call('/api/edesk/session');
@@ -278,10 +300,13 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
         throw StateError('Integração não reconhecida.');
       }
       if (health['mode'] == 'files-only') {
-        throw StateError('A abertura de arquivos está ativa, mas o envio E-Desk não. Execute Iniciar integração E-Desk.cmd e tente novamente.');
+        throw StateError(
+            'A abertura de arquivos está ativa, mas o envio E-Desk não. Execute Iniciar integração E-Desk.cmd e tente novamente.');
       }
-      if (widget.script == 'edesk_percentual.py' && health['standalonePercentage'] != true) {
-        throw StateError('Atualize a integração local para enviar somente a porcentagem.');
+      if (widget.script == 'edesk_percentual.py' &&
+          health['standalonePercentage'] != true) {
+        throw StateError(
+            'Atualize a integração local para enviar somente a porcentagem.');
       }
       if (health['busy'] == true) {
         throw StateError('Há outro envio em andamento. Aguarde sua conclusão.');
@@ -384,7 +409,7 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
                                               'Já confirmado — não será reenviado',
                                             'pending' ||
                                             'uncertain' =>
-                                          'Não confirmado na tentativa anterior',
+                                              'Não confirmado na tentativa anterior',
                                             _ => 'Novo lançamento',
                                           },
                                           style: const TextStyle(
@@ -400,12 +425,17 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
                                           'Esta hora já está registrada')),
                               ]))),
                 if (widget.script == 'edesk_comentario.py')
-                  Card(child: Padding(padding: const EdgeInsets.all(12),
-                      child: widget.data['_editorDeltaPreview'] is List
-                        ? CommentDocumentPreview(delta: widget.data['_editorDeltaPreview'] as List<dynamic>)
-                        : EdeskCommentPreview(
-                          text: widget.data['texto']?.toString() ?? '',
-                          legacyImage: widget.data['imagemBase64']?.toString()))),
+                  Card(
+                      child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: widget.data['_editorDeltaPreview'] is List
+                              ? CommentDocumentPreview(
+                                  delta: widget.data['_editorDeltaPreview']
+                                      as List<dynamic>)
+                              : EdeskCommentPreview(
+                                  text: widget.data['texto']?.toString() ?? '',
+                                  legacyImage: widget.data['imagemBase64']
+                                      ?.toString()))),
                 if (hasUncertain) ...[
                   TextButton.icon(
                       onPressed: () => launchUrl(
@@ -417,7 +447,8 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
                       onPressed: loading ? null : () => confirmManually(),
                       child:
                           const Text('As horas incertas já estão registradas')),
-                  const Text('A nova tentativa libera os itens sem confirmação anterior. Horas já confirmadas continuam protegidas contra reenvio.'),
+                  const Text(
+                      'A nova tentativa libera os itens sem confirmação anterior. Horas já confirmadas continuam protegidas contra reenvio.'),
                 ],
                 if (allConfirmed)
                   const Text(
@@ -428,23 +459,25 @@ class _EdeskReviewDialogState extends State<_EdeskReviewDialog> {
             onPressed: () =>
                 Navigator.pop(context, const EdeskReviewDecision(false)),
             child: const Text('Cancelar')),
-        if (error != null && (widget.script == 'edesk_percentual.py' ||
-            widget.data['percentualRealizado'] != null))
-          TextButton(onPressed: () => launchUrl(
-              Uri.parse('https://gerenciador-horas.web.app/integracao-completa.html'),
-              mode: LaunchMode.externalApplication),
-            child: const Text('Atualizar integração')),
+        if (error != null &&
+            (widget.script == 'edesk_percentual.py' ||
+                widget.data['percentualRealizado'] != null))
+          TextButton(
+              onPressed: () => launchUrl(
+                  Uri.parse(
+                      'https://gerenciador-horas.web.app/integracao-completa.html'),
+                  mode: LaunchMode.externalApplication),
+              child: const Text('Atualizar integração')),
         if (error != null)
           TextButton(
               onPressed: loading ? null : load,
               child: const Text('Verificar novamente')),
         FilledButton(
-            onPressed: loading ||
-                    error != null ||
-                    allConfirmed
+            onPressed: loading || error != null || allConfirmed
                 ? null
                 : () => Navigator.pop(
-                    context, EdeskReviewDecision(true,
+                    context,
+                    EdeskReviewDecision(true,
                         retryUncertain: widget.script == 'edesk_horas.py')),
             child: const Text('Confirmar e enviar'))
       ],
@@ -465,13 +498,15 @@ class EdeskProgressDialog extends StatelessWidget {
               ValueListenableBuilder<({int completed, int total})>(
                   valueListenable: edeskProgressCounts,
                   builder: (context, counts, child) => Column(children: [
-                    LinearProgressIndicator(value: counts.total > 0 && counts.completed > 0
-                        ? counts.completed / counts.total : null),
-                    const SizedBox(height: 8),
-                    Text(counts.total > 0
-                        ? '${counts.completed} de ${counts.total} itens confirmados — ${(100 * counts.completed / counts.total).floor()}%'
-                        : 'Preparando o envio…'),
-                  ])),
+                        LinearProgressIndicator(
+                            value: counts.total > 0 && counts.completed > 0
+                                ? counts.completed / counts.total
+                                : null),
+                        const SizedBox(height: 8),
+                        Text(counts.total > 0
+                            ? '${counts.completed} de ${counts.total} itens confirmados — ${(100 * counts.completed / counts.total).floor()}%'
+                            : 'Preparando o envio…'),
+                      ])),
               const SizedBox(height: 20),
               ValueListenableBuilder<String>(
                   valueListenable: edeskProgress,

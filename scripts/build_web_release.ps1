@@ -26,6 +26,11 @@ try {
         'abertura-local-windows.zip' = "abertura-local-windows-v$packageNumber.zip"
     }
     foreach ($sourceName in $downloadAliases.Keys) {
+        $versionedSource = Join-Path $projectDirectory "web\downloads\$($downloadAliases[$sourceName])"
+        if (Test-Path -LiteralPath $versionedSource) {
+            Copy-Item -LiteralPath $versionedSource -Destination (Join-Path $projectDirectory "build\web\downloads\$($downloadAliases[$sourceName])") -Force
+            continue
+        }
         $packageSource = Join-Path $projectDirectory "web\downloads\$sourceName"
         if (Test-Path -LiteralPath $packageSource) {
             Copy-Item -LiteralPath $packageSource -Destination (Join-Path $projectDirectory "build\web\downloads\$($downloadAliases[$sourceName])") -Force

@@ -115,7 +115,14 @@ class _ChecklistStageDialogState extends State<ChecklistStageDialog> {
           ]);
       final title =
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(widget.stage, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Row(children: [
+          Expanded(child: Text(widget.stage,
+              style: const TextStyle(fontWeight: FontWeight.w600))),
+          if (widget.tasks.any(zeroWeight))
+            const Tooltip(
+                message: 'Tarefas com peso zero contam como conclu\u00eddas, mas n\u00e3o aumentam o percentual.',
+                child: Icon(Icons.info_outline, size: 16)),
+        ]),
         const SizedBox(height: 4),
         Text(status, style: Theme.of(context).textTheme.bodySmall),
       ]);

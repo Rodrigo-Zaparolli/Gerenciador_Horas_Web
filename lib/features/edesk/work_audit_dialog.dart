@@ -212,10 +212,10 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
             hasErrors: _results.any((result) => result.error != null),
             interrupted: _stop));
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         setState(() => _message =
-            'Não foi possível concluir a conferência. Verifique as credenciais e a integração E-Desk. Resultados já obtidos foram mantidos.');
+            '${edeskConsultationError(error)} Resultados j\u00e1 obtidos foram mantidos.');
       }
     } finally {
       if (mounted) setState(() => _busy = false);

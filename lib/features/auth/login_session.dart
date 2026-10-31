@@ -36,6 +36,9 @@ class LoginSession {
         await auth.setPersistence(Persistence.SESSION);
       }
     }
-    return auth.signInWithEmailAndPassword(email: email, password: password);
+    final credential =
+        await auth.signInWithEmailAndPassword(email: email, password: password);
+    if (web) rememberLoginPreference(keepConnected);
+    return credential;
   }
 }

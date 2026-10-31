@@ -208,7 +208,8 @@ class NativeLocalFiles {
             'A integração ativa não possui o espelho do Excel. Atualize e reinicie a abertura local neste computador.');
       }
       throw NativeFilesException(
-          data['message']?.toString() ?? 'Não foi possível abrir o arquivo.');
+          data['message']?.toString() ?? 'Não foi possível abrir o arquivo.',
+          code: data['errorCode']?.toString());
     }
     final resolved = data['reference'];
     if (data['cancelled'] != true &&

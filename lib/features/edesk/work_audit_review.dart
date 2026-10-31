@@ -43,6 +43,9 @@ class WorkAuditReview extends StatelessWidget {
         .toSet()
         .length;
     final works = results.where((r) => r.reference.contains('/')).length;
+    int outcomeCount(String label) => results
+        .where((r) => auditWorkOutcome(r.fields, error: r.error) == label)
+        .length;
     final review = results
         .where((r) =>
             auditWorkSummary(r.fields, error: r.error) !=
@@ -149,6 +152,13 @@ class WorkAuditReview extends StatelessWidget {
                                                   'Resultados para revisar',
                                                   '$review'),
                                             ])),
+                                if (results.isNotEmpty)
+                                  Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(
+                                          '${outcomeCount('Completo')} completos · ${outcomeCount('Parcial')} parciais · ${outcomeCount('Falhou')} falharam',
+                                          key: const ValueKey(
+                                              'audit-outcome-counts'))),
                                 ExpansionTile(
                                     tilePadding: const EdgeInsets.symmetric(
                                         horizontal: 4),

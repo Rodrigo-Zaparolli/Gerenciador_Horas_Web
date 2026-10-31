@@ -121,6 +121,16 @@ class AuditFieldResult {
   final String field, app, edesk, state;
 }
 
+/// Completion of the consultation is separate from agreement with app data.
+String auditWorkOutcome(List<AuditFieldResult> fields, {String? error}) {
+  if (!fields.any((field) => field.edesk.trim().isNotEmpty)) return 'Falhou';
+  if (error != null ||
+      fields.any((field) => field.state == 'N\u00e3o consultado')) {
+    return 'Parcial';
+  }
+  return 'Completo';
+}
+
 String auditWorkSummary(List<AuditFieldResult> fields, {String? error}) {
   if (error != null ||
       fields.isEmpty ||

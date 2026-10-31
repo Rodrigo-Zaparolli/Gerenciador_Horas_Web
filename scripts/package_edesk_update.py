@@ -1,9 +1,11 @@
-"""Build the small phase-reader-58 update for an existing full installation."""
+"""Build the small work-diagnostics-59 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'local_edesk/diagnostics.py', 'edesk_bot/operation_log.py',
+    'edesk_bot/edesk_fases.py', 'edesk_bot/phase_confirmation.py',
     'edesk_bot/edesk_horas.py',
     'edesk_bot/hour_receipt.py',
     'edesk_bot/edesk_conferencia.py', 'edesk_bot/phase_audit.py', 'edesk_bot/edesk_recebidos.py',
@@ -24,7 +26,7 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO phase-reader-58 — instalação completa já existente
+README = '''ATUALIZAÇÃO work-diagnostics-59 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -35,6 +37,8 @@ Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
    os arquivos. Mantenha as subpastas edesk_bot, cloud_run e scripts.
    Não apague .edesk-local, python nem outros arquivos existentes.
 4. Execute Iniciar integração E-Desk.cmd e atualize o app com Ctrl + F5.
+
+Novidade v59: importacao por ID seleciona a aba principal Trabalhos e aguarda suas linhas. Diagnosticos distinguem falhas de leitura, guias e operacoes ocupadas. Conferencia informa completos, parciais e falhos. Logs preservam comprovantes com menos separadores.
 
 Correcao v58: leitura de Fases ignora campos ocultos Telerik, seleciona a aba principal e aguarda o carregamento das datas. Mantem os demais recursos.
 
@@ -194,7 +198,7 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-58.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-59.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:

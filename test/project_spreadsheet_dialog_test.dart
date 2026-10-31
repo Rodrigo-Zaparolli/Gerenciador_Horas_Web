@@ -803,7 +803,7 @@ void main() {
     expect(writes, 1);
     expect(find.textContaining('cópia no sistema não foi atualizada'),
         findsOneWidget);
-    expect(find.text('Sem alterações pendentes'), findsOneWidget);
+    expect(find.text('Salvo no Excel'), findsOneWidget);
     store.failSave = false;
     await tester.tap(find.byTooltip('Mais ações da planilha'));
     await tester.pumpAndSettle();

@@ -163,14 +163,25 @@ def checklist_table(checklist):
     return matches[0]
 
 
+class SheetReadError(ValueError):
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.code = code
+
+
 def snapshot(book, service_type=None, sheet_names=None):
     name = checklist_sheet(service_type, sheet_names)
     entry_name = (sheet_names or {}).get('entry', 'Informações de entrada')
     try:
-        entry = SheetSnapshot(book.Worksheets(entry_name))
-        checklist = SheetSnapshot(book.Worksheets(name))
+        entry_sheet = book.Worksheets(entry_name)
+        checklist_sheet_object = book.Worksheets(name)
     except Exception as error:
-        raise ValueError(f'Confira as abas {entry_name} e {name}. Use Configurar abas no editor para selecionar os nomes existentes neste arquivo.') from error
+        raise SheetReadError(f'Nao foi possivel acessar as abas {entry_name} e {name}. Confira os nomes em Configurar abas e se a planilha esta acessivel no Excel.', 'excel_sheet_unavailable') from error
+    try:
+        entry = SheetSnapshot(entry_sheet)
+        checklist = SheetSnapshot(checklist_sheet_object)
+    except Exception as error:
+        raise SheetReadError('As abas foram localizadas, mas nao foi possivel ler suas celulas. Confira se o Excel esta respondendo; nao e necessario selecionar outro arquivo.', 'excel_read_failed') from error
     first, last = checklist_table(checklist)
     fields, tasks = [], []
 

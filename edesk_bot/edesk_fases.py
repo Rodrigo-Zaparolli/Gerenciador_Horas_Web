@@ -4,6 +4,7 @@ import os
 import re
 import sys
 from send_progress import observe_log, completed
+from operation_log import emit_log
 from phase_confirmation import read_phase_rows, mismatched_phases, close_new_duplicate_requests
 import unicodedata
 from pathlib import Path
@@ -66,21 +67,7 @@ PERMITIR_SALVAMENTO = True
 
 def log(msg):
     observe_log(msg)
-    texto = str(msg)
-
-    linha = (
-        f"[E-Desk][Python] "
-        f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-        f"{texto}"
-    )
-
-    print(linha, flush=True)
-
-    try:
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(linha + "\n")
-    except Exception:
-        pass
+    emit_log(msg, f"[E-Desk][Python] [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]", LOG_FILE)
 
 
 # ================================================================

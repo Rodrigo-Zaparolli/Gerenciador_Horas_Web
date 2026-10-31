@@ -44,12 +44,12 @@ def package(complete=False):
             source = Path(distribution.locate_file(item)).resolve()
             if source.is_relative_to(SITE.resolve()):
                 add(source, 'python/Lib/site-packages/' + source.relative_to(SITE.resolve()).as_posix())
-    for name in ['local_edesk/files_server.py', 'local_edesk/local_files.py', 'local_edesk/authentication.py', 'local_edesk/excel_mirror.py', 'local_edesk/excel_editor.py', 'local_edesk/consultoria_rows.py', 'local_edesk/project_archive.py', 'local_edesk/backup_policy.py', 'edesk_bot/excel_preview.py',
+    for name in ['local_edesk/diagnostics.py', 'local_edesk/files_server.py', 'local_edesk/local_files.py', 'local_edesk/authentication.py', 'local_edesk/excel_mirror.py', 'local_edesk/excel_editor.py', 'local_edesk/consultoria_rows.py', 'local_edesk/project_archive.py', 'local_edesk/backup_policy.py', 'edesk_bot/excel_preview.py',
                  'scripts/start_local_files.ps1', 'scripts/stop_local_files.ps1', 'scripts/migrate_integration_data.py']:
         add(ROOT / name, name)
     if complete:
         for name in ['local_edesk/server.py', 'local_edesk/central.py', 'local_edesk/journal.py',
-                     'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py', 'edesk_bot/work_selection.py',
+                     'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py', 'edesk_bot/work_selection.py', 'edesk_bot/operation_log.py',
                      'edesk_bot/edesk_horas.py', 'edesk_bot/hour_receipt.py', 'edesk_bot/edesk_conferencia.py', 'edesk_bot/phase_audit.py', 'edesk_bot/edesk_recebidos.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/phase_confirmation.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/edesk_fases.py',
                      'scripts/start_edesk_local.ps1', 'scripts/stop_edesk_local.ps1',
                      'scripts/start_full_integration.ps1', 'scripts/migrate_integration_data.py',
@@ -57,7 +57,7 @@ def package(complete=False):
             add(ROOT / name, name)
         for source in (RUNTIME / 'ms-playwright' / 'chromium-1187').rglob('*'):
             add(source, 'python/' + source.relative_to(RUNTIME).as_posix())
-    output_path = OUT if not complete else OUT.with_name('integracao-edesk-completa-windows-v2.zip')
+    output_path = OUT if not complete else OUT.with_name('integracao-edesk-completa-windows-v59.zip')
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for target, source in sorted(files.items()):

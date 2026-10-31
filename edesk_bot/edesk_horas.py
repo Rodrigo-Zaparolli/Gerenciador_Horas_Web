@@ -15,6 +15,7 @@ from urllib.parse import (
 
 from playwright.sync_api import sync_playwright
 from send_progress import observe_log, hour_event, stage
+from operation_log import emit_log
 from hour_receipt import read_hours, deliver_hours, GRID_DIAGNOSTIC_SCRIPT
 from work_selection import resolve_work_selection
 
@@ -66,10 +67,7 @@ SELETORES_ENTRAR_LOGIN = [
 
 def log(mensagem):
     observe_log(mensagem)
-    linha = f"[E-Desk][Horas] {mensagem}"
-    print(linha, flush=True)
-    with RUN_LOG_PATH.open("a", encoding="utf-8") as arquivo:
-        arquivo.write(linha + "\n")
+    emit_log(mensagem, '[E-Desk][Horas]', RUN_LOG_PATH)
 
 def carregar_request():
     if len(sys.argv) < 2:
@@ -438,7 +436,7 @@ def obter_credenciais_edesk(dados):
 
     log("Credenciais E-Desk disponíveis para login automático.")
     log("E-mail disponível: SIM | [OCULTO]")
-    log(f"Senha disponível: SIM | {len(senha)} caracteres")
+    log('Credenciais disponiveis para login.')
 
     return {
         "email": email,

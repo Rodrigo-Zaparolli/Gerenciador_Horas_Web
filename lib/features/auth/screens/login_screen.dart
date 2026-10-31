@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gerenciador_horas/core/theme/cores_app.dart';
 import 'package:gerenciador_horas/features/auth/screens/register_screen.dart';
 import '../login_session.dart';
+import '../login_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -47,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    _keepConnected = keepLoginPreference();
 
     _animationController = AnimationController(
       vsync: this,
@@ -164,6 +166,11 @@ class _LoginScreenState extends State<LoginScreen>
         case 'network-request-failed':
           message =
               'Não foi possível conectar ao servidor. Verifique sua internet.';
+          break;
+
+        case 'web-storage-unsupported':
+          message =
+              'O navegador bloqueou o login permanente. Use Verificar login salvo para conferir o armazenamento deste navegador.';
           break;
 
         default:

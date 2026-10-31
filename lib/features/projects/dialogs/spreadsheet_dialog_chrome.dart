@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'spreadsheet_save_status.dart';
+export 'spreadsheet_save_status.dart';
 
 class SpreadsheetDialogHeader extends StatelessWidget {
   const SpreadsheetDialogHeader(
@@ -50,6 +52,17 @@ class SpreadsheetDialogHeader extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             color: colors.onSurfaceVariant, fontSize: 12))),
+                if (filename.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Tooltip(
+                      message: filename,
+                      child: Text('Arquivo: $filename',
+                          key: const ValueKey('spreadsheet-filename'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: colors.onSurfaceVariant, fontSize: 11))),
+                ],
               ])),
           if (serviceType.isNotEmpty && MediaQuery.sizeOf(context).width >= 700)
             Container(
@@ -83,29 +96,46 @@ class SpreadsheetDialogFooter extends StatelessWidget {
       {super.key,
       required this.pendingCount,
       this.pendingLabel,
+      this.writeState = SpreadsheetWriteState.unchanged,
+      this.loading = false,
       required this.synchronization,
       required this.actions});
   final int pendingCount;
   final String? pendingLabel;
+  final SpreadsheetWriteState writeState;
+  final bool loading;
   final String synchronization;
   final List<Widget> actions;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final color = pendingCount > 0 ? colors.tertiary : colors.onSurfaceVariant;
+    final color = writeState == SpreadsheetWriteState.unconfirmed
+        ? colors.error
+        : pendingCount > 0
+            ? colors.tertiary
+            : colors.onSurfaceVariant;
     final status = Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: Icon(Icons.circle, size: 10, color: color)),
+          child: writeState == SpreadsheetWriteState.saving || loading
+              ? const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(
+                  writeState == SpreadsheetWriteState.saved && pendingCount == 0
+                      ? Icons.check_circle
+                      : Icons.circle,
+                  size: 12,
+                  color: color)),
       const SizedBox(width: 10),
       Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
-            pendingLabel ??
-                (pendingCount == 0
-                    ? 'Sem alterações pendentes'
-                    : '$pendingCount ${pendingCount == 1 ? 'alteração pendente' : 'alterações pendentes'}'),
+            spreadsheetSaveLabel(writeState, pendingCount,
+                loading: loading, pendingLabel: pendingLabel),
+            key: const ValueKey('spreadsheet-save-status'),
             style: TextStyle(
                 color: color, fontWeight: FontWeight.w600, fontSize: 12)),
         const SizedBox(height: 3),

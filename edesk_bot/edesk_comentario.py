@@ -8,6 +8,7 @@ from edesk_horas import abrir_trabalho as abrir_trabalho_validado
 from edesk_horas import abrir_trabalho_na_solicitacao
 
 from send_progress import observe_log
+from operation_log import emit_log
 import json
 import time
 import html
@@ -50,11 +51,7 @@ LOGS_PATH.mkdir(parents=True, exist_ok=True)
 
 def log(mensagem):
     observe_log(mensagem)
-
-    print(
-        f"[E-Desk][Python] {mensagem}",
-        flush=True,
-    )
+    emit_log(mensagem, '[E-Desk][Python]')
 
 
 # ================================================================

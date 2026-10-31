@@ -148,6 +148,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
 
   String? error, notice, owner;
   bool busy = false, settingsReady = false;
+  SpreadsheetWriteState writeState = SpreadsheetWriteState.unchanged;
   late final ChecklistLivePreview livePreview;
   List<CompanyContact> contacts = [];
   SpreadsheetStore? get store =>
@@ -535,6 +536,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           pending.clear();
           calculatedEmails.clear();
           notice = null;
+          writeState = SpreadsheetWriteState.unchanged;
         });
       }
       if (mounted && authorized) await remember(result);
@@ -588,6 +590,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     if (!authorized || busy || pending.isEmpty || data == null) return;
     setState(() {
       busy = true;
+      writeState = SpreadsheetWriteState.saving;
       error = null;
       notice = null;
     });
@@ -617,6 +620,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           data = result;
           pending.clear();
           calculatedEmails.clear();
+          writeState = SpreadsheetWriteState.saved;
           notice = differentEmails
               ? 'Planilha salva, mas a fórmula do Excel retornou um e-mail diferente do cadastro. Confira o cadastro de consultores no Excel; o e-mail mostrado agora é o resultado real da planilha. Backup: ${result['backup']}'
               : 'Planilha atualizada e conferida. Backup: ${result['backup']}';
@@ -627,7 +631,12 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       }
       if (mounted && authorized) await remember(result);
     } catch (e) {
-      if (mounted && authorized) setState(() => error = e.toString());
+      if (mounted && authorized) {
+        setState(() {
+          error = e.toString();
+          writeState = SpreadsheetWriteState.unconfirmed;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => busy = false);
@@ -1182,6 +1191,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                                 children: [entry(), checklist(), timeline()])),
                     SpreadsheetDialogFooter(
                         pendingCount: pending.length,
+                        writeState: writeState,
+                        loading:
+                            busy && writeState != SpreadsheetWriteState.saving,
                         synchronization: synchronizationLabel,
                         actions: [
                           OutlinedButton.icon(

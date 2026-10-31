@@ -42,6 +42,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       saving = false,
       closing = false,
       rawGrid = false;
+  SpreadsheetWriteState writeState = SpreadsheetWriteState.unchanged;
   bool get structured =>
       data?['scheduleTable'] == true || data?['consultoriaTable'] == true;
   int row = 1, column = 1, selectionEpoch = 0;
@@ -198,6 +199,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           data = result;
           edits.clear();
           rows.clear();
+          writeState = SpreadsheetWriteState.unchanged;
         });
         if (savedWorksheet != name && widget.onWorksheetOpened != null) {
           savedWorksheet = name;
@@ -228,6 +230,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     setState(() {
       busy = true;
       saving = true;
+      writeState = SpreadsheetWriteState.saving;
       error = null;
     });
     try {
@@ -256,10 +259,16 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           edits.clear();
           rows.clear();
           saved = true;
+          writeState = SpreadsheetWriteState.saved;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => error = e.toString());
+      if (mounted) {
+        setState(() {
+          error = e.toString();
+          writeState = SpreadsheetWriteState.unconfirmed;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -680,10 +689,13 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                               child: dialog.content!)),
                       SpreadsheetDialogFooter(
                           pendingCount: pendingCount,
+                          writeState: writeState,
+                          loading: busy && !saving,
                           pendingLabel: rows.dirty ? rows.label : null,
                           synchronization: rows.dirty
                               ? 'As linhas ser\u00e3o adicionadas e removidas no Excel ao salvar.'
-                              : saved
+                              : writeState == SpreadsheetWriteState.saved &&
+                                      !dirty
                                   ? '\u00daltima grava\u00e7\u00e3o confirmada'
                                   : 'Altere o Status de cada encontro para atualizar o progresso.',
                           actions: [

@@ -9,11 +9,13 @@ class ProjectImportLayout extends StatefulWidget {
       this.onClose,
       this.summary,
       this.message,
+      this.reviewReady = false,
       this.busy = false});
   final List<Widget> children;
   final List<Widget> actions;
   final VoidCallback? onManual, onClose;
   final bool busy;
+  final bool reviewReady;
   final Widget? summary;
   final Widget? message;
   @override
@@ -34,6 +36,7 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
     return PopScope(
         canPop: !widget.busy,
         child: Dialog(
+          clipBehavior: Clip.antiAlias,
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           shape:
@@ -47,6 +50,14 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(children: [
+                        Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                                color: colors.primaryContainer,
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Icon(Icons.download_rounded,
+                                color: colors.onPrimaryContainer)),
+                        const SizedBox(width: 14),
                         Expanded(
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,7 +68,9 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
                                       .headlineSmall
                                       ?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              const Text('Importar do E-Desk pelo ID'),
+                              Text('Importar do E-Desk pelo ID',
+                                  style: TextStyle(
+                                      color: colors.onSurfaceVariant)),
                             ])),
                         IconButton(
                             tooltip: 'Fechar',
@@ -80,6 +93,33 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
                             child: const Text('Importar pelo ID')),
                       ]),
                       const SizedBox(height: 10),
+                      Wrap(spacing: 8, runSpacing: 6, children: [
+                        for (final (index, label) in const [
+                          (1, 'Buscar solicita\u00e7\u00e3o'),
+                          (2, 'Conferir dados e etapas'),
+                          (3, 'Cadastrar no app')
+                        ])
+                          Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                  color: (widget.reviewReady
+                                          ? index == 2
+                                          : index == 1)
+                                      ? colors.primaryContainer
+                                      : colors.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: Text('$index  $label',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: (widget.reviewReady
+                                              ? index == 2
+                                              : index == 1)
+                                          ? colors.onPrimaryContainer
+                                          : colors.onSurfaceVariant))),
+                      ]),
+                      const SizedBox(height: 14),
                       if (widget.busy) const LinearProgressIndicator(),
                       Expanded(
                           child: Scrollbar(
@@ -93,6 +133,8 @@ class _ProjectImportLayoutState extends State<ProjectImportLayout> {
                                           CrossAxisAlignment.stretch,
                                       children: widget.children)))),
                       const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 10),
                       if (widget.message != null) ...[
                         widget.message!,
                         const SizedBox(height: 8),
@@ -140,13 +182,11 @@ class ProjectImportSection extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(color: colors.outlineVariant),
           borderRadius: BorderRadius.circular(12),
-          color: Color.alphaBlend(
-              colors.surfaceContainerHighest.withValues(alpha: .55),
-              colors.surface),
+          color: colors.surface,
         ),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -179,12 +219,14 @@ class ProjectImportQuery extends StatelessWidget {
       required this.controller,
       required this.onSearch,
       required this.message,
+      this.hasError = false,
       this.busy = false,
       this.found = false});
   final TextEditingController controller;
   final VoidCallback? onSearch;
   final String message;
   final bool busy, found;
+  final bool hasError;
   @override
   Widget build(BuildContext context) => ProjectImportSection(
       number: 1,
@@ -217,11 +259,129 @@ class ProjectImportQuery extends StatelessWidget {
                 ]);
         }),
         const SizedBox(height: 12),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(found ? Icons.check_circle_outline : Icons.info_outline,
-              size: 18, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(child: SelectableText(message)),
-        ]),
+        Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: hasError
+                    ? Theme.of(context).colorScheme.errorContainer
+                    : Theme.of(context).colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8)),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(
+                  hasError
+                      ? Icons.error_outline
+                      : found
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                  size: 18,
+                  color: hasError
+                      ? Theme.of(context).colorScheme.onErrorContainer
+                      : Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: SelectableText(message,
+                      style: TextStyle(
+                          color: hasError
+                              ? Theme.of(context).colorScheme.onErrorContainer
+                              : null))),
+            ])),
       ]));
+}
+
+class ProjectImportMappingRow extends StatelessWidget {
+  const ProjectImportMappingRow(
+      {super.key,
+      required this.title,
+      required this.selected,
+      required this.linked,
+      required this.checkbox,
+      required this.work,
+      required this.hours,
+      required this.start,
+      required this.end});
+  final String title;
+  final bool selected, linked;
+  final Widget checkbox, work, hours, start, end;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: selected
+              ? colors.primary.withValues(alpha: .035)
+              : colors.surfaceContainerLow,
+          border: Border.all(
+              color: selected && !linked
+                  ? colors.tertiary
+                  : colors.outlineVariant),
+          borderRadius: BorderRadius.circular(10)),
+      child: LayoutBuilder(builder: (context, box) {
+        final name =
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 3),
+          Text(
+              linked
+                  ? 'Trabalho vinculado'
+                  : 'Selecione o trabalho correspondente',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: selected && !linked
+                      ? colors.tertiary
+                      : colors.onSurfaceVariant)),
+        ]);
+        if (box.maxWidth < 960) {
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  checkbox,
+                  const SizedBox(width: 6),
+                  Expanded(child: name)
+                ]),
+                const SizedBox(height: 12),
+                work,
+                const SizedBox(height: 12),
+                Wrap(spacing: 12, runSpacing: 12, children: [
+                  SizedBox(width: 100, child: hours),
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('In\u00edcio',
+                            style: TextStyle(fontSize: 11)),
+                        start
+                      ]),
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Fim', style: TextStyle(fontSize: 11)),
+                        end
+                      ]),
+                ]),
+              ]);
+        }
+        return Row(children: [
+          SizedBox(width: 36, child: checkbox),
+          Expanded(flex: 3, child: name),
+          const SizedBox(width: 12),
+          Expanded(flex: 4, child: work),
+          const SizedBox(width: 12),
+          SizedBox(width: 100, child: hours),
+          const SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('In\u00edcio', style: TextStyle(fontSize: 11)),
+            start
+          ]),
+          const SizedBox(width: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Fim', style: TextStyle(fontSize: 11)),
+            end
+          ]),
+        ]);
+      }),
+    );
+  }
 }

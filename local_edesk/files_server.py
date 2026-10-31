@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, request
 from waitress import serve
 from local_edesk.authentication import verify_token
+from local_edesk.diagnostics import file_failure
 from local_edesk.local_files import execute, SUPPORTED_ACTIONS, PROTOCOL_VERSION, SPREADSHEET_LAYOUTS, PROJECT_ROOT_MOVE, VERIFIED_PROJECT_MOVE, SPREADSHEET_SHEET_NAMES, DURABLE_LINKS, PROJECT_LINK_RECOVERY
 
 app = Flask(__name__)
@@ -59,14 +60,9 @@ def open_files():
         return jsonify(message='Solicitação inválida.'), 400
     try:
         return jsonify(execute(user['sub'], body, verified_user=user))
-    except PermissionError as error:
-        return jsonify(message=str(error)), 403
-    except FileNotFoundError:
-        return jsonify(message='Selecione novamente o original: a pasta ou arquivo mudou de lugar.'), 400
-    except ValueError as error:
-        return jsonify(message=str(error)), 400
-    except Exception:
-        return jsonify(message='Não foi possível abrir o original. Verifique as permissões e o programa padrão do Windows.'), 500
+    except Exception as error:
+        payload, status = file_failure(error, str(body.get('action', '')))
+        return jsonify(payload), status
 
 
 if __name__ == '__main__':

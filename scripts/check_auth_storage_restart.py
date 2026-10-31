@@ -37,6 +37,7 @@ try:
       assert page.evaluate('window.probeError || null') is None,page.evaluate('window.probeError')
       if stage=='login':
        page.evaluate('(keep)=>window.probeLogin(keep)',keep)
+       assert page.evaluate("localStorage.getItem('gerenciador_horas.auth.keepConnected')")==str(keep).lower(), 'Remembered checkbox must match the selected policy'
        assert page.evaluate('window.probeUid')=='diagnostic-only'
        page.reload();page.wait_for_function('window.probeReady===true || !!window.probeError',timeout=90000)
        assert page.evaluate('window.probeUid')=='diagnostic-only', 'session must survive page reload'

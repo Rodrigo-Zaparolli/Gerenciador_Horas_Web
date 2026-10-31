@@ -3,6 +3,7 @@ import json
 import re
 import sys
 import time
+import uuid
 from urllib.parse import parse_qs
 
 from config import HEADLESS, PROFILE_DIR, restore_session_cookies, save_session_cookies
@@ -90,7 +91,14 @@ def show_works(page):
         deadline = time.monotonic() + 15
         tabs = []
         while time.monotonic() < deadline:
-            tabs = [tab for tab in page.get_by_text(re.compile(r'^Trabalhos\s*(?:\(\d+\))?$')).all() if tab.is_visible()]
+            name = re.compile(r'^\s*Trabalhos\s*(?:\(\d+\))?\s*$', re.I)
+            # Prefer the main Telerik anchor. Other panels may repeat the same
+            # text, and nested spans are not independent navigation targets.
+            tabs = [tab for tab in page.locator('div.rtsLevel1 a.rtsLink').filter(has_text=name).all() if tab.is_visible()]
+            if not tabs:
+                tabs = [tab for tab in page.get_by_role('tab', name=name).all() if tab.is_visible()]
+            if not tabs:
+                tabs = [tab for tab in page.get_by_text(name).all() if tab.is_visible()]
             if tabs:
                 break
             page.wait_for_timeout(100)
@@ -102,7 +110,14 @@ def show_works(page):
             raise AuditLookupError('work_tab') from error
     try:
         table.wait_for(state='visible', timeout=15000)
-        page.wait_for_function("() => !window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.()", timeout=15000)
+        # A header-only table may already be visible before Telerik delivers
+        # its rows. Do not interpret that transient state as an empty request.
+        page.wait_for_function(r'''() => {
+          const busy=window.Sys?.WebForms?.PageRequestManager?.getInstance?.()?.get_isInAsyncPostBack?.();
+          const table=document.querySelector('#cph1_gvwTra');
+          return !busy&&table&&[...table.querySelectorAll('[onclick*="btnSelTra"],a[href*="btnSelTra"]')]
+            .some(e=>e.getClientRects().length);
+        }''', timeout=20000)
     except Exception as error:
         raise AuditLookupError('work_table') from error
 
@@ -197,13 +212,14 @@ def audit_request(context, grid, target, guid, include_hours=False, import_grid=
         else:
             request_page = abrir_solicitacao_para_comentario(page, context, row, solicitation, opened)
         request_url = request_page.url
-        if import_grid:
-            return import_work_rows(request_page, solicitation)
-        numbers = target.get('trabalhos') or work_numbers(request_page)
+        numbers = [] if import_grid else target.get('trabalhos') or work_numbers(request_page)
     except AuditLookupError:
         raise
     except Exception as error:
         raise AuditLookupError(phase) from error
+    if import_grid:
+        # Keep column/ID diagnostics instead of replacing them with open_request.
+        return import_work_rows(request_page, solicitation)
     if not numbers:
         raise AuditLookupError('work_numbers')
     grid_values = {}
@@ -307,15 +323,26 @@ def main():
                 stage('auditing')
         finally:
             context.close()
+    counts = {'complete': 0, 'partial': 0, 'failed': 0}
+    for row in rows:
+        outcome = ('failed' if not row.get('values') else
+                   'partial' if any(row.get(key) for key in ('error', 'phaseError', 'hoursError')) else 'complete')
+        row['consultationStatus'] = outcome
+        counts[outcome] += 1
     print(json.dumps({'ok': True, 'operation': 'conferencia', 'rows': rows,
-        'message': 'Conferencia concluida. Nenhum dado foi alterado.'}, ensure_ascii=False), flush=True)
+        'summary': counts,
+        'message': f"Consulta encerrada: {counts['complete']} completos, {counts['partial']} parciais, {counts['failed']} falharam. Nenhum dado foi alterado."}, ensure_ascii=False), flush=True)
     return 0
 
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except Exception:
+    except Exception as error:
+        diagnostic = uuid.uuid4().hex[:12]
+        print(f'conferencia_failed id={diagnostic} type={type(error).__name__}', file=sys.stderr, flush=True)
         print(json.dumps({'ok': False, 'operation': 'conferencia',
-            'message': 'Nao foi possivel concluir a consulta ao E-Desk. Confira a integracao e o login.'}), flush=True)
+            'errorCode': getattr(error, 'code', 'consultation_failed'), 'diagnosticId': diagnostic,
+            'message': (str(error) if isinstance(error, AuditLookupError) else
+                        'A consulta ao E-Desk falhou. Informe o codigo de diagnostico para identificar a etapa.') + f' Diagnostico: {diagnostic}.'}), flush=True)
         sys.exit(1)

@@ -5,6 +5,23 @@ import 'package:gerenciador_horas/features/edesk/work_audit_result_card.dart';
 import 'package:gerenciador_horas/core/config/work_audit_pilot_access.dart';
 
 void main() {
+  test(
+      'consultation outcome separates failure, partial and complete with divergence',
+      () {
+    expect(auditWorkOutcome([]), 'Falhou');
+    expect(
+        auditWorkOutcome(
+            compareAuditWork({}, {'hours': '02:00'}, {'hours', 'start'})),
+        'Parcial');
+    expect(
+        auditWorkOutcome(compareAuditWork(
+            {'hours': '01:00'}, {'hours': '02:00'}, {'hours'})),
+        'Completo');
+    expect(
+        auditWorkOutcome(compareAuditWork({}, {'hours': '02:00'}, {'hours'}),
+            error: 'Fase indisponivel'),
+        'Parcial');
+  });
   test('audit layout remains limited to the pilot account', () {
     expect(
         WorkAuditPilotAccess.allows(

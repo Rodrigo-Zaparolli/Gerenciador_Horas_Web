@@ -81,6 +81,13 @@ class WorkAuditResultCard extends StatelessWidget {
                                 : Icons.check_circle_outline,
                             size: 18),
                         label: Text(summary)),
+                    Chip(
+                        avatar: Icon(
+                            auditWorkOutcome(fields, error: error) == 'Falhou'
+                                ? Icons.error_outline
+                                : Icons.fact_check_outlined,
+                            size: 18),
+                        label: Text(auditWorkOutcome(fields, error: error))),
                   ]),
               if (hasReadValues && mapped.containsKey('phaseName'))
                 Padding(

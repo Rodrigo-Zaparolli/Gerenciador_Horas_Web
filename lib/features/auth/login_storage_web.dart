@@ -1,5 +1,22 @@
 import 'package:web/web.dart' as web;
 
+bool keepLoginPreference() {
+  try {
+    return web.window.localStorage
+            .getItem('gerenciador_horas.auth.keepConnected') !=
+        'false';
+  } catch (_) {
+    return true;
+  }
+}
+
+void rememberLoginPreference(bool keep) {
+  try {
+    web.window.localStorage
+        .setItem('gerenciador_horas.auth.keepConnected', '$keep');
+  } catch (_) {/* This preference never replaces Firebase persistence. */}
+}
+
 bool prefersLocalAuthStorage() {
   try {
     return web.window.localStorage.getItem('gerenciador_horas.auth.storage') ==

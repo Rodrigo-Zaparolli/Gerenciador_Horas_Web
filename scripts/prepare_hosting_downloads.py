@@ -20,6 +20,12 @@ def prepare():
     hosting = config['hosting']
     hosting = hosting[0] if isinstance(hosting, list) else hosting
     redirects = hosting.setdefault('redirects', [])
+    # Older redirects must point to the current installer too; otherwise an
+    # existing v2/v55 redirect can lead back to an archived download.
+    for item in redirects:
+        match = re.fullmatch(r'/downloads/(integracao-edesk-completa-windows-v|abertura-local-windows-v|atualizacao-integracao-completa-)[0-9]+\.zip', item.get('destination', ''))
+        if match and item.get('source') != '/downloads/' + match[1] + version + '.zip':
+            item['destination'] = '/downloads/' + match[1] + version + '.zip'
     known = {item.get('source') for item in redirects}
     archive = ROOT / 'build/hosting-download-archive'
     archive.mkdir(exist_ok=True)

@@ -73,10 +73,9 @@ void main() {
       expect(saved!.id, '2265173');
       expect(saved!.subTasks!.map((t) => t.edeskWorkNumber), ['3', '6']);
       expect(saved!.estimatedHours, '05:00');
-      expect(
-          find.text(
-              '2 trabalho(s) cadastrados no app. Nenhuma alteração foi feita no E-Desk.'),
-          findsOneWidget);
+      // Completion closes this dialog; verify persisted data and that saving
+      // locally did not trigger another E-Desk request, not its transient UI.
+      expect(queries, 1);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
