@@ -27,6 +27,14 @@ def prepare():
         if match and item.get('source') != '/downloads/' + match[1] + version + '.zip':
             item['destination'] = '/downloads/' + match[1] + version + '.zip'
     known = {item.get('source') for item in redirects}
+    # Recent public installers may no longer be in this isolated build. Keep
+    # their URLs working even when there is no obsolete ZIP to discover below.
+    for previous in range(max(1, int(version) - 3), int(version)):
+        for prefix in ('integracao-edesk-completa-windows-v', 'abertura-local-windows-v', 'atualizacao-integracao-completa-'):
+            source = f'/downloads/{prefix}{previous}.zip'
+            if source not in known:
+                redirects.append({'source': source, 'destination': f'/downloads/{prefix}{version}.zip', 'type': 302})
+                known.add(source)
     archive = ROOT / 'build/hosting-download-archive'
     archive.mkdir(exist_ok=True)
     count = 0
