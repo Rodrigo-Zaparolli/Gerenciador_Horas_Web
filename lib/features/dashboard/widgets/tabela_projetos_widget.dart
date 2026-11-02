@@ -51,7 +51,12 @@ class HoraInputFormatter extends TextInputFormatter {
       }
 
       if (minutes.length > 2) {
-        minutes = minutes.substring(0, 2);
+        // O separador inserido automaticamente não pode consumir o próximo
+        // dígito: ao continuar 2:50 com 0, a duração passa a ser 25:00.
+        final digits = '$hours$minutes';
+        if (digits.length > 6) return oldValue;
+        hours = digits.substring(0, digits.length - 2);
+        minutes = digits.substring(digits.length - 2);
       }
 
       text = '$hours:$minutes';

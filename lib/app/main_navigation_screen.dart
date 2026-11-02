@@ -1,4 +1,7 @@
 import 'dart:async';
+import '../core/platform/pilot_route.dart';
+import '../features/assistant/beta_access.dart';
+import '../features/assistant/beta_assistant.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -37,6 +40,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final Set<int> _visitedTabs = {0};
 
   final TimeLogStore _timeLogStore = TimeLogStore();
+  final _betaTasksKey=GlobalKey<TarefasScreenState>();
 
   List<WorkFormat> _workFormats = [];
 
@@ -47,6 +51,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
+
+    final account=FirebaseAuth.instance.currentUser;
+    if(redirectPilotAccount(uid:account?.uid,email:account?.email))return;
 
     _loadUserData();
     _loadWorkFormats();
@@ -213,6 +220,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       // --------------------------------------------------------
 
       TarefasScreen(
+        key:_betaTasksKey,
         selectedIndex: _selectedIndex,
         onSelectTab: _onSelectTab,
         timeLogStore: _timeLogStore,
@@ -254,7 +262,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // PÁGINA ATUAL COM FUNDO GLOBAL ÚNICO
     // ==========================================================
 
-    return _buildGlobalBackground(
+    final content = _buildGlobalBackground(
       child: IndexedStack(
         index: safeIndex,
         children: [
@@ -265,6 +273,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ],
       ),
     );
+    final user=FirebaseAuth.instance.currentUser;
+    if(!BetaAccess.allows(uid:user?.uid,email:user?.email))return content;
+    return BetaAssistant(key:ValueKey('beta/${user!.uid}'),owner:user.uid,
+      loadDay:_timeLogStore.loadRegisteredDay,
+      canNavigate:()=>ModalRoute.of(context)?.isCurrent!=false,
+      openTasks:(){if(ModalRoute.of(context)?.isCurrent!=false)_onSelectTab(5);},
+      send:(logs)async{
+        if(ModalRoute.of(context)?.isCurrent==false)throw StateError('Feche a edição aberta antes de enviar horas.');
+        _onSelectTab(5);await WidgetsBinding.instance.endOfFrame;
+        final tasks=_betaTasksKey.currentState;
+        if(tasks==null)throw StateError('Não foi possível abrir Tarefas.');
+        return tasks.sendForBeta(logs);
+      },child:content);
   }
 
   @override

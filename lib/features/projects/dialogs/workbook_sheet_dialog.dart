@@ -1,4 +1,6 @@
 import 'workbook_confirmation.dart';
+import 'workbook_value_validation.dart';
+import 'spreadsheet_draft.dart';
 import 'consultoria_row_drafts.dart';
 import 'project_worksheet_preference.dart';
 import 'spreadsheet_dialog_chrome.dart';
@@ -12,6 +14,8 @@ class WorkbookSheetDialog extends StatefulWidget {
       required this.call,
       required this.allowed,
       this.projectId,
+      this.draftOwner,
+      this.fileReference,
       this.client = '',
       this.serviceType = '',
       this.initialWorksheet,
@@ -19,6 +23,7 @@ class WorkbookSheetDialog extends StatefulWidget {
       this.onMappedWorksheet});
   final Future<void> Function(String)? onMappedWorksheet;
   final String? projectId;
+  final String? draftOwner, fileReference;
   final String client, serviceType;
   bool get projectLayout => projectId != null;
   final String? initialWorksheet;
@@ -47,6 +52,101 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       data?['scheduleTable'] == true || data?['consultoriaTable'] == true;
   int row = 1, column = 1, selectionEpoch = 0;
   final vertical = ScrollController(), horizontal = ScrollController();
+  bool _closed = false;
+  bool get canDraft =>
+      widget.draftOwner != null &&
+      widget.projectId != null &&
+      widget.fileReference != null &&
+      selected != null;
+  void clearDraft() {
+    if (canDraft) {
+      SpreadsheetDraft.clear(widget.draftOwner, widget.projectId!,
+          widget.fileReference!, selected!);
+    }
+  }
+
+  void persistDraft() {
+    if (_closed || !canDraft || !widget.allowed() || data == null) return;
+    if (!dirty) {
+      clearDraft();
+      return;
+    }
+    if (!SpreadsheetDraft.save(widget.draftOwner, widget.projectId!,
+        widget.fileReference!, selected!, {
+      'revision': data!['revision'],
+      'changes': edits.values.toList(),
+      'rows': rows.toJson()
+    })) {
+      error =
+          'N\u00e3o foi poss\u00edvel guardar o rascunho neste computador. Salve na planilha para preservar os ajustes.';
+    }
+  }
+
+  Future<void> recoverDraft() async {
+    if (!canDraft || !mounted || !widget.allowed() || data == null) return;
+    final draft = SpreadsheetDraft.read(
+        widget.draftOwner, widget.projectId!, widget.fileReference!, selected!);
+    if (draft == null) return;
+    final recoveredRows = ConsultoriaRowDrafts();
+    final rowValid = recoveredRows.restore(draft['rows']);
+    final original = (data!['fields'] as List).cast<Map<String, dynamic>>();
+    final originalRows = original
+        .map((field) => ConsultoriaRowDrafts.rowOf('${field['cell']}'))
+        .toSet();
+    final validStructure = rowValid &&
+        (!recoveredRows.dirty ||
+            const [1, 2].contains(data!['consultoriaRowOperationsVersion'])) &&
+        recoveredRows.deleted.every(originalRows.contains) &&
+        recoveredRows.after.values.every((parent) =>
+            parent == null ||
+            parent > 1000000 ||
+            originalRows.contains(parent)) &&
+        recoveredRows.added.values
+            .expand((fields) => fields)
+            .every((field) => field['sheet'] == selected);
+    final changes = !validStructure
+        ? null
+        : SpreadsheetDraft.validatedChanges(draft, '${data!['revision']}', [
+            ...original,
+            ...recoveredRows.added.values.expand((fields) => fields)
+          ]);
+    final restore = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(changes == null
+                    ? 'Rascunho de outra revis\u00e3o'
+                    : 'Recuperar ajustes pendentes?'),
+                content: Text(changes == null
+                    ? 'A planilha ou suas linhas mudaram. O rascunho ser\u00e1 mantido, sem aplicar altera\u00e7\u00f5es automaticamente.'
+                    : '${changes.length + recoveredRows.count} ajuste(s) desta guia ainda n\u00e3o foram salvos no Excel.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Fechar e manter rascunho')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Descartar rascunho')),
+                  if (changes != null)
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Recuperar ajustes'))
+                ]));
+    if (!mounted || _closed || !widget.allowed()) return;
+    if (restore == null) {
+      _closed = true;
+      Navigator.pop(context, saved);
+      return;
+    }
+    if (restore == false) {
+      clearDraft();
+      return;
+    }
+    if (restore != true || changes == null) return;
+    setState(() {
+      rows.restore(draft['rows']);
+      edits.addAll({for (final change in changes) '${change['cell']}': change});
+    });
+  }
 
   @override
   void initState() {
@@ -67,12 +167,12 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     final reading = const {'excel-editor-read', 'excel-editor-sheets'}
         .contains(args['action']);
     for (var attempt = 0;; attempt++) {
-      if (!mounted || !widget.allowed()) {
+      if (_closed || !mounted || !widget.allowed()) {
         throw StateError('A conta mudou ou o editor foi fechado.');
       }
       try {
         final result = await widget.call(args);
-        if (!mounted || !widget.allowed()) {
+        if (_closed || !mounted || !widget.allowed()) {
           throw StateError('A conta mudou ou o editor foi fechado.');
         }
         return result;
@@ -120,6 +220,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
     try {
       if (await discard() && mounted) {
         popped = true;
+        _closed = true;
         Navigator.pop(context, saved);
       }
     } finally {
@@ -129,7 +230,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
 
   Future<bool> discard() async {
     if (!dirty) return true;
-    return await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
             context: context,
             builder: (_) => const WorkbookConfirmation(
                 title: 'Descartar altera\u00e7\u00f5es desta guia?',
@@ -138,6 +239,8 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                 cancelLabel: 'Continuar editando',
                 confirmLabel: 'Descartar')) ==
         true;
+    if (confirmed) clearDraft();
+    return confirmed;
   }
 
   Future<void> open(String name, int firstRow, int firstColumn) async {
@@ -201,6 +304,9 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           rows.clear();
           writeState = SpreadsheetWriteState.unchanged;
         });
+        setState(() => busy = false);
+        await recoverDraft();
+        if (!mounted || _closed || !widget.allowed()) return;
         if (savedWorksheet != name && widget.onWorksheetOpened != null) {
           savedWorksheet = name;
           unawaited(Future<void>.sync(() => widget.onWorksheetOpened!(name))
@@ -256,6 +362,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       if (mounted) {
         setState(() {
           data = result;
+          clearDraft();
           edits.clear();
           rows.clear();
           saved = true;
@@ -301,6 +408,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
         (data?['consultoriaDetails'] as Map?)?['description']?.toString() ??
             'Consultoria',
         below: below));
+    persistDraft();
   }
 
   Future<void> deleteRow(int row) async {
@@ -316,11 +424,18 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
       if (confirmed != true || !mounted || !widget.allowed() || busy) return;
     }
     setState(() => rows.remove(row, edits));
+    persistDraft();
   }
 
   void setField(Map<String, dynamic> field, dynamic value) {
-    if (busy || !widget.allowed()) return;
+    if (_closed || busy || !widget.allowed()) return;
+    final validation = validateWorkbookValue(field, value);
+    if (validation != null) {
+      setState(() => error = validation);
+      return;
+    }
     setState(() {
+      error = null;
       if (value == field['value']) {
         edits.remove(field['cell']);
       } else {
@@ -331,11 +446,14 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           'value': value
         };
       }
+      persistDraft();
     });
   }
 
   Future<void> edit(Map<String, dynamic> field) async {
-    if (busy || field['readOnly'] == true || !widget.allowed()) return;
+    if (_closed || busy || field['readOnly'] == true || !widget.allowed()) {
+      return;
+    }
     final address = field['cell'] as String;
     final current = edits[address]?['value'] ?? field['value'];
     dynamic next;
@@ -352,49 +470,60 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           text: field['percent'] == true && current is num
               ? (current * 100).toString()
               : current.toString());
+      String? fieldError;
       final result = await showDialog<String>(
           context: context,
-          builder: (context) => AlertDialog(
-                title: Text('$selected · $address'),
-                content: TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                        helperText: field['percent'] == true
-                            ? 'Percentual de 0 a 100'
-                            : field['kind'] == 'time'
-                                ? 'Horário no formato HH:mm'
-                                : null),
-                    autofocus: true,
-                    maxLength: 10000,
-                    keyboardType: field['kind'] == 'number'
-                        ? const TextInputType.numberWithOptions(
-                            decimal: true, signed: true)
-                        : TextInputType.multiline),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancelar')),
-                  FilledButton(
-                      onPressed: () => Navigator.pop(context, controller.text),
-                      child: const Text('Aplicar'))
-                ],
-              ));
+          builder: (context) => StatefulBuilder(
+              builder: (context, setFieldState) => AlertDialog(
+                    title: Text('$selected · $address'),
+                    content: TextField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                            errorText: fieldError,
+                            helperText: field['percent'] == true
+                                ? 'Percentual de 0 a 100'
+                                : field['kind'] == 'time'
+                                    ? 'Horário no formato HH:mm'
+                                    : null),
+                        autofocus: true,
+                        maxLength: 10000,
+                        keyboardType: field['kind'] == 'number'
+                            ? const TextInputType.numberWithOptions(
+                                decimal: true, signed: true)
+                            : TextInputType.multiline),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar')),
+                      FilledButton(
+                          onPressed: () {
+                            try {
+                              parseWorkbookInput(field, controller.text);
+                              Navigator.pop(context, controller.text);
+                            } on FormatException catch (error) {
+                              setFieldState(() => fieldError = error.message);
+                            }
+                          },
+                          child: const Text('Aplicar'))
+                    ],
+                  )));
       // The route keeps the text field alive for its exit animation.
       await Future<void>.delayed(const Duration(milliseconds: 300));
       controller.dispose();
       if (result == null) return;
-      next = field['kind'] == 'number'
-          ? double.tryParse(result.replaceAll(',', '.'))
-          : field['value'] == ''
-              ? double.tryParse(result.replaceAll(',', '.')) ?? result
-              : result;
-      if (field['percent'] == true && next is num) next = next / 100;
-      if (next == null || next is double && !next.isFinite) {
-        if (mounted) setState(() => error = 'Informe um número válido.');
+      try {
+        next = parseWorkbookInput(field, result);
+      } on FormatException catch (failure) {
+        if (mounted) setState(() => error = failure.message);
         return;
       }
     }
-    if (!mounted || !widget.allowed()) return;
+    if (_closed || !mounted || !widget.allowed()) return;
+    final validation = validateWorkbookValue(field, next);
+    if (validation != null) {
+      setState(() => error = validation);
+      return;
+    }
     setState(() {
       error = null;
       if (next == field['value']) {
@@ -407,6 +536,7 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
           'value': next
         };
       }
+      persistDraft();
     });
   }
 
@@ -551,8 +681,10 @@ class _WorkbookSheetDialogState extends State<WorkbookSheetDialog> {
                         onAddRow: addRow,
                         onAddRowBelow: addRow,
                         onDeleteRow: deleteRow,
-                        onUndoRow: (row) =>
-                            setState(() => rows.deleted.remove(row)),
+                        onUndoRow: (row) => setState(() {
+                              rows.deleted.remove(row);
+                              persistDraft();
+                            }),
                         onEditValue: setField,
                         onStatus: setField)
                     : widget.projectLayout && !rawGrid && fields.isNotEmpty

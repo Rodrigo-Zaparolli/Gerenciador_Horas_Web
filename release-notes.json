@@ -1,10 +1,10 @@
 {
   "changes": [
-    "Importacao pelo ID reorganizada em busca, conferencia e cadastro, com etapas adaptadas ao celular e total de horas sempre visivel.",
-    "Integracao v59 corrige a selecao da aba principal Trabalhos e aguarda o carregamento das linhas para importar IDs reais e horas estimadas.",
-    "Planilha diferencia alteracoes pendentes, gravacao em andamento, salvo no Excel e gravacao nao confirmada, preservando a edicao quando ocorre uma falha.",
-    "Cabecalho da planilha mostra o arquivo junto ao cliente e projeto. Progresso mantem pesos do Excel e contagem de tarefas concluidas.",
-    "Conferencia distingue resultados completos, parciais e falhos. Diagnosticos mais especificos e logs com menos separadores, preservando comprovantes.",
-    "Manter conectado lembra a escolha apos login bem-sucedido. Downloads leve e completo da integracao v59 disponiveis nesta atualizacao."
+    "Piloto pessoal: BETA com voz Dora e chamada Ola Beta em todas as telas.",
+    "Conferencia de horas por voz ou visual, autorizacao antes de enviar e resultado falado com despedida automatica.",
+    "Melhorias de recuperacao de edicoes da planilha, validacao de valores e verificacao da integracao na importacao.",
+    "Horas digitadas como 2500 passam a representar 25:00.",
+    "Comentario permite escolher a etapa e preencher percentual e data fim correspondentes da planilha.",
+    "Integracao v60: execute Preparar voz Beta.cmd uma vez na pasta da integracao para instalar a voz local."
   ]
 }

@@ -1,5 +1,6 @@
 import '../../../core/config/checklist_block_pilot_access.dart';
 import 'spreadsheet_status_cache.dart';
+import 'spreadsheet_draft.dart';
 import 'package:flutter/foundation.dart';
 import 'project_worksheet_preference.dart';
 import 'dart:async';
@@ -89,6 +90,8 @@ class ProjectSpreadsheetDialog extends StatefulWidget {
                         initialTab: mappedWorksheetTab(initial) ?? 0);
                   }
                   return WorkbookSheetDialog(
+                    draftOwner: user.uid,
+                    fileReference: project.excelLink,
                     onMappedWorksheet: (name) async {
                       if (FirebaseAuth.instance.currentUser?.uid != user.uid) {
                         return;
@@ -149,6 +152,91 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
   String? error, notice, owner;
   bool busy = false, settingsReady = false;
   SpreadsheetWriteState writeState = SpreadsheetWriteState.unchanged;
+  bool _closed = false, _closing = false;
+  int _recoveryEpoch = 0;
+  String get _draftSheet =>
+      'mapped:${sheetNames['entry'] ?? data?['entrySheet'] ?? 'Informações de entrada'}:${sheetNames['checklist'] ?? data?['checklistSheet'] ?? projectChecklistSheet(widget.project.serviceType)}';
+  bool get _canDraft =>
+      owner != null && (widget.project.excelLink?.isNotEmpty ?? false);
+  void persistDraft() {
+    if (!_canDraft || !authorized || data == null) return;
+    if (pending.isEmpty) {
+      clearDraft();
+      return;
+    }
+    final saved = SpreadsheetDraft.save(
+        owner,
+        widget.project.id,
+        widget.project.excelLink!,
+        _draftSheet,
+        {'revision': data!['revision'], 'changes': pending.values.toList()});
+    if (!saved) {
+      notice =
+          'N\u00e3o foi poss\u00edvel guardar o rascunho neste computador. Salve na planilha para preservar os ajustes.';
+    }
+  }
+
+  void clearDraft() {
+    if (_canDraft) {
+      SpreadsheetDraft.clear(
+          owner, widget.project.id, widget.project.excelLink!, _draftSheet);
+    }
+  }
+
+  Map<String, dynamic>? get savedDraft => !_canDraft
+      ? null
+      : SpreadsheetDraft.read(
+          owner, widget.project.id, widget.project.excelLink!, _draftSheet);
+  Future<void> recoverDraft() async {
+    final draft = savedDraft;
+    if (draft == null || data == null || !mounted || !authorized) return;
+    final fields = [...(data!['fields'] as List), ...(data!['tasks'] as List)]
+        .cast<Map<String, dynamic>>();
+    final changes = SpreadsheetDraft.validatedChanges(
+        draft, '${data!['revision']}', fields);
+    final recover = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(changes == null
+                    ? 'Rascunho de outra revis\u00e3o'
+                    : 'Recuperar ajustes pendentes?'),
+                content: Text(changes == null
+                    ? 'A planilha mudou ou os ajustes n\u00e3o correspondem mais \u00e0s c\u00e9lulas atuais. O rascunho ser\u00e1 mantido; nenhum ajuste ser\u00e1 aplicado automaticamente.'
+                    : '${changes.length} ajuste(s) foram guardados neste computador e ainda n\u00e3o foram salvos no Excel.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Fechar e manter rascunho')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Descartar rascunho')),
+                  if (changes != null)
+                    FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Recuperar ajustes'))
+                ]));
+    if (!mounted || !authorized) return;
+    if (recover == null) {
+      _closed = true;
+      Navigator.pop(context);
+      return;
+    }
+    if (recover == false) {
+      clearDraft();
+      return;
+    }
+    if (recover != true || changes == null) return;
+    setState(() {
+      _recoveryEpoch++;
+      pending.addAll({
+        for (final change in changes)
+          '${change['sheet']}!${change['cell']}': change
+      });
+      notice =
+          'Rascunho recuperado. Use Salvar na planilha para gravar no Excel.';
+    });
+  }
+
   late final ChecklistLivePreview livePreview;
   List<CompanyContact> contacts = [];
   SpreadsheetStore? get store =>
@@ -163,7 +251,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       ? widget.emailProvider!()
       : FirebaseAuth.instance.currentUser?.email;
   bool get authorized {
-    return uid == owner && PilotFeatureAccess.allows(uid: uid, email: email);
+    return !_closed &&
+        uid == owner &&
+        PilotFeatureAccess.allows(uid: uid, email: email);
   }
 
   bool _stageDialogOpen = false;
@@ -315,6 +405,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           context: context,
           barrierDismissible: false,
           builder: (sheetContext) => WorkbookSheetDialog(
+              draftOwner: owner,
+              fileReference: widget.project.excelLink,
               onMappedWorksheet: (name) async {
                 requestedMappedTab = mappedWorksheetTab(name);
                 if (widget.transport == null) {
@@ -427,23 +519,26 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     super.dispose();
   }
 
-  Future<bool> discard() async =>
-      pending.isEmpty ||
-      await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                      title: const Text('Descartar alterações?'),
-                      content: const Text(
-                          'As alterações ainda não foram salvas na planilha.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Continuar editando')),
-                        FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Descartar'))
-                      ])) ==
-          true;
+  Future<bool> discard() async {
+    if (pending.isEmpty) return true;
+    final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+                    title: const Text('Descartar alterações?'),
+                    content: const Text(
+                        'As alterações ainda não foram salvas na planilha.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Continuar editando')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Descartar'))
+                    ])) ==
+        true;
+    if (confirmed) clearDraft();
+    return confirmed;
+  }
 
   Future<void> loadContacts() async {
     try {
@@ -473,6 +568,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         });
         final status = savedSpreadsheetStatus(saved, sheetNames);
         if (status != null) livePreview.restore(status);
+        if (savedDraft != null) await load();
         return;
       }
     } catch (e) {
@@ -540,6 +636,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         });
       }
       if (mounted && authorized) await remember(result);
+      if (mounted && authorized) {
+        setState(() => busy = false);
+        await recoverDraft();
+      }
     } catch (e) {
       if (mounted && authorized) setState(() => error = e.toString());
     } finally {
@@ -618,6 +718,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
       if (mounted && authorized) {
         setState(() {
           data = result;
+          clearDraft();
           pending.clear();
           calculatedEmails.clear();
           writeState = SpreadsheetWriteState.saved;
@@ -677,12 +778,21 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         }
         notice = null;
         livePreview.invalidate();
+        persistDraft();
       });
 
   Future<void> close() async {
-    if (busy || !await discard() || !mounted) return;
-    pending.clear();
-    Navigator.pop(context);
+    if (_closing || writeState == SpreadsheetWriteState.saving) return;
+    _closing = true;
+    try {
+      if (!await discard() || !mounted) return;
+      _closed = true;
+      livePreview.clear();
+      pending.clear();
+      Navigator.pop(context);
+    } finally {
+      if (!_closed) _closing = false;
+    }
   }
 
   Widget input(Map<String, dynamic> field) {
@@ -692,7 +802,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
         contacts.isNotEmpty &&
         field['readOnly'] != true) {
       return Autocomplete<CompanyContact>(
-          key: ValueKey('${data!['revision']}:${keyOf(field)}'),
+          key: ValueKey('${data!['revision']}:$_recoveryEpoch:${keyOf(field)}'),
           initialValue: TextEditingValue(text: current(field).toString()),
           displayStringForOption: (c) => c.name,
           optionsBuilder: (text) => contacts.where((c) => '${c.name} ${c.email}'
@@ -740,7 +850,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     }
     if (kind == 'yesno') {
       return DropdownButtonFormField<String>(
-          key: ValueKey('${data!['revision']}:${keyOf(field)}'),
+          key: ValueKey('${data!['revision']}:$_recoveryEpoch:${keyOf(field)}'),
           initialValue: current(field) as String,
           decoration: InputDecoration(labelText: label),
           items: const [
@@ -756,7 +866,8 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
           ? raw
           : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
       return TextFormField(
-          key: ValueKey('${data!['revision']}:${keyOf(field)}:$raw'),
+          key: ValueKey(
+              '${data!['revision']}:$_recoveryEpoch:${keyOf(field)}:$raw'),
           initialValue: text,
           readOnly: true,
           decoration: InputDecoration(
@@ -782,7 +893,7 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
     }
     return TextFormField(
         key: ValueKey(
-            '${data!['revision']}:${keyOf(field)}:${field['label'].toString().endsWith('— E-mail') ? current(field) : ''}'),
+            '${data!['revision']}:$_recoveryEpoch:${keyOf(field)}:${field['label'].toString().endsWith('— E-mail') ? current(field) : ''}'),
         initialValue: current(field).toString(),
         enabled: !busy && authorized,
         readOnly: field['readOnly'] == true,
@@ -1108,7 +1219,9 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                         client: widget.project.client,
                         filename: data?['filename']?.toString() ?? '',
                         serviceType: widget.project.serviceType,
-                        onClose: busy ? null : close,
+                        onClose: writeState == SpreadsheetWriteState.saving
+                            ? null
+                            : close,
                         sheetAction:
                             Row(mainAxisSize: MainAxisSize.min, children: [
                           if (size.width >= 600)
@@ -1204,7 +1317,10 @@ class _ProjectSpreadsheetDialogState extends State<ProjectSpreadsheetDialog> {
                               icon: const Icon(Icons.refresh, size: 18),
                               label: const Text('Recarregar do Excel')),
                           TextButton(
-                              onPressed: busy ? null : close,
+                              onPressed:
+                                  writeState == SpreadsheetWriteState.saving
+                                      ? null
+                                      : close,
                               child: const Text('Cancelar')),
                           FilledButton.icon(
                               style: FilledButton.styleFrom(

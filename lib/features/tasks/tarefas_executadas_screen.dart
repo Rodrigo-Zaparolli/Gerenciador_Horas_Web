@@ -1,4 +1,5 @@
 import 'hours_send_selection.dart';
+import '../assistant/beta_access.dart';
 import 'task_history_month.dart';
 import 'task_history_month_panel.dart';
 import 'dart:async';
@@ -35,10 +36,15 @@ class TarefasScreen extends StatefulWidget {
   });
 
   @override
-  State<TarefasScreen> createState() => _TarefasScreenState();
+  State<TarefasScreen> createState() => TarefasScreenState();
 }
 
-class _TarefasScreenState extends State<TarefasScreen> {
+class TarefasScreenState extends State<TarefasScreen> {
+  Future<String?> sendForBeta(List<TimeLog> logs) {
+    final user=FirebaseAuth.instance.currentUser;
+    if(!BetaAccess.allows(uid:user?.uid,email:user?.email))throw StateError('BETA indisponível para esta conta.');
+    return _enviarHorasDireto(logs,reviewed:true);
+  }
   String? _filterOwner;
   String _lastFilterState = '';
   final _searchController = TextEditingController();
@@ -1471,18 +1477,21 @@ class _TarefasScreenState extends State<TarefasScreen> {
 // MODAL PRINCIPAL DE CONFERÊNCIA E-DESK
 // ============================================================
 
-  Future<void> _enviarHorasDireto(List<TimeLog> logs) async {
-    if (_enviandoEdesk || logs.isEmpty) return;
+  Future<String?> _enviarHorasDireto(List<TimeLog> logs,{bool reviewed=false}) async {
+    if (_enviandoEdesk || logs.isEmpty) {
+      if(reviewed)throw StateError('Há outro envio em andamento.');
+      return null;
+    }
     final sendOwner = FirebaseAuth.instance.currentUser?.uid;
-    if (sendOwner == null) return;
+    if (sendOwner == null) return null;
     setState(() => _enviandoEdesk = true);
     try {
-      {
+      if(!reviewed) {
         final selection = await selectHoursForSend(context, logs,
             save: widget.timeLogStore.updateFirebaseLog,
             delete: widget.timeLogStore.deleteFirebaseLog,
             canSend: () => mounted && FirebaseAuth.instance.currentUser?.uid == sendOwner);
-        if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner || selection == null || selection.isEmpty) return;
+        if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner || selection == null || selection.isEmpty) return null;
         logs = selection;
       }
       final draftsSelecionados = logs
@@ -1581,7 +1590,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
 
       final credenciais = await EdeskCredentialsService().ler();
 
-      if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner) return;
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner) return null;
 
       final payload = {
         'url': 'https://promob.e-desk.com.br',
@@ -1604,7 +1613,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
       );
 
       if (resultado.statusCode == 499) {
-        return;
+        return null;
       }
 
       if (!resultado.confirmed) {
@@ -1616,14 +1625,16 @@ class _TarefasScreenState extends State<TarefasScreen> {
         );
       }
 
-      if (!mounted || !context.mounted) return;
+      if (!mounted || !context.mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner) return null;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(resultado.message),
         backgroundColor: CoresApp.primaria,
         duration: const Duration(seconds: 6),
       ));
+      return resultado.message.isNotEmpty?resultado.message:'Envio concluído e confirmado no E-Desk.';
     } catch (e) {
-      if (!mounted || !context.mounted) return;
+      if(reviewed)rethrow;
+      if (!mounted || !context.mounted || FirebaseAuth.instance.currentUser?.uid != sendOwner) return null;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Erro ao enviar horas para o E-Desk: $e'),
         backgroundColor: CoresApp.erro,
@@ -1632,6 +1643,7 @@ class _TarefasScreenState extends State<TarefasScreen> {
     } finally {
       if (mounted && context.mounted) setState(() => _enviandoEdesk = false);
     }
+    return null;
   }
 
   String _formatarDataEdesk(dynamic date) {

@@ -208,13 +208,24 @@ def local_files_action():
     try:
         from local_edesk.local_files import execute
         return jsonify(execute(user['sub'], body, verified_user=user))
-    except PermissionError as error:
-        return jsonify({'message': str(error)}), 403
-    except (ValueError, FileNotFoundError) as error:
-        message = 'O arquivo ou pasta mudou de lugar. Selecione novamente no editor.' if isinstance(error, FileNotFoundError) else str(error)
-        return jsonify({'message': message}), 400
-    except Exception:
-        return jsonify({'message': 'Não foi possível abrir o arquivo original. Verifique as permissões e o programa padrão no Windows.'}), 500
+    except Exception as error:
+        from local_edesk.diagnostics import file_failure
+        payload, status = file_failure(error, str(body.get('action', '')))
+        return jsonify(payload), status
+
+
+@app.post('/api/beta-voice')
+def beta_voice_action():
+    if not LOCAL_MODE or request.remote_addr not in {'127.0.0.1','::1'}:
+        return jsonify({'message':'A BETA usa somente a integração local deste computador.'}),403
+    user,error=_authenticated_user(pairing=True)
+    if error is not None:return error
+    from local_edesk import beta_voice
+    if not beta_voice.allowed(user):return jsonify({'message':'BETA indisponível para esta conta.'}),403
+    try:return jsonify(beta_voice.execute(request.get_json(silent=True)))
+    except ValueError as error:return jsonify({'message':str(error)}),400
+    except RuntimeError as error:return jsonify({'message':str(error)}),503
+    except Exception:return jsonify({'message':'Não foi possível processar a voz local. Verifique a instalação da BETA.'}),503
 
 
 @app.get('/api/edesk/session')

@@ -1,4 +1,4 @@
-param([string]$FlutterPath = 'C:\src\flutter\bin\flutter.bat')
+param([string]$FlutterPath = 'C:\src\flutter\bin\flutter.bat', [string]$BaseHref = '/', [switch]$PersonalPilot)
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $PSScriptRoot
 $releaseIdentifier = [Guid]::NewGuid().ToString('N')
@@ -13,7 +13,7 @@ try {
     $manifestPath = Join-Path $projectDirectory 'build\web\web-release.json'
     # Never let a previous manifest become an offline resource of this release.
     if (Test-Path -LiteralPath $manifestPath) { Remove-Item -LiteralPath $manifestPath }
-    & $FlutterPath build web --release --no-pub --no-web-resources-cdn --no-wasm-dry-run --dart2js-optimization=O2 "--dart-define=WEB_RELEASE=$releaseIdentifier"
+    & $FlutterPath build web --release --no-pub --no-web-resources-cdn --no-wasm-dry-run --dart2js-optimization=O2 "--dart-define=WEB_RELEASE=$releaseIdentifier" "--base-href=$BaseHref" "--dart-define=PERSONAL_PILOT=$($PersonalPilot.IsPresent.ToString().ToLower())"
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar: nenhuma nova versão deve ser publicada.' }
     # A query parameter can still reuse an old installer in intermediary caches.
     # Put the package version in the actual filename used by the download page.

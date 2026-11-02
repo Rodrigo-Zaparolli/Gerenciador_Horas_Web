@@ -1,9 +1,10 @@
-"""Build the small work-diagnostics-59 update for an existing full installation."""
+"""Build the small beta-pilot-60 update for an existing full installation."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    'local_edesk/beta_voice.py', 'scripts/setup_beta_voice.ps1',
     'local_edesk/diagnostics.py', 'edesk_bot/operation_log.py',
     'edesk_bot/edesk_fases.py', 'edesk_bot/phase_confirmation.py',
     'edesk_bot/edesk_horas.py',
@@ -26,7 +27,9 @@ FILES = (
     'scripts/start_full_integration.ps1',
     'scripts/start_edesk_local.ps1', 'scripts/start_local_files.ps1',
 )
-README = '''ATUALIZAÇÃO work-diagnostics-59 — instalação completa já existente
+README = '''BETA v60: voz Dora e reconhecimento local para a conta piloto. Depois de extrair, execute Preparar voz Beta.cmd uma vez para baixar os modelos. Os demais usuarios mantem seus recursos.
+
+ATUALIZAÇÃO beta-pilot-60 — instalação completa já existente
 
 Este arquivo não é uma instalação nova. Use a pasta que já contém
 Iniciar integração E-Desk.cmd, python e os demais arquivos da integração.
@@ -198,15 +201,16 @@ A ação Salvar de uma hora anterior não é repetida.
 
 
 def main():
-    target = ROOT / 'web/downloads/atualizacao-integracao-completa-59.zip'
+    target = ROOT / 'web/downloads/atualizacao-integracao-completa-60.zip'
     target.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:
             archive.write(ROOT / name, name)
+        archive.writestr('Preparar voz Beta.cmd', '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\setup_beta_voice.ps1"\r\npause\r\n')
         archive.writestr('LEIA-ME-ATUALIZACAO.txt', README.encode('utf-8-sig'))
     with ZipFile(target) as archive:
         assert archive.testzip() is None
-        assert set(archive.namelist()) == {*FILES, 'LEIA-ME-ATUALIZACAO.txt'}
+        assert set(archive.namelist()) == {*FILES, 'LEIA-ME-ATUALIZACAO.txt','Preparar voz Beta.cmd'}
         for name in FILES:
             assert archive.read(name) == (ROOT / name).read_bytes()
     print(f'{target.name}: {target.stat().st_size} bytes; all source files verified')

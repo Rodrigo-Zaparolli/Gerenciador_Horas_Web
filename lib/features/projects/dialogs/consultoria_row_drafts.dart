@@ -3,6 +3,86 @@ class ConsultoriaRowDrafts {
   final Set<int> deleted = {};
   final Map<int, int?> after = {};
   int _next = 1000000;
+  Map<String, dynamic> toJson() => {
+        'next': _next,
+        'added': {
+          for (final entry in added.entries) '${entry.key}': entry.value
+        },
+        'deleted': deleted.toList(),
+        'after': {
+          for (final entry in after.entries) '${entry.key}': entry.value
+        },
+      };
+
+  bool restore(dynamic raw) {
+    if (raw is! Map ||
+        raw['added'] is! Map ||
+        raw['deleted'] is! List ||
+        raw['after'] is! Map) {
+      return false;
+    }
+    try {
+      final restored = <int, List<Map<String, dynamic>>>{};
+      final parents = <int, int?>{};
+      final removed = (raw['deleted'] as List).map((v) => v as int).toSet();
+      if ((raw['added'] as Map).length > 200 ||
+          removed.length > 500 ||
+          removed.any((r) => r < 1 || r >= 1000000)) {
+        return false;
+      }
+      for (final entry in (raw['added'] as Map).entries) {
+        final row = int.parse(entry.key as String);
+        if (row <= 1000000 || row > 1001000 || entry.value is! List) {
+          return false;
+        }
+        final fields = (entry.value as List)
+            .map((v) => Map<String, dynamic>.from(v as Map))
+            .toList();
+        if (fields.length != 8 ||
+            fields.map((f) => f['cell']).toSet().length != 8 ||
+            fields
+                .any((f) => !RegExp('^[B-I]$row\$').hasMatch('${f['cell']}'))) {
+          return false;
+        }
+        for (final field in fields) {
+          final column = '${field['cell']}'[0];
+          final kind = column == 'B'
+              ? 'date'
+              : const ['C', 'D', 'E', 'F'].contains(column)
+                  ? 'time'
+                  : 'text';
+          if (field['kind'] != kind ||
+              field['readOnly'] != (column == 'G' || column == 'I')) {
+            return false;
+          }
+        }
+        restored[row] = fields;
+        final parent = raw['after']['$row'];
+        if (parent != null && parent is! int) return false;
+        parents[row] = parent as int?;
+      }
+      for (final row in restored.keys) {
+        final seen = <int>{row};
+        var parent = parents[row];
+        while (parent != null && parent > 1000000) {
+          if (!restored.containsKey(parent) || !seen.add(parent)) return false;
+          parent = parents[parent];
+        }
+        if (parent != null && (parent < 1 || removed.contains(parent))) {
+          return false;
+        }
+      }
+      clear();
+      added.addAll(restored);
+      deleted.addAll(removed);
+      after.addAll(parents);
+      _next = restored.keys.fold(1000000, (a, b) => a > b ? a : b);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   bool get dirty => added.isNotEmpty || deleted.isNotEmpty;
   int get count => added.length + deleted.length;
   static int? rowOf(String cell) =>

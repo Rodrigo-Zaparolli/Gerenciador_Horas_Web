@@ -2,6 +2,11 @@ import 'client_contacts.dart';
 import 'comment_contact_insert.dart';
 import '../../../core/config/pilot_feature_access.dart';
 import 'comment_template.dart';
+import 'comment_stage.dart';
+import 'comment_stage_panel.dart';
+import 'comment_stage_source.dart';
+import '../../../data/services/native_local_files_service.dart';
+import '../../projects/dialogs/spreadsheet_sheet_settings.dart';
 import 'excel_field_edit_dialog.dart';
 import 'comment_percentage_work.dart';
 import 'standalone_percentage_dialog.dart';
@@ -56,6 +61,35 @@ class ComentarioModal {
   static void show(BuildContext context, ProjectModel project, {String initialText = ''}) {
     final comentarioController = _ComentarioRichTextController();
     final editorController = quill.QuillController.basic();
+    final stageOwner = FirebaseAuth.instance.currentUser?.uid;
+    CommentStage? commentStage;
+    bool stageAllowed() => stageOwner != null &&
+        FirebaseAuth.instance.currentUser?.uid == stageOwner;
+    Future<List<CommentStage>> loadCommentStages() async {
+      if (!stageAllowed()) throw StateError('A conta mudou.');
+      final reference = project.excelLink?.trim() ?? '';
+      if (reference.isEmpty) {
+        throw StateError('Vincule a planilha deste projeto antes de carregar as etapas.');
+      }
+      final names = await FirebaseSpreadsheetSheetSettingsStore()
+          .load(stageOwner!, project.id, reference);
+      if (!stageAllowed()) throw StateError('A conta mudou.');
+      return readCommentStages(serviceType: project.serviceType, sheets: names,
+          read: ({String? worksheet, int? firstRow, int? firstColumn}) async {
+            if (!stageAllowed() || project.excelLink?.trim() != reference) {
+              throw StateError('A conta ou a planilha vinculada mudou. Carregue novamente.');
+            }
+            final data = await NativeLocalFiles.call('excel-editor-read',
+                reference: reference, projectId: project.id, projectField: 'excelLink',
+                serviceType: project.serviceType, worksheet: worksheet,
+                firstRow: firstRow, firstColumn: firstColumn,
+                sheetNames: names.isEmpty ? null : names);
+            if (!stageAllowed() || project.excelLink?.trim() != reference) {
+              throw StateError('A conta ou a planilha vinculada mudou. Carregue novamente.');
+            }
+            return data;
+          });
+    }
     final editorFocusNode = FocusNode();
     final editorScrollController = ScrollController();
     final editorImages = CommentEditorImages();
@@ -941,6 +975,9 @@ class ComentarioModal {
 
       insertCommentTemplate(editorController, conteudo,
           excelImage: imagensExcelBase64.isEmpty ? null : imagensExcelBase64.last);
+      if (commentStage != null && stageAllowed()) {
+        applyCommentStage(editorController, commentStage!);
+      }
       setDialogState(() {
         modeloDescricaoSelecionado = nomeModelo;
       });
@@ -5837,6 +5874,18 @@ class ComentarioModal {
                                             ),
 
                                             const SizedBox(height: 10),
+
+                                            CommentStagePanel(
+                                              load: loadCommentStages,
+                                              allowed: stageAllowed,
+                                              onInvalidated: () => commentStage = null,
+                                              disabled: salvando || testandoEdesk || enviandoEdesk,
+                                              onSelected: (stage) {
+                                                if (!stageAllowed()) return;
+                                                applyCommentStage(editorController, stage);
+                                                commentStage = stage;
+                                              },
+                                            ),
 
                                             // Descrição do comentário
                                             LayoutBuilder(

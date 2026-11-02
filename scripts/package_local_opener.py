@@ -27,7 +27,7 @@ def package(complete=False):
             add(source, 'python/Lib/' + relative.as_posix())
     queue = ['Flask', 'google-auth', 'CacheControl', 'requests', 'waitress', 'pywin32', 'Pillow']
     if complete:
-        queue.append('playwright')
+        queue.extend(['playwright','pip'])
     seen = set()
     while queue:
         name = queue.pop()
@@ -48,7 +48,7 @@ def package(complete=False):
                  'scripts/start_local_files.ps1', 'scripts/stop_local_files.ps1', 'scripts/migrate_integration_data.py']:
         add(ROOT / name, name)
     if complete:
-        for name in ['local_edesk/server.py', 'local_edesk/central.py', 'local_edesk/journal.py',
+        for name in ['local_edesk/beta_voice.py','scripts/setup_beta_voice.ps1','local_edesk/server.py', 'local_edesk/central.py', 'local_edesk/journal.py',
                      'cloud_run/main.py', 'edesk_bot/config.py', 'edesk_bot/send_progress.py', 'edesk_bot/work_selection.py', 'edesk_bot/operation_log.py',
                      'edesk_bot/edesk_horas.py', 'edesk_bot/hour_receipt.py', 'edesk_bot/edesk_conferencia.py', 'edesk_bot/phase_audit.py', 'edesk_bot/edesk_recebidos.py', 'edesk_bot/comment_percentage.py', 'edesk_bot/phase_confirmation.py', 'edesk_bot/edesk_comentario.py', 'edesk_bot/edesk_percentual.py', 'edesk_bot/edesk_fases.py',
                      'scripts/start_edesk_local.ps1', 'scripts/stop_edesk_local.ps1',
@@ -57,13 +57,14 @@ def package(complete=False):
             add(ROOT / name, name)
         for source in (RUNTIME / 'ms-playwright' / 'chromium-1187').rglob('*'):
             add(source, 'python/' + source.relative_to(RUNTIME).as_posix())
-    output_path = OUT if not complete else OUT.with_name('integracao-edesk-completa-windows-v59.zip')
+    output_path = OUT if not complete else OUT.with_name('integracao-edesk-completa-windows-v60.zip')
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for target, source in sorted(files.items()):
             archive.write(source, target)
         archive.writestr('local_edesk/__init__.py', '')
         if complete:
+            archive.writestr('Preparar voz Beta.cmd','@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\\setup_beta_voice.ps1"\r\npause\r\n')
             archive.writestr('cloud_run/__init__.py', '')
             archive.writestr('edesk_bot/__init__.py', '')
             for name, script in [('Iniciar integração E-Desk.cmd', 'start_full_integration.ps1'),

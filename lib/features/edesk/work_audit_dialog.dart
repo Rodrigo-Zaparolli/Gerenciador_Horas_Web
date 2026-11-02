@@ -253,25 +253,30 @@ class _WorkAuditDialogState extends State<WorkAuditDialog> {
     }
     final match = matches.single;
     setState(() => _busy = true);
-    final changed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => PhaseDateSyncDialog(
-            project: match.project,
-            task: match.task,
-            request: parts[0],
-            phase: values['phaseName']!,
-            edeskStart: values['start'] ?? '',
-            edeskEnd: values['end'] ?? ''));
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      if (changed == true) {
-        _results.clear();
-        _message =
-            'Altera\u00e7\u00e3o confirmada. Reabra a confer\u00eancia para consultar os dados atualizados.';
-      }
-    });
+    try {
+      final changed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => PhaseDateSyncDialog(
+              project: match.project,
+              task: match.task,
+              request: parts[0],
+              phase: values['phaseName']!,
+              edeskStart: values['start'] ?? '',
+              edeskEnd: values['end'] ?? ''));
+      if (!mounted) return;
+      setState(() {
+        if (changed == true) {
+          _results.clear();
+          _message =
+              'Altera\u00e7\u00e3o confirmada. Reabra a confer\u00eancia para consultar os dados atualizados.';
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() => _message = edeskConsultationError(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Widget _scopeControls() {

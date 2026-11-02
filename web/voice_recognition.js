@@ -55,7 +55,7 @@
     recognition.onresult = event => {
       if (active !== session) return;
       // Never interpret the assistant's own spoken reply as a user command.
-      if (window.projectSpeechBusy || performance.now() < (window.projectSpeechQuietUntil || 0)) {
+      if (window.projectSpeechBusy || window.betaSpeechBusy || performance.now() < Math.max(window.projectSpeechQuietUntil || 0,window.betaSpeechQuietUntil || 0)) {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) session.finalIndexes.add(i);
         }

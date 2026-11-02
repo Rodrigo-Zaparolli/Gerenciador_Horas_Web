@@ -13,6 +13,8 @@ import '../../domain/models/work_format_model.dart';
 import 'received_work.dart';
 import 'work_audit.dart';
 import 'project_import_layout.dart';
+import 'integration_readiness_panel.dart';
+import '../../data/services/edesk_integration.dart';
 
 void _closeReceivedRoute(BuildContext context) {
   final route = ModalRoute.of(context);
@@ -313,6 +315,11 @@ class _ReceivedWorkDialogState extends State<ReceivedWorkDialog> {
                   onPressed: null, child: Text('Cadastrar no app'))
             ],
             children: [
+              IntegrationReadinessPanel(
+                  disabled: _busy,
+                  allowed: () => _sameOwner,
+                  check: () => EdeskIntegrationApi.call('/healthz',
+                      authenticated: false)),
               ProjectImportQuery(
                   controller: _requestId,
                   onSearch: _searchById,
@@ -639,6 +646,7 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
   }
 
   Future<void> _save() async {
+    if (_saving || !mounted || _session.currentUser?.uid != _owner) return;
     setState(() => _error = '');
     try {
       if (_usesFormat && !_sameRequest) {
@@ -898,6 +906,11 @@ class _ReceivedReviewState extends State<ReceivedWorkReview> {
             label: const Text('Cadastrar no app')),
       ],
       children: [
+        IntegrationReadinessPanel(
+            disabled: _saving,
+            allowed: () => mounted && _session.currentUser?.uid == _owner,
+            check: () =>
+                EdeskIntegrationApi.call('/healthz', authenticated: false)),
         ProjectImportQuery(
             controller: _reviewRequest,
             onSearch: widget.onSearch,
