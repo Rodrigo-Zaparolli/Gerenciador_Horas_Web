@@ -21,8 +21,10 @@ ao Firestore e o envio ao E-Desk continuam dependendo de internet.
 
 ## Uso
 
-1. Ative a escuta explicitamente. Ela não é ativada ao abrir o sistema.
-2. Diga “Olá, Beta”. A saudação segue o horário local.
+1. Ative a escuta pelo ícone do microfone no cabeçalho. Ela não é ativada ao abrir o sistema.
+   O painel e o holograma permanecem ocultos nesse momento.
+2. Diga “Olá, Beta”. A saudação segue o horário local. Somente então aparecem
+   o balão de conversa e o holograma flutuante abaixo, sem fundo de cartão.
 3. Diga “Enviar horas do dia”. A BETA abre Tarefas e consulta registros reais.
 4. Escolha “Pode ler” ou “Conferir na tela”.
 5. Após conferir, diga “Pode enviar”. A BETA relê os dados no servidor e

@@ -9,6 +9,7 @@ import '../tasks/daily_hours_voice_command.dart' show dayHoursMinutes;
 import '../tasks/theo_replies.dart' show spokenHours;
 import 'beta_access.dart';
 import 'beta_hologram.dart';
+import 'beta_controls.dart';
 
 String betaNormalize(String text) => text
     .toLowerCase()
@@ -95,11 +96,27 @@ class _BetaAssistantState extends State<BetaAssistant> {
   void initState() {
     super.initState();
     _audio = (widget.audioFactory ?? createBetaAudio)(_event, _request);
+    BetaControls.requests.addListener(_headerRequest);
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(mounted)BetaControls.state.value=const BetaControlState();
+    });
+  }
+
+  void _headerRequest() {
+    if (_current && !_working) unawaited(_activate());
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    BetaControls.state.value =
+        BetaControlState(armed: _armed, busy: _working, status: _status);
   }
 
   @override
   void dispose() {
     _turn++;
+    BetaControls.requests.removeListener(_headerRequest);
     _audio.dispose();
     _input.dispose();
     super.dispose();
@@ -122,6 +139,9 @@ class _BetaAssistantState extends State<BetaAssistant> {
           .timeout(const Duration(seconds: 90));
       if (!_current) throw StateError('A conta mudou.');
       if (response.statusCode != 200) {
+        if (response.statusCode == 404)
+          throw StateError(
+              'Atualize a integração para v60 e execute Preparar voz Beta.cmd.');
         final body = jsonDecode(response.body);
         throw StateError(body['message']?.toString() ??
             'Verifique a integração local da BETA.');
@@ -161,10 +181,11 @@ class _BetaAssistantState extends State<BetaAssistant> {
     _audio.stop();
     try {
       await _audio.speak(text);
-    } catch (_) {
+    } catch (error) {
       if (_current && turn == _turn) {
-        setState(() => _status =
-            'Voz local indisponível. Verifique a instalação da BETA. Você pode continuar pelo texto.');
+        setState(() => _status = error is StateError
+            ? error.message.toString()
+            : 'Não consegui reproduzir a voz local. Confira se a integração v60 está ativa e se Preparar voz Beta.cmd foi executado.');
       }
     } finally {
       if (_current && turn == _turn) {
@@ -421,135 +442,146 @@ class _BetaAssistantState extends State<BetaAssistant> {
 
   @override
   Widget build(BuildContext context) {
+    // The assistant has no visible panel before the wake word.
+    if (_phase == 'asleep') return widget.child;
+    final width = MediaQuery.sizeOf(context).width;
     return Stack(children: [
       widget.child,
       Positioned(
-          right: 16,
+          right: 20,
           bottom: 16,
-          child: Material(
-              color: const Color(0xff102438),
-              elevation: 12,
-              borderRadius: BorderRadius.circular(20),
-              child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                      maxWidth: MediaQuery.sizeOf(context).width < 430
-                          ? MediaQuery.sizeOf(context).width - 32
-                          : 380,
-                      maxHeight: MediaQuery.sizeOf(context).height * .8),
-                  child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: DefaultTextStyle(
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
-                          child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(children: [
-                                  const Icon(Icons.blur_circular,
-                                      color: Colors.cyanAccent, size: 34),
-                                  const SizedBox(width: 10),
-                                  const Text('BETA',
-                                      style: TextStyle(
-                                          fontSize: 18, letterSpacing: 3)),
-                                  const Spacer(),
-                                  if (_phase != 'asleep')
-                                    IconButton(
-                                        tooltip: 'Recolher BETA',
-                                        onPressed: _working || _speaking
-                                            ? null
-                                            : () => _command('fechar beta'),
-                                        icon: const Icon(Icons.remove,
-                                            color: Colors.white))
-                                ]),
-                                Text(_status,
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.cyanAccent)),
-                                if (_phase != 'asleep') ...[
-                                  Center(
-                                      child: BetaHologram(speaking: _speaking)),
-                                  const SizedBox(height: 12),
-                                  Text(_message),
-                                  if (_logs.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Text(
-                                        '${_logs.length} apontamentos · ${spokenHours(_logs.fold(0, (s, l) => s + dayHoursMinutes(l)))}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    SizedBox(
-                                        height: 180,
-                                        child: ListView(children: [
-                                          for (final log in _logs)
-                                            ListTile(
-                                                dense: true,
-                                                contentPadding: EdgeInsets.zero,
-                                                textColor: Colors.white,
-                                                title: Text(
-                                                    '${log.projectName ?? log.targetId} · ${log.taskName ?? ''}'),
-                                                subtitle: Text(
-                                                    '${log.startTime}–${log.endTime}\n${log.description ?? ''}',
-                                                    style: const TextStyle(
-                                                        color: Colors.white70)))
-                                        ]))
-                                  ],
-                                  if (!_working && !_speaking)
-                                    Wrap(spacing: 8, children: [
-                                      if (_phase == 'choose') ...[
-                                        TextButton(
-                                            onPressed: () =>
-                                                _command('pode ler'),
-                                            child: const Text('Ler por voz')),
-                                        TextButton(
-                                            onPressed: () =>
-                                                _command('conferir na tela'),
-                                            child:
-                                                const Text('Conferir na tela'))
+          child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxWidth: width < 440 ? width - 40 : 360,
+                  maxHeight: MediaQuery.sizeOf(context).height * .82),
+              child: SingleChildScrollView(
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                    Material(
+                        color: const Color(0xff102438),
+                        elevation: 8,
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Colors.cyan.withValues(alpha: .3)),
+                                borderRadius: BorderRadius.circular(18)),
+                            child: DefaultTextStyle(
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    height: 1.5),
+                                child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(children: [
+                                        Container(
+                                            width: 7,
+                                            height: 7,
+                                            decoration: const BoxDecoration(
+                                                color: Colors.cyanAccent,
+                                                shape: BoxShape.circle)),
+                                        const SizedBox(width: 8),
+                                        const Text('BETA',
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                letterSpacing: 2,
+                                                fontWeight: FontWeight.w600)),
+                                        const Spacer(),
+                                        IconButton(
+                                            tooltip: 'Recolher BETA',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            onPressed: _working || _speaking
+                                                ? null
+                                                : () => _command('fechar beta'),
+                                            icon: const Icon(Icons.remove,
+                                                color: Colors.white70,
+                                                size: 18))
+                                      ]),
+                                      Text(_message),
+                                      const SizedBox(height: 8),
+                                      Text(_status,
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.cyanAccent)),
+                                      if (_logs.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Text(
+                                            '${_logs.length} apontamentos · ${spokenHours(_logs.fold(0, (sum, l) => sum + dayHoursMinutes(l)))}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        SizedBox(
+                                            height: 150,
+                                            child: ListView(children: [
+                                              for (final log in _logs)
+                                                Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(vertical: 6),
+                                                    child: Text(
+                                                        '${log.projectName ?? log.targetId} · ${log.taskName ?? ''}\n${log.startTime}–${log.endTime} · ${log.description ?? ''}'))
+                                            ]))
                                       ],
-                                      if (_phase == 'review')
-                                        FilledButton(
-                                            onPressed: () =>
-                                                _command('pode enviar'),
-                                            child: const Text('Pode enviar')),
-                                      if (_phase == 'ready')
+                                      if (!_working && !_speaking) ...[
+                                        Wrap(spacing: 8, children: [
+                                          if (_phase == 'choose') ...[
+                                            TextButton(
+                                                onPressed: () =>
+                                                    _command('pode ler'),
+                                                child:
+                                                    const Text('Ler por voz')),
+                                            TextButton(
+                                                onPressed: () => _command(
+                                                    'conferir na tela'),
+                                                child: const Text(
+                                                    'Conferir na tela'))
+                                          ],
+                                          if (_phase == 'review')
+                                            FilledButton(
+                                                onPressed: () =>
+                                                    _command('pode enviar'),
+                                                child:
+                                                    const Text('Pode enviar')),
+                                          if (_phase == 'ready')
+                                            TextButton(
+                                                onPressed: () => _command(
+                                                    'enviar horas do dia'),
+                                                child: const Text(
+                                                    'Enviar horas do dia'))
+                                        ]),
+                                        TextField(
+                                            controller: _input,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12),
+                                            decoration: const InputDecoration(
+                                                hintText:
+                                                    'Ou digite sua resposta…',
+                                                hintStyle: TextStyle(
+                                                    color: Colors.white54)),
+                                            onSubmitted: (value) {
+                                              _input.clear();
+                                              unawaited(_command(value));
+                                            })
+                                      ],
+                                      if (_speaking && _phase != 'sending')
                                         TextButton(
-                                            onPressed: () =>
-                                                _command('enviar horas do dia'),
-                                            child: const Text(
-                                                'Enviar horas do dia'))
-                                    ]),
-                                  if (!_working && !_speaking)
-                                    TextField(
-                                        controller: _input,
-                                        style: const TextStyle(
-                                            color: Colors.white),
-                                        decoration: const InputDecoration(
-                                            hintText: 'Digite um comando',
-                                            hintStyle: TextStyle(
-                                                color: Colors.white54)),
-                                        onSubmitted: (value) {
-                                          _input.clear();
-                                          unawaited(_command(value));
-                                        }),
-                                ],
-                                Wrap(spacing: 8, children: [
-                                  TextButton.icon(
-                                      onPressed: _working ? null : _activate,
-                                      icon: Icon(
-                                          _armed ? Icons.mic : Icons.mic_off),
-                                      label: Text(_armed
-                                          ? 'Desativar escuta'
-                                          : 'Ativar escuta')),
-                                  if (_phase == 'asleep')
-                                    TextButton(
-                                        onPressed: () => _command('Beta'),
-                                        child: const Text('Chamar Beta')),
-                                  if (_speaking && _phase != 'sending')
-                                    TextButton(
-                                        onPressed: _stopReading,
-                                        child: const Text('Parar voz'))
-                                ]),
-                              ]))))))
+                                            onPressed: _stopReading,
+                                            child: const Text('Parar voz')),
+                                    ])))),
+                    const SizedBox(height: 4),
+                    IgnorePointer(
+                        child: SizedBox(
+                            width: 180,
+                            height: 150,
+                            child: FittedBox(
+                                child: BetaHologram(speaking: _speaking)))),
+                  ]))))
     ]);
   }
 }

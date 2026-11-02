@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gerenciador_horas/features/assistant/beta_controls.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gerenciador_horas/core/platform/beta_audio.dart';
 import 'package:gerenciador_horas/features/assistant/beta_assistant.dart';
@@ -65,9 +66,14 @@ void main() {
                 sends++;
                 return 'Envio confirmado';
               },
-              child: const Scaffold(body: Text('Projetos')))));
-      await tester.tap(find.text('Ativar escuta'));
+              child: Scaffold(
+                  appBar: AppBar(actions: const [BetaHeaderControl()]),
+                  body: const Text('Projetos')))));
       await tester.pumpAndSettle();
+      expect(find.text('BETA'),findsNothing);
+      await tester.tap(find.byTooltip('Ativar escuta da BETA'));
+      await tester.pumpAndSettle();
+      expect(find.text('BETA'),findsNothing);
       audio.hear('Olá Beta');
       await tester.pumpAndSettle();
       audio.hear('ajuda');
@@ -87,7 +93,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(sends, changed ? 0 : 1);
       if (!changed) {
-        expect(find.text('Chamar Beta'), findsOneWidget);
+        expect(find.byTooltip('Recolher BETA'), findsNothing);
         expect(audio.spoken.last, contains('só me chamar'));
       }
       if (changed) expect(audio.spoken.last, contains('mudaram'));
@@ -117,8 +123,10 @@ void main() {
             openTasks: () {},
             canNavigate: () => true,
             send: (_) async => null,
-            child: const Scaffold())));
-    await tester.tap(find.text('Ativar escuta'));
+            child: Scaffold(
+                appBar: AppBar(actions: const [BetaHeaderControl()])))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Ativar escuta da BETA'));
     await tester.pumpAndSettle();
     audio.hear('Beta');
     await tester.pumpAndSettle();

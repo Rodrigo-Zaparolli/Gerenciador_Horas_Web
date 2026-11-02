@@ -1,6 +1,8 @@
 import 'package:gerenciador_horas/core/theme/app_appearance.dart';
 import 'package:gerenciador_horas/core/theme/app_palette.dart';
 import 'dart:convert';
+import '../../features/assistant/beta_access.dart';
+import '../../features/assistant/beta_controls.dart';
 import 'adaptive_header_navigation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gerenciador_horas/data/services/edesk_integration.dart';
@@ -1432,6 +1434,8 @@ class _CabecalhoState extends State<Cabecalho> {
                 ),
 
               if (!isVeryCompact) const SizedBox(width: 6),
+              if(BetaAccess.allows(uid:FirebaseAuth.instance.currentUser?.uid,email:FirebaseAuth.instance.currentUser?.email))
+                const BetaHeaderControl(),
 
               // ==================================================
               // BUSCA

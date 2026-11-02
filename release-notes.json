@@ -1,10 +1,8 @@
 {
   "changes": [
-    "Piloto pessoal: BETA com voz Dora e chamada Ola Beta em todas as telas.",
-    "Conferencia de horas por voz ou visual, autorizacao antes de enviar e resultado falado com despedida automatica.",
-    "Melhorias de recuperacao de edicoes da planilha, validacao de valores e verificacao da integracao na importacao.",
-    "Horas digitadas como 2500 passam a representar 25:00.",
-    "Comentario permite escolher a etapa e preencher percentual e data fim correspondentes da planilha.",
-    "Integracao v60: execute Preparar voz Beta.cmd uma vez na pasta da integracao para instalar a voz local."
+    "BETA permanece oculta ate ser chamada por Ola Beta. O microfone fica no cabecalho.",
+    "Apresentacao ajustada para mensagem discreta com holograma fora do cartao, conforme previa.",
+    "Mensagens de voz indicam quando falta preparar os modelos locais da integracao.",
+    "Mantidos os demais ajustes pessoais publicados anteriormente."
   ]
 }
